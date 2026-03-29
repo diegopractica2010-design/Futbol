@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-ball" viewBox="0 0 64 64">
+    <circle cx="32" cy="32" r="30" fill="#fff7e7" stroke="#0f6b3b" stroke-width="3"/>
+    <path d="M32 16l8 6-3 10H27l-3-10 8-6zm-12 17l7 5-3 10-9 2-5-8 10-9zm24 0l10 9-5 8-9-2-3-10 7-5zm-20 17h16l5 8-13 4-13-4 5-8z" fill="#d98c2b"/>
+  </symbol>
+  <symbol id="icon-coin" viewBox="0 0 64 64">
+    <circle cx="32" cy="32" r="26" fill="#f6c25b" stroke="#a86b10" stroke-width="4"/>
+    <path d="M32 18c-6 0-11 3-11 8s5 7 11 8 11 3 11 8-5 8-11 8-10-2-13-6" fill="none" stroke="#7a4b00" stroke-width="4" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="icon-table" viewBox="0 0 64 64">
+    <rect x="10" y="12" width="44" height="40" rx="6" fill="#fff7e7" stroke="#0f6b3b" stroke-width="3"/>
+    <path d="M10 24h44M24 12v40M38 12v40" stroke="#0f6b3b" stroke-width="3"/>
+  </symbol>
+</svg>

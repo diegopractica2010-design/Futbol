@@ -1,0 +1,9 @@
+[
+  { "id": "colo-colo", "name": "Colo-Colo", "city": "Santiago", "stadium": "Monumental", "style": "Presion", "budget": 145000000, "fanBase": 920000, "sponsor": 82000000, "infrastructureCost": 16000000, "form": 13 },
+  { "id": "u-de-chile", "name": "Universidad de Chile", "city": "Santiago", "stadium": "Nacional", "style": "Posesion", "budget": 136000000, "fanBase": 870000, "sponsor": 76000000, "infrastructureCost": 15200000, "form": 12 },
+  { "id": "u-catolica", "name": "Universidad Catolica", "city": "Santiago", "stadium": "Santa Laura", "style": "Posesion", "budget": 132000000, "fanBase": 780000, "sponsor": 74000000, "infrastructureCost": 14800000, "form": 12 },
+  { "id": "cobreloa", "name": "Cobreloa", "city": "Calama", "stadium": "Zorros del Desierto", "style": "Vertical", "budget": 92000000, "fanBase": 410000, "sponsor": 38000000, "infrastructureCost": 9800000, "form": 10 },
+  { "id": "huachipato", "name": "Huachipato", "city": "Talcahuano", "stadium": "CAP", "style": "Presion", "budget": 98000000, "fanBase": 380000, "sponsor": 42000000, "infrastructureCost": 9400000, "form": 11 },
+  { "id": "palestino", "name": "Palestino", "city": "La Cisterna", "stadium": "Municipal de La Cisterna", "style": "Posesion", "budget": 88000000, "fanBase": 300000, "sponsor": 35000000, "infrastructureCost": 8600000, "form": 10 },
+  { "id": "wanderers", "name": "Santiago Wanderers", "city": "Valparaiso", "stadium": "Elias Figueroa", "style": "Vertical", "budget": 84000000, "fanBase": 360000, "sponsor": 33000000, "infrastructureCost": 8300000, "form": 9 }
+]
