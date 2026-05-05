@@ -61,23 +61,68 @@
     return [...firstLeg, ...secondLeg].map((matches, index) => ({ week: index + 1, played: false, matches }));
   }
 
+  function getNextUnplayedFixture(state) {
+    return state.fixtures
+      .filter((fixture) => !fixture.played)
+      .sort((left, right) => left.week - right.week)[0] || null;
+  }
+
+  function getChampion(state) {
+    const sorted = FMG.sortStandings(state.standings);
+    return sorted[0] || null;
+  }
+
+  function createSeasonRecord(state) {
+    const champion = state.champion || getChampion(state);
+    const userStanding = state.standings.find((entry) => entry.teamId === state.userTeamId);
+    return {
+      seasonNumber: state.seasonNumber,
+      championTeamId: champion ? champion.teamId : null,
+      championName: champion ? champion.name : "Sin campeon",
+      userTeamId: state.userTeamId,
+      userTeamName: state.userClub ? state.userClub.name : "Sin club",
+      userPosition: state.standings.findIndex((entry) => entry.teamId === state.userTeamId) + 1,
+      userPoints: userStanding ? userStanding.points : 0,
+      completedAt: new Date().toISOString()
+    };
+  }
+
+  function updateMarketWindow(state) {
+    const openWeeks = state.currentWeek <= 3 || state.currentWeek >= Math.max(1, state.totalWeeks - 2) || state.seasonComplete;
+    state.market.windowOpen = openWeeks;
+  }
+
   function reviveState(state) {
     const revived = FMG.deepClone(state);
+    revived.version = Math.max(revived.version || 1, 3);
     revived.route = revived.route || FMG.ROUTES.dashboard;
     revived.notifications = revived.notifications || [];
-    revived.market = revived.market || { listings: [], refreshCost: 2500000 };
+    revived.market = revived.market || { listings: [], refreshCost: 2500000, windowOpen: true };
+    revived.market.windowOpen = revived.market.windowOpen !== false;
     revived.finances = revived.finances || { balance: 0, incomeHistory: [], expenseHistory: [], weeklyReport: [] };
     revived.eventsLog = revived.eventsLog || [];
     revived.lastResults = revived.lastResults || [];
     revived.seasonLog = revived.seasonLog || [];
+    revived.seasonNumber = revived.seasonNumber || 1;
+    revived.seasonHistory = revived.seasonHistory || [];
+    revived.completedWeeks = revived.fixtures ? revived.fixtures.filter((fixture) => fixture.played).length : 0;
+    revived.seasonComplete = revived.seasonComplete || (revived.fixtures && revived.fixtures.every((fixture) => fixture.played));
+    revived.champion = revived.champion || (revived.seasonComplete ? getChampion(revived) : null);
     revived.selectionMode = !revived.userTeamId;
+    revived.userClub = revived.teams.find((team) => team.id === revived.userTeamId) || null;
+    FMG.preparePlayersForSeason(revived.players);
+    FMG.initializeTeamPlans(revived);
+    updateMarketWindow(revived);
     return revived;
   }
 
   FMG.initializeGame = function (teams, players) {
+    FMG.validateSeedData(teams, players);
     const fixtures = buildSeasonFixtures(teams);
     const seasonPlayers = ensureSquadDepth(teams, players);
+    FMG.preparePlayersForSeason(seasonPlayers);
     FMG.replaceGameState({
+      version: 3,
       initialized: true,
       route: FMG.ROUTES.dashboard,
       selectionMode: true,
@@ -86,17 +131,25 @@
       fixtures,
       currentWeek: 1,
       totalWeeks: fixtures.length,
+      completedWeeks: 0,
+      seasonComplete: false,
+      champion: null,
+      seasonNumber: 1,
+      seasonHistory: [],
       userTeamId: null,
       userClub: null,
       currentMatch: null,
       lastResults: [],
       standings: FMG.createInitialStandings(teams),
-      market: { listings: [], refreshCost: 2500000 },
+      market: { listings: [], refreshCost: 2500000, windowOpen: true },
+      tactics: { teamSettings: {}, trainingUsedWeek: 0 },
       finances: { balance: 0, incomeHistory: [], expenseHistory: [], weeklyReport: [] },
       eventsLog: [],
       notifications: [],
       seasonLog: []
     });
+    FMG.initializeTeamPlans(FMG.gameState);
+    updateMarketWindow(FMG.gameState);
   };
 
   FMG.selectClub = function (teamId) {
@@ -107,20 +160,47 @@
     FMG.gameState.selectionMode = false;
     FMG.gameState.finances.balance = 0;
     FMG.registerFinanceEntry(FMG.gameState.finances, "income", "Capital inicial de temporada", team.budget);
+    FMG.autoSelectLineup(FMG.gameState, team.id);
     FMG.buildTransferMarket(FMG.gameState);
     FMG.pushNotification(`Tomaste el control de ${team.name}.`);
   };
 
   FMG.advanceWeek = function () {
     const state = FMG.gameState;
-    const currentFixture = state.fixtures.find((fixture) => fixture.week === state.currentWeek);
-    if (!currentFixture || currentFixture.played) return { ok: false, message: "No quedan fechas por disputar." };
+    if (state.seasonComplete) return { ok: false, message: "La temporada ya termino." };
+
+    const currentFixture = state.fixtures.find((fixture) => !fixture.played && fixture.week === state.currentWeek) || getNextUnplayedFixture(state);
+    if (!currentFixture) {
+      state.seasonComplete = true;
+      state.champion = getChampion(state);
+      return { ok: false, message: "No quedan fechas por disputar." };
+    }
+    state.currentWeek = currentFixture.week;
+
+    FMG.tickPlayerAvailability(state);
+    state.players.forEach((player) => {
+      player.energy = FMG.clamp(player.energy + FMG.randomInt(4, 8), 0, 100);
+    });
+    state.teams.forEach((team) => FMG.autoSelectLineup(state, team.id));
 
     const results = currentFixture.matches.map((match) => {
       const homeTeam = state.teams.find((team) => team.id === match.homeTeamId);
       const awayTeam = state.teams.find((team) => team.id === match.awayTeamId);
-      const result = FMG.simulateMatch({ homeTeam, awayTeam, players: state.players });
+      const result = FMG.simulateMatch({ homeTeam, awayTeam, players: state.players, state });
+      result.week = currentFixture.week;
       FMG.updateStandings(state.standings, result);
+      FMG.applyMatchSquadStats(state, result);
+      [...(result.cards || []), ...(result.injuries || [])].forEach((incident) => {
+        const isInjury = Boolean(incident.duration);
+        state.eventsLog.unshift({
+          week: currentFixture.week,
+          title: isInjury ? "Lesion de partido" : incident.color === "red" ? "Tarjeta roja" : "Tarjeta amarilla",
+          detail: isInjury
+            ? `${incident.playerName} estara fuera ${incident.duration} semana(s).`
+            : `${incident.playerName} recibe ${incident.color === "red" ? "roja y queda suspendido" : "amarilla"}.`
+        });
+      });
+      state.eventsLog = state.eventsLog.slice(0, 12);
       homeTeam.form = FMG.clamp(homeTeam.form + (result.homeGoals >= result.awayGoals ? 1 : -1), 0, 20);
       awayTeam.form = FMG.clamp(awayTeam.form + (result.awayGoals >= result.homeGoals ? 1 : -1), 0, 20);
       return result;
@@ -129,36 +209,90 @@
     currentFixture.played = true;
     state.lastResults = results;
     state.standings = FMG.sortStandings(state.standings);
-    state.currentMatch = results.find((result) => result.homeTeamId === state.userTeamId || result.awayTeamId === state.userTeamId) || null;
+    const userMatch = results.find((result) => result.homeTeamId === state.userTeamId || result.awayTeamId === state.userTeamId) || null;
+    if (userMatch) state.currentMatch = userMatch;
 
     const event = FMG.applyWeeklyEvent(state);
     const financeReport = FMG.processWeeklyFinances(state);
-    state.players.filter((player) => player.teamId === state.userTeamId).forEach((player) => {
-      player.energy = FMG.clamp(player.energy + FMG.randomInt(4, 8), 0, 100);
-    });
+    state.teams.forEach((team) => FMG.autoSelectLineup(state, team.id));
 
     state.seasonLog.unshift({ week: state.currentWeek, headline: FMG.financeHeadline(financeReport), event });
     state.seasonLog = state.seasonLog.slice(0, 10);
+    state.completedWeeks = state.fixtures.filter((fixture) => fixture.played).length;
 
-    if (state.currentWeek < state.totalWeeks) state.currentWeek += 1;
+    const nextFixture = getNextUnplayedFixture(state);
+    if (nextFixture) {
+      state.currentWeek = nextFixture.week;
+    } else {
+      state.seasonComplete = true;
+      state.champion = getChampion(state);
+      state.seasonHistory.unshift(createSeasonRecord(state));
+      state.seasonHistory = state.seasonHistory.slice(0, 8);
+    }
+    updateMarketWindow(state);
+
     const nextOpponent = FMG.getNextOpponent();
-    FMG.pushNotification(nextOpponent ? `Semana completada. Proximo rival: ${nextOpponent.name}.` : "La temporada ha terminado.");
+    const message = state.seasonComplete
+      ? `La temporada ha terminado. Campeon: ${state.champion.name}.`
+      : userMatch
+        ? `Semana completada. Proximo rival: ${nextOpponent ? nextOpponent.name : "descanso"}.`
+        : `Semana de descanso completada. Proximo rival: ${nextOpponent ? nextOpponent.name : "por definir"}.`;
+    FMG.pushNotification(message);
     return { ok: true, message: "Fecha simulada correctamente." };
+  };
+
+  FMG.startNewSeason = function () {
+    const state = FMG.gameState;
+    if (!state.seasonComplete) return { ok: false, message: "Debes terminar la temporada actual antes de iniciar otra." };
+    const fixtures = buildSeasonFixtures(state.teams);
+    state.seasonNumber += 1;
+    state.fixtures = fixtures;
+    state.currentWeek = 1;
+    state.totalWeeks = fixtures.length;
+    state.completedWeeks = 0;
+    state.seasonComplete = false;
+    state.champion = null;
+    state.currentMatch = null;
+    state.lastResults = [];
+    state.standings = FMG.createInitialStandings(state.teams);
+    state.seasonLog = [];
+    state.eventsLog = [];
+    state.tactics.trainingUsedWeek = 0;
+    state.teams.forEach((team) => {
+      team.form = FMG.clamp(9 + FMG.randomInt(0, 5), 0, 20);
+    });
+    state.players.forEach((player) => {
+      player.age += 1;
+      player.contractYears = Math.max(0, (player.contractYears || 1) - 1);
+      if (player.age <= 24 && player.overall < player.potential && Math.random() < 0.35) player.overall += 1;
+      if (player.age >= 32 && Math.random() < 0.35) player.overall = Math.max(45, player.overall - 1);
+      player.energy = FMG.clamp(84 + FMG.randomInt(0, 12), 0, 100);
+      player.morale = FMG.clamp(66 + FMG.randomInt(0, 18), 0, 100);
+    });
+    FMG.preparePlayersForSeason(state.players, { newSeason: true });
+    FMG.initializeTeamPlans(state);
+    updateMarketWindow(state);
+    FMG.buildTransferMarket(state);
+    FMG.pushNotification(`Temporada ${state.seasonNumber} iniciada.`);
+    return { ok: true, message: "Nueva temporada iniciada." };
   };
 
   FMG.getNextOpponent = function () {
     const state = FMG.gameState;
-    const upcoming = state.fixtures.find((fixture) => !fixture.played && fixture.week === state.currentWeek);
+    const upcoming = state.fixtures
+      .filter((fixture) => !fixture.played)
+      .sort((left, right) => left.week - right.week)
+      .find((fixture) => fixture.matches.some((item) => item.homeTeamId === state.userTeamId || item.awayTeamId === state.userTeamId));
     if (!upcoming) return null;
     const match = upcoming.matches.find((item) => item.homeTeamId === state.userTeamId || item.awayTeamId === state.userTeamId);
-    if (!match) return null;
     const opponentId = match.homeTeamId === state.userTeamId ? match.awayTeamId : match.homeTeamId;
-    return state.teams.find((team) => team.id === opponentId) || null;
+    const opponent = state.teams.find((team) => team.id === opponentId) || null;
+    return opponent ? { ...opponent, week: upcoming.week } : null;
   };
 
   FMG.getUpcomingFixture = function () {
     const state = FMG.gameState;
-    const nextFixture = state.fixtures.find((fixture) => !fixture.played && fixture.week === state.currentWeek);
+    const nextFixture = state.fixtures.find((fixture) => !fixture.played && fixture.week === state.currentWeek) || getNextUnplayedFixture(state);
     if (!nextFixture) return null;
     return nextFixture.matches.map((match) => ({
       ...match,
@@ -177,15 +311,28 @@
   };
 
   FMG.saveGame = function () {
-    localStorage.setItem(FMG.STORAGE_KEY, JSON.stringify(FMG.gameState));
-    FMG.pushNotification("Partida guardada en el navegador.");
+    try {
+      localStorage.setItem(FMG.STORAGE_KEY, JSON.stringify(FMG.gameState));
+      FMG.pushNotification("Partida guardada en el navegador.");
+      return { ok: true, message: "Partida guardada." };
+    } catch (error) {
+      return { ok: false, message: "No se pudo guardar la partida." };
+    }
   };
 
   FMG.loadGame = function () {
-    const raw = localStorage.getItem(FMG.STORAGE_KEY);
-    if (!raw) return { ok: false, message: "No hay una partida guardada disponible." };
-    FMG.replaceGameState(reviveState(JSON.parse(raw)));
-    FMG.pushNotification("Partida cargada correctamente.");
-    return { ok: true, message: "Partida cargada." };
+    try {
+      const raw = localStorage.getItem(FMG.STORAGE_KEY);
+      if (!raw) return { ok: false, message: "No hay una partida guardada disponible." };
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.teams) || !Array.isArray(parsed.players) || !Array.isArray(parsed.fixtures)) {
+        return { ok: false, message: "La partida guardada no es compatible." };
+      }
+      FMG.replaceGameState(reviveState(parsed));
+      FMG.pushNotification("Partida cargada correctamente.");
+      return { ok: true, message: "Partida cargada." };
+    } catch (error) {
+      return { ok: false, message: "La partida guardada esta danada." };
+    }
   };
 })();

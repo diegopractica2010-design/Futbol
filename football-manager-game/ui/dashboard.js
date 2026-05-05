@@ -7,20 +7,23 @@
     const topScorer = state.currentMatch ? [...state.currentMatch.homeEvents, ...state.currentMatch.awayEvents][0]?.scorer || "Sin registros" : "Sin registros";
     const nextOpponent = helpers.nextOpponent;
     const position = state.standings.findIndex((entry) => entry.teamId === state.userTeamId) + 1;
+    const progress = state.totalWeeks ? (state.completedWeeks / state.totalWeeks) * 100 : 0;
+    const plan = FMG.getTeamPlan(state, state.userTeamId);
 
     return `
       <section class="hero">
         <div class="panel hero-main">
           <span class="eyebrow">Temporada en marcha</span>
-          <h1 class="hero-title">${state.userClub.name}</h1>
+          <h1 class="hero-title">${FMG.escapeHtml(state.userClub.name)}</h1>
           <p class="hero-copy">Administra presupuesto, mercado y vestuario para competir por la liga. Cada semana mezcla futbol, riesgo financiero y decisiones de plantilla.</p>
           <div class="chips">
-            <span class="chip">${state.userClub.city}</span>
-            <span class="chip">Estadio ${state.userClub.stadium}</span>
-            <span class="chip">Estilo ${state.userClub.style}</span>
+            <span class="chip">${FMG.escapeHtml(state.userClub.city)}</span>
+            <span class="chip">Estadio ${FMG.escapeHtml(state.userClub.stadium)}</span>
+            <span class="chip">Estilo ${FMG.escapeHtml(state.userClub.style)}</span>
           </div>
           <div class="hero-actions">
             <button class="btn-primary" data-action="advance-week">Simular semana</button>
+            ${state.seasonComplete ? `<button class="btn-primary" data-action="new-season">Nueva temporada</button>` : ""}
             <button class="btn-secondary" data-action="save-game">Guardar partida</button>
             <button class="btn-ghost" data-action="load-game">Cargar partida</button>
           </div>
@@ -28,23 +31,29 @@
             <article class="stat-card"><div class="muted">Saldo disponible</div><div class="stat-value">${FMG.currency(state.finances.balance)}</div></article>
             <article class="stat-card"><div class="muted">Posicion actual</div><div class="stat-value">${position || "-"}</div></article>
             <article class="stat-card"><div class="muted">Media de plantilla</div><div class="stat-value">${avgOverall}</div></article>
+            <article class="stat-card"><div class="muted">Sistema</div><div class="stat-value">${FMG.escapeHtml(plan.formation)}</div></article>
           </div>
         </div>
         <div class="side-stack">
           <section class="panel">
             <div class="section-title"><h2>Proxima fecha</h2><span class="chip">Semana ${state.currentWeek}</span></div>
             ${
-              nextOpponent
-                ? `<p><strong>${state.userClub.name}</strong> vs <strong>${nextOpponent.name}</strong></p>
-                   <p class="muted">${nextOpponent.city} | Forma ${nextOpponent.form}/20</p>
-                   <div class="progress"><span style="width:${(state.currentWeek / state.totalWeeks) * 100}%"></span></div>`
-                : `<div class="empty-state">No quedan partidos pendientes en el calendario.</div>`
+              state.seasonComplete
+                ? `<p><strong>Campeon: ${FMG.escapeHtml(state.champion ? state.champion.name : "Por definir")}</strong></p>
+                   <p class="muted">La temporada actual ya fue completada.</p>
+                   <div class="progress"><span style="width:100%"></span></div>`
+                : nextOpponent
+                  ? `<p><strong>${FMG.escapeHtml(state.userClub.name)}</strong> vs <strong>${FMG.escapeHtml(nextOpponent.name)}</strong></p>
+                     <p class="muted">Semana ${nextOpponent.week} | ${FMG.escapeHtml(nextOpponent.city)} | Forma ${nextOpponent.form}/20</p>
+                     <div class="progress"><span style="width:${progress}%"></span></div>`
+                  : `<div class="empty-state">Tu club descansa en la proxima fecha.</div>`
             }
           </section>
           <section class="panel">
             <div class="section-title"><h2>Radar rapido</h2></div>
             <div class="log-list">
-              <div class="log-item"><strong>Ultimo protagonista</strong><p class="muted">${topScorer}</p></div>
+              <div class="log-item"><strong>Ultimo protagonista</strong><p class="muted">${FMG.escapeHtml(topScorer)}</p></div>
+              <div class="log-item"><strong>Mercado</strong><p class="muted">${state.market.windowOpen ? "Ventana abierta" : "Ventana cerrada"}</p></div>
               <div class="log-item"><strong>Aficion</strong><p class="muted">${state.userClub.fanBase.toLocaleString("es-CL")} hinchas base</p></div>
               <div class="log-item"><strong>Patrocinio</strong><p class="muted">${FMG.currency(state.userClub.sponsor)}</p></div>
             </div>
@@ -60,8 +69,8 @@
                 ? state.seasonLog.map((entry) => `
                     <div class="log-item">
                       <strong>Semana ${entry.week}</strong>
-                      <p class="muted">${entry.headline}</p>
-                      <p class="muted">${entry.event ? entry.event.detail : "Sin evento extraordinario."}</p>
+                      <p class="muted">${FMG.escapeHtml(entry.headline)}</p>
+                      <p class="muted">${FMG.escapeHtml(entry.event ? entry.event.detail : "Sin evento extraordinario.")}</p>
                     </div>`).join("")
                 : `<div class="empty-state">La temporada aun no registra actividad.</div>`
             }
@@ -73,10 +82,24 @@
             <div class="table-row header"><span>#</span><span>Equipo</span><span>Pts</span><span>DG</span><span>GF</span><span>PJ</span></div>
             ${state.standings.slice(0, 5).map((entry, index) => `
               <div class="table-row">
-                <span>${index + 1}</span><span>${entry.name}</span><span>${entry.points}</span><span>${entry.goalDifference}</span><span>${entry.goalsFor}</span><span>${entry.played}</span>
+                <span>${index + 1}</span><span>${FMG.escapeHtml(entry.name)}</span><span>${entry.points}</span><span>${entry.goalDifference}</span><span>${entry.goalsFor}</span><span>${entry.played}</span>
               </div>`).join("")}
           </div>
         </section>
+      </section>
+      <section class="card">
+        <div class="section-title"><h2>Historial</h2><span class="chip">Temporada ${state.seasonNumber}</span></div>
+        <div class="log-list">
+          ${
+            state.seasonHistory.length
+              ? state.seasonHistory.map((entry) => `
+                <div class="log-item">
+                  <strong>Temporada ${entry.seasonNumber}: ${FMG.escapeHtml(entry.championName)}</strong>
+                  <p class="muted">${FMG.escapeHtml(entry.userTeamName)} termino ${entry.userPosition || "-"} con ${entry.userPoints} pts.</p>
+                </div>`).join("")
+              : `<div class="empty-state">Todavia no hay temporadas cerradas.</div>`
+          }
+        </div>
       </section>
     `;
   };

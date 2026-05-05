@@ -15,7 +15,9 @@
 
   FMG.processWeeklyFinances = function (state) {
     const club = state.userClub;
-    const attendanceIncome = Math.round(club.fanBase * 18000 + Math.random() * 3500000);
+    const estimatedAttendance = FMG.clamp(Math.round(club.fanBase * 0.006 + Math.random() * 3500), 2500, 42000);
+    const ticketPrice = 6500;
+    const attendanceIncome = Math.round(estimatedAttendance * ticketPrice);
     const sponsorshipIncome = Math.round(club.sponsor * 0.085);
     const wageExpense = -Math.round(
       state.players.filter((player) => player.teamId === club.id).reduce((sum, player) => sum + player.salary, 0)

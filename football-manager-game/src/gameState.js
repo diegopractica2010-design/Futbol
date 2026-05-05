@@ -11,6 +11,7 @@
   };
 
   FMG.gameState = {
+    version: 3,
     initialized: false,
     route: FMG.ROUTES.dashboard,
     selectionMode: true,
@@ -19,6 +20,11 @@
     fixtures: [],
     currentWeek: 1,
     totalWeeks: 0,
+    completedWeeks: 0,
+    seasonComplete: false,
+    champion: null,
+    seasonNumber: 1,
+    seasonHistory: [],
     userTeamId: null,
     userClub: null,
     currentMatch: null,
@@ -26,7 +32,12 @@
     standings: [],
     market: {
       listings: [],
-      refreshCost: 2500000
+      refreshCost: 2500000,
+      windowOpen: true
+    },
+    tactics: {
+      teamSettings: {},
+      trainingUsedWeek: 0
     },
     finances: {
       balance: 0,

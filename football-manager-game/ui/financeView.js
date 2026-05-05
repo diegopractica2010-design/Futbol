@@ -3,7 +3,7 @@
 
   function renderEntries(entries) {
     return entries.length
-      ? entries.slice(0, 8).map((entry) => `<div class="log-item"><strong>${entry.label}</strong><p class="muted">${FMG.currency(entry.amount)}</p></div>`).join("")
+      ? entries.slice(0, 8).map((entry) => `<div class="log-item"><strong>${FMG.escapeHtml(entry.label)}</strong><p class="muted">${FMG.currency(entry.amount)}</p></div>`).join("")
       : `<div class="empty-state">Todavia no hay movimientos registrados.</div>`;
   }
 
@@ -28,9 +28,9 @@
               state.eventsLog.length
                 ? state.eventsLog.map((event) => `
                     <div class="log-item">
-                      <strong>${event.title}</strong>
+                      <strong>${FMG.escapeHtml(event.title)}</strong>
                       <p class="muted">Semana ${event.week}</p>
-                      <p class="muted">${event.detail}</p>
+                      <p class="muted">${FMG.escapeHtml(event.detail)}</p>
                     </div>`).join("")
                 : `<div class="empty-state">Aun no se registran eventos aleatorios.</div>`
             }

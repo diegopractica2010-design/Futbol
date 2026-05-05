@@ -36,4 +36,47 @@
   FMG.deepClone = function (value) {
     return JSON.parse(JSON.stringify(value));
   };
+
+  FMG.escapeHtml = function (value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  };
+
+  FMG.validateSeedData = function (teams, players) {
+    if (!Array.isArray(teams) || teams.length < 2) {
+      throw new Error("Se necesitan al menos dos equipos para iniciar la liga.");
+    }
+    if (!Array.isArray(players) || players.length === 0) {
+      throw new Error("No se encontraron jugadores para iniciar la partida.");
+    }
+
+    const teamIds = new Set();
+    teams.forEach((team) => {
+      ["id", "name", "city", "stadium", "style"].forEach((field) => {
+        if (!team[field]) throw new Error(`Equipo invalido: falta ${field}.`);
+      });
+      ["budget", "fanBase", "sponsor", "infrastructureCost", "form"].forEach((field) => {
+        if (!Number.isFinite(team[field])) throw new Error(`Equipo ${team.name} tiene ${field} invalido.`);
+      });
+      if (teamIds.has(team.id)) throw new Error(`Equipo duplicado: ${team.id}.`);
+      teamIds.add(team.id);
+    });
+
+    const playerIds = new Set();
+    players.forEach((player) => {
+      ["id", "name", "teamId", "position"].forEach((field) => {
+        if (!player[field]) throw new Error(`Jugador invalido: falta ${field}.`);
+      });
+      ["age", "overall", "morale", "energy", "value", "salary"].forEach((field) => {
+        if (!Number.isFinite(player[field])) throw new Error(`Jugador ${player.name} tiene ${field} invalido.`);
+      });
+      if (!teamIds.has(player.teamId)) throw new Error(`Jugador ${player.name} apunta a un equipo inexistente.`);
+      if (playerIds.has(player.id)) throw new Error(`Jugador duplicado: ${player.id}.`);
+      playerIds.add(player.id);
+    });
+  };
 })();

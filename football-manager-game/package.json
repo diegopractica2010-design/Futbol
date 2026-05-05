@@ -1,0 +1,8 @@
+{
+  "name": "football-manager-game-chile",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node tests/phase0.test.js && node tests/phase1.test.js && node tests/phase2.test.js"
+  }
+}

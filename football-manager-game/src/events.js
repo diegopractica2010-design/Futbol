@@ -15,9 +15,13 @@
       execute(state) {
         const squad = state.players.filter((player) => player.teamId === state.userClub.id);
         const player = FMG.sample(squad);
+        player.injuredWeeks = Math.max(player.injuredWeeks || 0, 1);
         player.energy = FMG.clamp(player.energy - 18, 25, 100);
         player.morale = FMG.clamp(player.morale - 6, 35, 100);
-        return `${player.name} termino con una molestia muscular y baja su energia.`;
+        player.seasonStats = player.seasonStats || { appearances: 0, goals: 0, injuries: 0, cards: 0 };
+        player.seasonStats.injuries += 1;
+        FMG.autoSelectLineup(state, state.userTeamId);
+        return `${player.name} termino con una molestia muscular y estara una semana fuera.`;
       }
     },
     {

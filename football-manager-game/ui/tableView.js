@@ -9,7 +9,7 @@
           <div class="table-row header"><span>#</span><span>Equipo</span><span>Pts</span><span>DG</span><span>GF</span><span>PJ</span></div>
           ${state.standings.map((entry, index) => `
             <div class="table-row">
-              <span>${index + 1}</span><span>${entry.name}${entry.teamId === state.userTeamId ? " (Tu club)" : ""}</span><span>${entry.points}</span><span>${entry.goalDifference}</span><span>${entry.goalsFor}</span><span>${entry.played}</span>
+              <span>${index + 1}</span><span>${FMG.escapeHtml(entry.name)}${entry.teamId === state.userTeamId ? " (Tu club)" : ""}</span><span>${entry.points}</span><span>${entry.goalDifference}</span><span>${entry.goalsFor}</span><span>${entry.played}</span>
             </div>`).join("")}
         </div>
       </section>
