@@ -2,7 +2,7 @@
 
 Simulador web de gestion futbolistica inspirado en el rol de manager de un club chileno. El proyecto funciona como SPA sin frameworks, con estado centralizado, simulacion semanal de temporada, mercado de fichajes, finanzas, eventos aleatorios y persistencia en `localStorage`.
 
-Estado actual: Fase 4 implementada. Esta base ya permite jugar el partido del usuario minuto a minuto y configurar tacticas profundas, aunque todavia quedan fases de plantilla avanzada, contratos, carrera, IA rival avanzada y contenido final.
+Estado actual: Fase 8 implementada. Esta base ya permite jugar el partido del usuario minuto a minuto, configurar tacticas profundas, gestionar jugadores en profundidad, negociar contratos/mercado con ofertas reales, ver clubes rivales actuar con IA propia y competir en un ecosistema con liga, copa, supercopa e internacional.
 
 ## Caracteristicas
 
@@ -21,6 +21,11 @@ Estado actual: Fase 4 implementada. Esta base ya permite jugar el partido del us
 - Partido en vivo con avance por minutos, velocidades, cambios, ajustes tacticos basicos, momentum y cierre de fecha.
 - Tacticas avanzadas con mentalidad, presion, ritmo, pase, anchura, linea defensiva, roles por posicion e instrucciones individuales.
 - Previa tactica del siguiente rival con comparacion de perfiles.
+- Ficha individual de jugador con atributos detallados, rol de plantilla, liderazgo, felicidad, minutos, historial medico y moral.
+- Progresion de jovenes, declive/retiro de veteranos y filtros/ordenamiento de plantilla.
+- Mercado con valor dinamico, negociaciones, contraofertas, agentes libres, cesiones, renovaciones, ofertas recibidas e historial de transferencias.
+- IA de clubes rivales con presupuestos, necesidades de plantilla, rotacion, ajustes tacticos, renovaciones y movimientos de mercado.
+- Competencias completas con Copa Chile, Supercopa, copa internacional simplificada, premios, clasificaciones, rankings y ascenso/descenso sintetico.
 
 ## Estructura
 

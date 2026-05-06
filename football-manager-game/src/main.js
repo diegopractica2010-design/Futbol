@@ -127,11 +127,38 @@
     if (action === "refresh-market") {
       FMG.pushNotification(FMG.refreshTransferMarket(FMG.gameState).message);
     }
+    if (action === "create-transfer-offer") {
+      const player = FMG.gameState.players.find((item) => item.id === target.dataset.playerId);
+      const role = player && player.overall >= 76 ? "starter" : "rotation";
+      FMG.pushNotification(FMG.createTransferOffer(FMG.gameState, target.dataset.playerId, { transferType: target.dataset.transferType, role }).message);
+    }
+    if (action === "create-loan-offer") {
+      FMG.pushNotification(FMG.createTransferOffer(FMG.gameState, target.dataset.playerId, { transferType: "loan", role: "rotation" }).message);
+    }
+    if (action === "resolve-negotiation") FMG.pushNotification(FMG.resolveTransferNegotiation(FMG.gameState, target.dataset.negotiationId).message);
+    if (action === "generate-incoming-offers") {
+      const offers = FMG.generateIncomingOffers(FMG.gameState);
+      FMG.pushNotification(offers.length ? "Llegaron nuevas ofertas por jugadores." : "No llegaron ofertas nuevas.");
+    }
+    if (action === "accept-incoming-offer") FMG.pushNotification(FMG.respondIncomingOffer(FMG.gameState, target.dataset.offerId, true).message);
+    if (action === "reject-incoming-offer") FMG.pushNotification(FMG.respondIncomingOffer(FMG.gameState, target.dataset.offerId, false).message);
     if (action === "set-formation") FMG.pushNotification(FMG.setFormation(FMG.gameState, target.dataset.formation).message);
     if (action === "set-training") FMG.pushNotification(FMG.setTrainingFocus(FMG.gameState, target.dataset.focus).message);
     if (action === "set-team-tactic") FMG.pushNotification(FMG.setTeamTactic(FMG.gameState, target.dataset.tacticKey, target.dataset.tacticValue).message);
     if (action === "set-position-role") FMG.pushNotification(FMG.setPositionRole(FMG.gameState, target.dataset.position, target.dataset.role).message);
     if (action === "set-player-instruction") FMG.pushNotification(FMG.setPlayerInstruction(FMG.gameState, target.dataset.playerId, target.dataset.instruction).message);
+    if (action === "set-squad-role") FMG.pushNotification(FMG.setSquadRole(FMG.gameState, target.dataset.playerId, target.dataset.role).message);
+    if (action === "set-captain") FMG.pushNotification(FMG.setCaptain(FMG.gameState, target.dataset.playerId).message);
+    if (action === "select-squad-player") FMG.pushNotification(FMG.selectSquadPlayer(FMG.gameState, target.dataset.playerId).message);
+    if (action === "set-squad-filter") FMG.setSquadView(FMG.gameState, "filter", target.dataset.filter);
+    if (action === "set-squad-sort") FMG.setSquadView(FMG.gameState, "sort", target.dataset.sort);
+    if (action === "renew-contract") {
+      const player = FMG.gameState.players.find((item) => item.id === target.dataset.playerId);
+      FMG.pushNotification(FMG.renewPlayerContract(FMG.gameState, target.dataset.playerId, {
+        role: player ? player.squadRole : "rotation",
+        years: 3
+      }).message);
+    }
     if (action === "train-squad") FMG.pushNotification(FMG.trainUserSquad(FMG.gameState).message);
     if (action === "new-season") FMG.pushNotification(FMG.startNewSeason().message);
     if (action === "buy-player") FMG.pushNotification(FMG.buyPlayer(FMG.gameState, target.dataset.playerId).message);

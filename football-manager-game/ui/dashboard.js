@@ -101,6 +101,21 @@
           }
         </div>
       </section>
+      <section class="card">
+        <div class="section-title"><h2>Movimiento rival</h2><span class="chip">IA clubes</span></div>
+        <div class="log-list">
+          ${
+            state.rivalAI && state.rivalAI.log && state.rivalAI.log.length
+              ? state.rivalAI.log.slice(0, 8).map((entry) => `
+                <div class="log-item">
+                  <strong>${FMG.escapeHtml(entry.teamName)} | ${FMG.escapeHtml(entry.title)}</strong>
+                  <p class="muted">Semana ${entry.week}</p>
+                  <p class="muted">${FMG.escapeHtml(entry.detail)}</p>
+                </div>`).join("")
+              : `<div class="empty-state">Los clubes rivales aun no registran movimientos.</div>`
+          }
+        </div>
+      </section>
     `;
   };
 })();

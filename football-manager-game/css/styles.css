@@ -239,6 +239,45 @@ button:disabled {
 .compact-control .button-row button { padding: 10px 12px; }
 .tactical-table .table-row { grid-template-columns: 1fr 1fr 1fr; }
 
+.player-profile { grid-column: 1 / -1; }
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.attribute-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.attribute-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 42px;
+  align-items: center;
+  gap: 10px;
+}
+
+.attribute-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(31, 42, 31, 0.08);
+  overflow: hidden;
+}
+
+.attribute-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), var(--primary-2));
+}
+
+.profile-meta { margin-top: 12px; }
+.profile-history { margin-top: 18px; }
+
 .event-goal {
   border-color: rgba(15, 107, 59, 0.36);
   background: rgba(15, 107, 59, 0.08);
@@ -331,4 +370,5 @@ button:disabled {
   .table-row { grid-template-columns: 36px 1fr repeat(4, 46px); font-size: 13px; }
   .list-row, .match-score { grid-template-columns: 1fr; flex-direction: column; }
   .live-scoreboard, .sub-grid { grid-template-columns: 1fr; }
+  .profile-grid { grid-template-columns: 1fr; }
 }

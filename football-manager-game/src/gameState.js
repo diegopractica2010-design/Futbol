@@ -11,7 +11,7 @@
   };
 
   FMG.gameState = {
-    version: 4,
+    version: 8,
     initialized: false,
     route: FMG.ROUTES.dashboard,
     selectionMode: true,
@@ -33,12 +33,39 @@
     standings: [],
     market: {
       listings: [],
+      negotiations: [],
+      incomingOffers: [],
+      transferHistory: [],
       refreshCost: 2500000,
       windowOpen: true
     },
     tactics: {
       teamSettings: {},
       trainingUsedWeek: 0
+    },
+    squadView: {
+      selectedPlayerId: null,
+      filter: "all",
+      sort: "overall"
+    },
+    rivalAI: {
+      log: [],
+      budgets: {},
+      profiles: {}
+    },
+    competitions: {
+      nationalCup: null,
+      superCup: null,
+      international: null,
+      rankings: {
+        scorers: [],
+        shooters: [],
+        cards: [],
+        keepers: []
+      },
+      qualification: [],
+      relegation: null,
+      prizeLog: []
     },
     finances: {
       balance: 0,

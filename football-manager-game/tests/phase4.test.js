@@ -37,7 +37,7 @@ const players = JSON.parse(fs.readFileSync(path.join(root, "data/players.json"),
 FMG.initializeGame(teams, players);
 FMG.selectClub("colo-colo");
 
-assert.equal(FMG.gameState.version, 4, "fase 4 debe usar estado version 4");
+assert.ok(FMG.gameState.version >= 4, "fase 4 debe usar estado versionado desde 4");
 
 const defaultPlan = FMG.getTeamPlan(FMG.gameState, "colo-colo");
 assert.equal(defaultPlan.mentality, "balanced", "debe migrar mentalidad por defecto");
@@ -136,7 +136,7 @@ delete parsed.tactics.teamSettings["colo-colo"].mentality;
 delete parsed.tactics.teamSettings["colo-colo"].playerRoles;
 localStorage.data[FMG.STORAGE_KEY] = JSON.stringify(parsed);
 assert.equal(FMG.loadGame().ok, true, "debe cargar save anterior y migrar tacticas");
-assert.equal(FMG.gameState.version, 4, "save antiguo debe migrar a version 4");
+assert.ok(FMG.gameState.version >= 4, "save antiguo debe migrar a version 4 o superior");
 assert.ok(FMG.getTeamPlan(FMG.gameState, "colo-colo").playerRoles.DEF, "save migrado debe tener roles");
 
 console.log("Phase 4 tests passed");

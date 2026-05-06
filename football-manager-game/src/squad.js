@@ -60,6 +60,61 @@
     takeRisks: { label: "Arriesgar", possession: -0.4, attack: 0.9, risk: 0.8, fatigue: 0.3 }
   };
 
+  FMG.SQUAD_ROLES = {
+    key: { label: "Figura", expectedStarts: 0.78, morale: 2 },
+    starter: { label: "Titular", expectedStarts: 0.58, morale: 1 },
+    rotation: { label: "Rotacion", expectedStarts: 0.34, morale: 0 },
+    backup: { label: "Suplente", expectedStarts: 0.16, morale: -1 },
+    youth: { label: "Juvenil", expectedStarts: 0.08, morale: 0 }
+  };
+
+  const PERSONALITIES = ["Profesional", "Ambicioso", "Leal", "Competitivo", "Volatil"];
+
+  function seededValue(player, salt) {
+    const source = `${player.id}-${player.name}-${salt}`;
+    let hash = 0;
+    for (let index = 0; index < source.length; index += 1) {
+      hash = (hash * 31 + source.charCodeAt(index)) % 9973;
+    }
+    return hash;
+  }
+
+  function attributeBase(player, name, index) {
+    const variance = (seededValue(player, name) % 13) - 6;
+    const positionBoosts = {
+      POR: { defense: 10, physical: 3, mentality: 4, shooting: -12 },
+      DEF: { defense: 9, physical: 4, shooting: -5 },
+      MED: { passing: 8, technique: 5, mentality: 4 },
+      EXT: { speed: 8, technique: 5, shooting: 2, defense: -4 },
+      DEL: { shooting: 10, technique: 3, speed: 2, defense: -7 }
+    };
+    const boost = positionBoosts[player.position]?.[name] || 0;
+    return FMG.clamp(Math.round(player.overall + boost + variance + (index % 3) - 1), 35, 95);
+  }
+
+  function ensureDetailedAttributes(player, index) {
+    player.attributes = player.attributes || {};
+    ["speed", "passing", "shooting", "defense", "physical", "technique", "mentality"].forEach((name) => {
+      if (!Number.isFinite(player.attributes[name])) {
+        player.attributes[name] = attributeBase(player, name, index);
+      }
+    });
+  }
+
+  function defaultSquadRole(player) {
+    if (player.age <= 21 && player.overall < 70) return "youth";
+    if (player.overall >= 77) return "key";
+    if (player.overall >= 72) return "starter";
+    if (player.overall >= 68) return "rotation";
+    return "backup";
+  }
+
+  function addMoraleEntry(player, reason, amount) {
+    player.moraleLog = player.moraleLog || [];
+    player.moraleLog.unshift({ week: FMG.gameState?.currentWeek || 0, reason, amount });
+    player.moraleLog = player.moraleLog.slice(0, 6);
+  }
+
   function defaultPlayerRoles() {
     return { POR: "balanced", DEF: "defensive", MED: "support", EXT: "attacking", DEL: "attacking" };
   }
@@ -118,9 +173,21 @@
       player.injuredWeeks = newSeason ? 0 : player.injuredWeeks || 0;
       player.suspendedWeeks = newSeason ? 0 : player.suspendedWeeks || 0;
       player.seasonStats = newSeason || !player.seasonStats
-        ? { appearances: 0, goals: 0, injuries: 0, cards: 0, shots: 0 }
+        ? { appearances: 0, starts: 0, minutes: 0, goals: 0, injuries: 0, cards: 0, shots: 0 }
         : player.seasonStats;
+      player.seasonStats.appearances = player.seasonStats.appearances || 0;
+      player.seasonStats.starts = player.seasonStats.starts || 0;
+      player.seasonStats.minutes = player.seasonStats.minutes || 0;
       player.seasonStats.shots = player.seasonStats.shots || 0;
+      ensureDetailedAttributes(player, index);
+      player.squadRole = player.squadRole || defaultSquadRole(player);
+      player.personality = player.personality || PERSONALITIES[seededValue(player, "personality") % PERSONALITIES.length];
+      player.leadership = Number.isFinite(player.leadership) ? player.leadership : FMG.clamp(Math.round(player.attributes.mentality * 0.7 + player.age * 0.8 + (seededValue(player, "leadership") % 9) - 4), 35, 95);
+      player.happiness = Number.isFinite(player.happiness) ? player.happiness : FMG.clamp(player.morale + FMG.SQUAD_ROLES[player.squadRole].morale, 0, 100);
+      player.moraleReason = player.moraleReason || "Inicio de temporada";
+      player.moraleLog = player.moraleLog || [{ week: 0, reason: player.moraleReason, amount: 0 }];
+      player.injuryHistory = newSeason ? (player.injuryHistory || []) : player.injuryHistory || [];
+      player.retired = Boolean(player.retired);
     });
   };
 
@@ -131,6 +198,12 @@
       const defaultFormation = index % 3 === 0 ? "4-3-3" : index % 3 === 1 ? "4-4-2" : "3-5-2";
       const current = state.tactics.teamSettings[team.id] || {};
       state.tactics.teamSettings[team.id] = normalizeTeamPlan(current, current.formation || defaultFormation);
+      if (!state.tactics.teamSettings[team.id].captainId) {
+        const leaders = state.players
+          .filter((player) => player.teamId === team.id && !player.retired)
+          .sort((left, right) => right.leadership - left.leadership);
+        state.tactics.teamSettings[team.id].captainId = leaders[0]?.id || null;
+      }
       FMG.autoSelectLineup(state, team.id);
     });
   };
@@ -145,6 +218,7 @@
   FMG.getAvailablePlayers = function (players, teamId) {
     return players.filter((player) =>
       player.teamId === teamId &&
+      !player.retired &&
       (player.injuredWeeks || 0) <= 0 &&
       (player.suspendedWeeks || 0) <= 0
     );
@@ -206,6 +280,91 @@
     const plan = FMG.getTeamPlan(state, state.userTeamId);
     plan.instructions[playerId] = instruction;
     return { ok: true, message: `${player.name}: ${FMG.INDIVIDUAL_INSTRUCTIONS[instruction].label}.` };
+  };
+
+  FMG.setSquadRole = function (state, playerId, role) {
+    if (!FMG.SQUAD_ROLES[role]) return { ok: false, message: "Rol de plantilla no disponible." };
+    const player = state.players.find((item) => item.id === playerId && item.teamId === state.userTeamId && !item.retired);
+    if (!player) return { ok: false, message: "Jugador no disponible." };
+    player.squadRole = role;
+    player.morale = FMG.clamp(player.morale + FMG.SQUAD_ROLES[role].morale, 0, 100);
+    player.moraleReason = `Rol definido: ${FMG.SQUAD_ROLES[role].label}`;
+    addMoraleEntry(player, player.moraleReason, FMG.SQUAD_ROLES[role].morale);
+    return { ok: true, message: `${player.name} queda como ${FMG.SQUAD_ROLES[role].label.toLowerCase()}.` };
+  };
+
+  FMG.setCaptain = function (state, playerId) {
+    const player = state.players.find((item) => item.id === playerId && item.teamId === state.userTeamId && !item.retired);
+    if (!player) return { ok: false, message: "Jugador no disponible." };
+    FMG.getTeamPlan(state, state.userTeamId).captainId = player.id;
+    player.morale = FMG.clamp(player.morale + 3, 0, 100);
+    player.moraleReason = "Nombrado capitan";
+    addMoraleEntry(player, player.moraleReason, 3);
+    return { ok: true, message: `${player.name} es el capitan del equipo.` };
+  };
+
+  FMG.selectSquadPlayer = function (state, playerId) {
+    const player = state.players.find((item) => item.id === playerId && item.teamId === state.userTeamId && !item.retired);
+    if (!player) return { ok: false, message: "Jugador no disponible." };
+    state.squadView = state.squadView || { selectedPlayerId: null, filter: "all", sort: "overall" };
+    state.squadView.selectedPlayerId = player.id;
+    return { ok: true, message: `Ficha abierta: ${player.name}.` };
+  };
+
+  FMG.setSquadView = function (state, key, value) {
+    state.squadView = state.squadView || { selectedPlayerId: null, filter: "all", sort: "overall" };
+    if (key === "filter" && !["all", "POR", "DEF", "MED", "EXT", "DEL"].includes(value)) return { ok: false, message: "Filtro no disponible." };
+    if (key === "sort" && !["overall", "age", "morale", "minutes", "potential"].includes(value)) return { ok: false, message: "Orden no disponible." };
+    state.squadView[key] = value;
+    return { ok: true, message: "Vista de plantilla actualizada." };
+  };
+
+  FMG.updateSquadHappiness = function (state) {
+    const completed = Math.max(1, state.completedWeeks || 1);
+    state.players.filter((player) => player.teamId === state.userTeamId && !player.retired).forEach((player) => {
+      const role = FMG.SQUAD_ROLES[player.squadRole] || FMG.SQUAD_ROLES.rotation;
+      const startRatio = (player.seasonStats?.starts || 0) / completed;
+      const gap = startRatio - role.expectedStarts;
+      const adjustment = gap < -0.18 ? -4 : gap > 0.18 ? 3 : 1;
+      player.happiness = FMG.clamp(player.happiness + adjustment, 0, 100);
+      player.morale = FMG.clamp(player.morale + Math.sign(adjustment), 0, 100);
+      player.moraleReason = adjustment < 0 ? "Quiere mas minutos" : adjustment > 1 ? "Conforme con su rol" : "Semana estable";
+      addMoraleEntry(player, player.moraleReason, adjustment);
+    });
+  };
+
+  FMG.progressPlayersForNewSeason = function (state) {
+    const retired = [];
+    state.players.forEach((player) => {
+      if (player.retired) return;
+      const minutesFactor = Math.min(1, (player.seasonStats?.minutes || 0) / 1800);
+      const youngGrowth = player.age <= 24 && player.overall < player.potential && Math.random() < 0.18 + minutesFactor * 0.32;
+      const veteranDecline = player.age >= 32 && Math.random() < 0.25 + (player.age - 32) * 0.04;
+      if (youngGrowth) {
+        player.overall += 1;
+        Object.keys(player.attributes || {}).forEach((key) => {
+          if (Math.random() < 0.38) player.attributes[key] = FMG.clamp(player.attributes[key] + 1, 35, 99);
+        });
+        player.moraleReason = "Progreso por desarrollo";
+        addMoraleEntry(player, player.moraleReason, 2);
+      }
+      if (veteranDecline) {
+        player.overall = Math.max(45, player.overall - 1);
+        Object.keys(player.attributes || {}).forEach((key) => {
+          if (Math.random() < 0.28) player.attributes[key] = FMG.clamp(player.attributes[key] - 1, 30, 99);
+        });
+      }
+      if (player.age >= 36 && Math.random() < 0.3 + (player.age - 36) * 0.12) {
+        player.retired = true;
+        player.retiredSeason = state.seasonNumber;
+        retired.push(player);
+      }
+    });
+    retired.forEach((player) => {
+      state.eventsLog.unshift({ week: state.currentWeek, title: "Retiro profesional", detail: `${player.name} anuncio su retiro del futbol.` });
+    });
+    state.eventsLog = state.eventsLog.slice(0, 12);
+    return retired;
   };
 
   FMG.getTacticalMatchProfile = function (state, teamId) {
@@ -286,30 +445,37 @@
     const allEvents = [...result.homeEvents, ...result.awayEvents];
     [result.homeTeamId, result.awayTeamId].forEach((teamId) => {
       FMG.getMatchSquad(state, teamId).forEach((player) => {
-        player.seasonStats = player.seasonStats || { appearances: 0, goals: 0, injuries: 0, cards: 0 };
+        player.seasonStats = player.seasonStats || { appearances: 0, starts: 0, minutes: 0, goals: 0, injuries: 0, cards: 0, shots: 0 };
         player.seasonStats.appearances += 1;
+        player.seasonStats.starts += 1;
+        player.seasonStats.minutes += 90;
       });
     });
     allEvents.forEach((event) => {
       const player = state.players.find((item) => item.name === event.scorer);
       if (player) {
-        player.seasonStats = player.seasonStats || { appearances: 0, goals: 0, injuries: 0, cards: 0 };
+        player.seasonStats = player.seasonStats || { appearances: 0, starts: 0, minutes: 0, goals: 0, injuries: 0, cards: 0, shots: 0 };
         player.seasonStats.goals += 1;
+        player.morale = FMG.clamp(player.morale + 3, 0, 100);
+        player.moraleReason = "Anoto en partido oficial";
+        addMoraleEntry(player, player.moraleReason, 3);
       }
     });
     (result.timeline || []).filter((event) => event.type === "shot" || event.type === "shot-on-target" || event.type === "goal").forEach((event) => {
       const player = state.players.find((item) => item.id === event.playerId);
       if (player) {
-        player.seasonStats = player.seasonStats || { appearances: 0, goals: 0, injuries: 0, cards: 0, shots: 0 };
+        player.seasonStats = player.seasonStats || { appearances: 0, starts: 0, minutes: 0, goals: 0, injuries: 0, cards: 0, shots: 0 };
         player.seasonStats.shots = (player.seasonStats.shots || 0) + 1;
       }
     });
     (result.cards || []).forEach((card) => {
       const player = state.players.find((item) => item.id === card.playerId);
       if (player) {
-        player.seasonStats = player.seasonStats || { appearances: 0, goals: 0, injuries: 0, cards: 0, shots: 0 };
+        player.seasonStats = player.seasonStats || { appearances: 0, starts: 0, minutes: 0, goals: 0, injuries: 0, cards: 0, shots: 0 };
         player.seasonStats.cards += 1;
         if (card.color === "red") player.suspendedWeeks = Math.max(player.suspendedWeeks || 0, 1);
+        player.moraleReason = card.color === "red" ? "Expulsado" : "Amonestado";
+        addMoraleEntry(player, player.moraleReason, card.color === "red" ? -3 : -1);
       }
     });
     (result.injuries || []).forEach((injury) => {
@@ -317,8 +483,13 @@
       if (player) {
         player.injuredWeeks = Math.max(player.injuredWeeks || 0, injury.duration);
         player.energy = FMG.clamp(player.energy - 20, 20, 100);
-        player.seasonStats = player.seasonStats || { appearances: 0, goals: 0, injuries: 0, cards: 0, shots: 0 };
+        player.seasonStats = player.seasonStats || { appearances: 0, starts: 0, minutes: 0, goals: 0, injuries: 0, cards: 0, shots: 0 };
         player.seasonStats.injuries += 1;
+        player.injuryHistory = player.injuryHistory || [];
+        player.injuryHistory.unshift({ week: result.week || state.currentWeek, duration: injury.duration, detail: "Lesion durante partido" });
+        player.injuryHistory = player.injuryHistory.slice(0, 8);
+        player.moraleReason = "Lesionado";
+        addMoraleEntry(player, player.moraleReason, -4);
       }
     });
   };

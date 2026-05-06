@@ -72,6 +72,146 @@
     return sorted[0] || null;
   }
 
+  function ensureCompetitions(state) {
+    state.competitions = state.competitions || {};
+    state.competitions.nationalCup = state.competitions.nationalCup || null;
+    state.competitions.superCup = state.competitions.superCup || null;
+    state.competitions.international = state.competitions.international || null;
+    state.competitions.rankings = state.competitions.rankings || { scorers: [], shooters: [], cards: [], keepers: [] };
+    state.competitions.qualification = state.competitions.qualification || [];
+    state.competitions.relegation = state.competitions.relegation || null;
+    state.competitions.prizeLog = state.competitions.prizeLog || [];
+  }
+
+  function knockoutWinner(state, firstTeamId, secondTeamId, competitionName, roundName) {
+    const homeTeam = state.teams.find((team) => team.id === firstTeamId);
+    const awayTeam = state.teams.find((team) => team.id === secondTeamId);
+    const result = FMG.simulateMatch({ homeTeam, awayTeam, players: state.players, state });
+    let winnerId = result.homeGoals > result.awayGoals ? firstTeamId : result.awayGoals > result.homeGoals ? secondTeamId : null;
+    if (!winnerId) {
+      const homeStrength = FMG.computeTeamStrength(homeTeam, state.players, state);
+      const awayStrength = FMG.computeTeamStrength(awayTeam, state.players, state);
+      winnerId = homeStrength + FMG.randomInt(0, 8) >= awayStrength + FMG.randomInt(0, 8) ? firstTeamId : secondTeamId;
+    }
+    return {
+      competitionName,
+      roundName,
+      homeTeamId: firstTeamId,
+      awayTeamId: secondTeamId,
+      homeTeamName: homeTeam.name,
+      awayTeamName: awayTeam.name,
+      homeGoals: result.homeGoals,
+      awayGoals: result.awayGoals,
+      winnerTeamId: winnerId,
+      winnerName: state.teams.find((team) => team.id === winnerId).name
+    };
+  }
+
+  function simulateKnockout(state, entrants, competitionName) {
+    let current = entrants.map((team) => team.id).filter(Boolean);
+    if (current.length % 2 !== 0) current = current.slice(0, -1);
+    const rounds = [];
+    while (current.length > 1) {
+      const roundName = current.length > 4 ? "Cuartos" : current.length > 2 ? "Semifinal" : "Final";
+      const next = [];
+      const matches = [];
+      const paired = current.length % 2 === 0 ? current : current.slice(0, -1);
+      if (paired.length !== current.length) next.push(current[current.length - 1]);
+      for (let index = 0; index < paired.length; index += 2) {
+        const match = knockoutWinner(state, paired[index], paired[index + 1], competitionName, roundName);
+        matches.push(match);
+        next.push(match.winnerTeamId);
+      }
+      rounds.push({ name: roundName, matches });
+      current = next;
+    }
+    return { rounds, championTeamId: current[0], championName: state.teams.find((team) => team.id === current[0]).name };
+  }
+
+  function updateCompetitionRankings(state) {
+    ensureCompetitions(state);
+    const activePlayers = state.players.filter((player) => !player.retired);
+    state.competitions.rankings = {
+      scorers: [...activePlayers].sort((left, right) => (right.seasonStats?.goals || 0) - (left.seasonStats?.goals || 0)).slice(0, 10).map((player) => ({
+        playerId: player.id,
+        name: player.name,
+        teamName: state.teams.find((team) => team.id === player.teamId)?.name || "Libre",
+        value: player.seasonStats?.goals || 0
+      })),
+      shooters: [...activePlayers].sort((left, right) => (right.seasonStats?.shots || 0) - (left.seasonStats?.shots || 0)).slice(0, 10).map((player) => ({
+        playerId: player.id,
+        name: player.name,
+        teamName: state.teams.find((team) => team.id === player.teamId)?.name || "Libre",
+        value: player.seasonStats?.shots || 0
+      })),
+      cards: [...activePlayers].sort((left, right) => (right.seasonStats?.cards || 0) - (left.seasonStats?.cards || 0)).slice(0, 10).map((player) => ({
+        playerId: player.id,
+        name: player.name,
+        teamName: state.teams.find((team) => team.id === player.teamId)?.name || "Libre",
+        value: player.seasonStats?.cards || 0
+      })),
+      keepers: [...activePlayers].filter((player) => player.position === "POR").sort((left, right) => (right.seasonStats?.appearances || 0) - (left.seasonStats?.appearances || 0)).slice(0, 8).map((player) => ({
+        playerId: player.id,
+        name: player.name,
+        teamName: state.teams.find((team) => team.id === player.teamId)?.name || "Libre",
+        value: player.seasonStats?.appearances || 0
+      }))
+    };
+  }
+
+  function awardPrize(state, label, amount) {
+    FMG.registerFinanceEntry(state.finances, amount >= 0 ? "income" : "expense", label, amount);
+    state.competitions.prizeLog.unshift({ week: state.currentWeek, label, amount });
+    state.competitions.prizeLog = state.competitions.prizeLog.slice(0, 10);
+  }
+
+  function completeSeasonCompetitions(state) {
+    ensureCompetitions(state);
+    const sorted = FMG.sortStandings(state.standings);
+    const cupEntrants = [...state.teams].sort((left, right) => right.form - left.form).slice(0, 8);
+    const nationalCup = simulateKnockout(state, cupEntrants, "Copa Chile");
+    state.competitions.nationalCup = { seasonNumber: state.seasonNumber, ...nationalCup };
+
+    const internationalEntrants = sorted.slice(0, Math.min(4, sorted.length)).map((entry) => state.teams.find((team) => team.id === entry.teamId));
+    state.competitions.international = {
+      seasonNumber: state.seasonNumber,
+      ...simulateKnockout(state, internationalEntrants.length % 2 === 0 ? internationalEntrants : internationalEntrants.slice(0, -1), "Copa Internacional")
+    };
+
+    state.competitions.qualification = sorted.map((entry, index) => ({
+      teamId: entry.teamId,
+      teamName: entry.name,
+      position: index + 1,
+      competition: index === 0 ? "Copa Libertadores" : index <= 2 ? "Copa Sudamericana" : "Liga local"
+    }));
+    const bottom = sorted[sorted.length - 1];
+    state.competitions.relegation = {
+      relegatedTeamId: bottom.teamId,
+      relegatedTeamName: bottom.name,
+      promotedTeamId: `ascenso-${state.seasonNumber + 1}`,
+      promotedTeamName: `Deportes del Valle ${state.seasonNumber + 1}`
+    };
+
+    const userPosition = sorted.findIndex((entry) => entry.teamId === state.userTeamId) + 1;
+    const leaguePrize = userPosition === 1 ? 38000000 : userPosition <= 3 ? 22000000 : userPosition <= 5 ? 12000000 : 5000000;
+    awardPrize(state, `Premio liga posicion ${userPosition}`, leaguePrize);
+    if (state.competitions.nationalCup.championTeamId === state.userTeamId) awardPrize(state, "Premio campeon Copa Chile", 18000000);
+    if (state.competitions.international.championTeamId === state.userTeamId) awardPrize(state, "Premio campeon internacional", 26000000);
+    updateCompetitionRankings(state);
+  }
+
+  function playSuperCup(state) {
+    ensureCompetitions(state);
+    const previous = state.seasonHistory[0];
+    const championId = previous?.championTeamId || FMG.sortStandings(state.standings)[0]?.teamId || state.teams[0].id;
+    const cupChampionId = state.competitions.nationalCup?.championTeamId || state.teams.find((team) => team.id !== championId)?.id;
+    if (!championId || !cupChampionId || championId === cupChampionId) return null;
+    const match = knockoutWinner(state, championId, cupChampionId, "Supercopa", "Final");
+    state.competitions.superCup = { seasonNumber: state.seasonNumber, match, championTeamId: match.winnerTeamId, championName: match.winnerName };
+    if (match.winnerTeamId === state.userTeamId) awardPrize(state, "Premio Supercopa", 9000000);
+    return state.competitions.superCup;
+  }
+
   function createSeasonRecord(state) {
     const champion = state.champion || getChampion(state);
     const userStanding = state.standings.find((entry) => entry.teamId === state.userTeamId);
@@ -79,6 +219,8 @@
       seasonNumber: state.seasonNumber,
       championTeamId: champion ? champion.teamId : null,
       championName: champion ? champion.name : "Sin campeon",
+      cupChampionName: state.competitions?.nationalCup?.championName || "Sin campeon",
+      internationalChampionName: state.competitions?.international?.championName || "Sin campeon",
       userTeamId: state.userTeamId,
       userTeamName: state.userClub ? state.userClub.name : "Sin club",
       userPosition: state.standings.findIndex((entry) => entry.teamId === state.userTeamId) + 1,
@@ -102,6 +244,7 @@
     state.players.forEach((player) => {
       player.energy = FMG.clamp(player.energy + FMG.randomInt(4, 8), 0, 100);
     });
+    FMG.runRivalAIWeek(state, { beforeMatches: true });
     state.teams.forEach((team) => FMG.autoSelectLineup(state, team.id));
   }
 
@@ -138,11 +281,15 @@
 
     const event = FMG.applyWeeklyEvent(state);
     const financeReport = FMG.processWeeklyFinances(state);
+    FMG.generateIncomingOffers(state);
+    FMG.runRivalAIWeek(state, { afterMatches: true });
     state.teams.forEach((team) => FMG.autoSelectLineup(state, team.id));
 
     state.seasonLog.unshift({ week: state.currentWeek, headline: FMG.financeHeadline(financeReport), event });
     state.seasonLog = state.seasonLog.slice(0, 10);
     state.completedWeeks = state.fixtures.filter((fixture) => fixture.played).length;
+    FMG.updateSquadHappiness(state);
+    updateCompetitionRankings(state);
 
     const nextFixture = getNextUnplayedFixture(state);
     if (nextFixture) {
@@ -150,6 +297,7 @@
     } else {
       state.seasonComplete = true;
       state.champion = getChampion(state);
+      completeSeasonCompetitions(state);
       state.seasonHistory.unshift(createSeasonRecord(state));
       state.seasonHistory = state.seasonHistory.slice(0, 8);
     }
@@ -167,10 +315,13 @@
 
   function reviveState(state) {
     const revived = FMG.deepClone(state);
-    revived.version = Math.max(revived.version || 1, 4);
+    revived.version = Math.max(revived.version || 1, 8);
     revived.route = revived.route || FMG.ROUTES.dashboard;
     revived.notifications = revived.notifications || [];
     revived.market = revived.market || { listings: [], refreshCost: 2500000, windowOpen: true };
+    revived.market.negotiations = revived.market.negotiations || [];
+    revived.market.incomingOffers = revived.market.incomingOffers || [];
+    revived.market.transferHistory = revived.market.transferHistory || [];
     revived.market.windowOpen = revived.market.windowOpen !== false;
     revived.finances = revived.finances || { balance: 0, incomeHistory: [], expenseHistory: [], weeklyReport: [] };
     revived.eventsLog = revived.eventsLog || [];
@@ -182,10 +333,14 @@
     revived.seasonComplete = revived.seasonComplete || (revived.fixtures && revived.fixtures.every((fixture) => fixture.played));
     revived.champion = revived.champion || (revived.seasonComplete ? getChampion(revived) : null);
     revived.liveMatch = revived.liveMatch || null;
+    revived.squadView = revived.squadView || { selectedPlayerId: null, filter: "all", sort: "overall" };
+    revived.rivalAI = revived.rivalAI || { log: [], budgets: {}, profiles: {} };
+    ensureCompetitions(revived);
     revived.selectionMode = !revived.userTeamId;
     revived.userClub = revived.teams.find((team) => team.id === revived.userTeamId) || null;
     FMG.preparePlayersForSeason(revived.players);
     FMG.initializeTeamPlans(revived);
+    FMG.initializeRivalAI(revived);
     updateMarketWindow(revived);
     return revived;
   }
@@ -196,7 +351,7 @@
     const seasonPlayers = ensureSquadDepth(teams, players);
     FMG.preparePlayersForSeason(seasonPlayers);
     FMG.replaceGameState({
-      version: 4,
+      version: 8,
       initialized: true,
       route: FMG.ROUTES.dashboard,
       selectionMode: true,
@@ -216,14 +371,26 @@
       liveMatch: null,
       lastResults: [],
       standings: FMG.createInitialStandings(teams),
-      market: { listings: [], refreshCost: 2500000, windowOpen: true },
+      market: { listings: [], negotiations: [], incomingOffers: [], transferHistory: [], refreshCost: 2500000, windowOpen: true },
       tactics: { teamSettings: {}, trainingUsedWeek: 0 },
+      squadView: { selectedPlayerId: null, filter: "all", sort: "overall" },
+      rivalAI: { log: [], budgets: {}, profiles: {} },
+      competitions: {
+        nationalCup: null,
+        superCup: null,
+        international: null,
+        rankings: { scorers: [], shooters: [], cards: [], keepers: [] },
+        qualification: [],
+        relegation: null,
+        prizeLog: []
+      },
       finances: { balance: 0, incomeHistory: [], expenseHistory: [], weeklyReport: [] },
       eventsLog: [],
       notifications: [],
       seasonLog: []
     });
     FMG.initializeTeamPlans(FMG.gameState);
+    FMG.initializeRivalAI(FMG.gameState);
     updateMarketWindow(FMG.gameState);
   };
 
@@ -367,21 +534,24 @@
     state.seasonLog = [];
     state.eventsLog = [];
     state.tactics.trainingUsedWeek = 0;
+    ensureCompetitions(state);
     state.teams.forEach((team) => {
       team.form = FMG.clamp(9 + FMG.randomInt(0, 5), 0, 20);
     });
     state.players.forEach((player) => {
+      if (player.retired) return;
       player.age += 1;
       player.contractYears = Math.max(0, (player.contractYears || 1) - 1);
-      if (player.age <= 24 && player.overall < player.potential && Math.random() < 0.35) player.overall += 1;
-      if (player.age >= 32 && Math.random() < 0.35) player.overall = Math.max(45, player.overall - 1);
       player.energy = FMG.clamp(84 + FMG.randomInt(0, 12), 0, 100);
       player.morale = FMG.clamp(66 + FMG.randomInt(0, 18), 0, 100);
     });
+    FMG.progressPlayersForNewSeason(state);
     FMG.preparePlayersForSeason(state.players, { newSeason: true });
     FMG.initializeTeamPlans(state);
+    FMG.initializeRivalAI(state);
     updateMarketWindow(state);
     FMG.buildTransferMarket(state);
+    playSuperCup(state);
     FMG.pushNotification(`Temporada ${state.seasonNumber} iniciada.`);
     return { ok: true, message: "Nueva temporada iniciada." };
   };
