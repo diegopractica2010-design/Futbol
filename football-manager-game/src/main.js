@@ -94,6 +94,28 @@
       const result = FMG.advanceWeek();
       if (!result.ok) FMG.pushNotification(result.message);
     }
+    if (action === "start-live-match") FMG.pushNotification(FMG.startLiveUserMatch().message);
+    if (action === "advance-live-match") {
+      const result = FMG.advanceLiveUserMatch(FMG.gameState.liveMatch ? FMG.gameState.liveMatch.speed : 5);
+      if (!result.ok) FMG.pushNotification(result.message);
+    }
+    if (action === "advance-live-half") {
+      const liveMatch = FMG.gameState.liveMatch;
+      const target = liveMatch && liveMatch.minute < 45 ? 45 : 90;
+      const result = FMG.advanceLiveUserMatch(liveMatch ? target - liveMatch.minute : 45);
+      if (!result.ok) FMG.pushNotification(result.message);
+    }
+    if (action === "simulate-live-full") {
+      const liveMatch = FMG.gameState.liveMatch;
+      const result = FMG.advanceLiveUserMatch(liveMatch ? 90 - liveMatch.minute : 90);
+      if (!result.ok) FMG.pushNotification(result.message);
+    }
+    if (action === "finish-live-match") FMG.pushNotification(FMG.finishLiveUserMatch().message);
+    if (action === "set-live-speed") FMG.pushNotification(FMG.setLiveMatchSpeed(Number(target.dataset.speed)).message);
+    if (action === "live-tactic") FMG.pushNotification(FMG.applyLiveTacticalShift(target.dataset.mode).message);
+    if (action === "live-substitution") {
+      FMG.pushNotification(FMG.makeLiveSubstitution(target.dataset.outPlayerId, target.dataset.inPlayerId).message);
+    }
     if (action === "save-game") {
       const result = FMG.saveGame();
       if (!result.ok) FMG.pushNotification(result.message);
@@ -107,6 +129,9 @@
     }
     if (action === "set-formation") FMG.pushNotification(FMG.setFormation(FMG.gameState, target.dataset.formation).message);
     if (action === "set-training") FMG.pushNotification(FMG.setTrainingFocus(FMG.gameState, target.dataset.focus).message);
+    if (action === "set-team-tactic") FMG.pushNotification(FMG.setTeamTactic(FMG.gameState, target.dataset.tacticKey, target.dataset.tacticValue).message);
+    if (action === "set-position-role") FMG.pushNotification(FMG.setPositionRole(FMG.gameState, target.dataset.position, target.dataset.role).message);
+    if (action === "set-player-instruction") FMG.pushNotification(FMG.setPlayerInstruction(FMG.gameState, target.dataset.playerId, target.dataset.instruction).message);
     if (action === "train-squad") FMG.pushNotification(FMG.trainUserSquad(FMG.gameState).message);
     if (action === "new-season") FMG.pushNotification(FMG.startNewSeason().message);
     if (action === "buy-player") FMG.pushNotification(FMG.buyPlayer(FMG.gameState, target.dataset.playerId).message);

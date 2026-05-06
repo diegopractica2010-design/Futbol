@@ -14,6 +14,79 @@
     tactics: { label: "Tactico", energy: -3, morale: 1, overallChance: 0.12 }
   };
 
+  FMG.TACTIC_OPTIONS = {
+    mentality: {
+      defensive: { label: "Defensiva", possession: -2, attack: -4, defense: 5, risk: -4, fatigue: -1 },
+      balanced: { label: "Equilibrada", possession: 0, attack: 0, defense: 0, risk: 0, fatigue: 0 },
+      attacking: { label: "Ofensiva", possession: 2, attack: 5, defense: -3, risk: 5, fatigue: 1 }
+    },
+    pressing: {
+      low: { label: "Baja", possession: -2, attack: -1, defense: 2, risk: -2, fatigue: -2, fouls: -2 },
+      medium: { label: "Media", possession: 0, attack: 0, defense: 0, risk: 0, fatigue: 0, fouls: 0 },
+      high: { label: "Alta", possession: 3, attack: 3, defense: -1, risk: 4, fatigue: 3, fouls: 4 }
+    },
+    tempo: {
+      slow: { label: "Pausado", possession: 3, attack: -2, defense: 1, risk: -2, fatigue: -1, chance: -2 },
+      normal: { label: "Normal", possession: 0, attack: 0, defense: 0, risk: 0, fatigue: 0, chance: 0 },
+      fast: { label: "Rapido", possession: -2, attack: 4, defense: -2, risk: 4, fatigue: 2, chance: 4 }
+    },
+    passing: {
+      short: { label: "Corto", possession: 4, attack: -1, defense: 1, risk: -1, fatigue: 0 },
+      mixed: { label: "Mixto", possession: 0, attack: 0, defense: 0, risk: 0, fatigue: 0 },
+      direct: { label: "Directo", possession: -4, attack: 3, defense: -1, risk: 3, fatigue: 1, chance: 2 }
+    },
+    width: {
+      narrow: { label: "Cerrada", possession: 1, attack: -1, defense: 3, risk: -1, fatigue: 0 },
+      balanced: { label: "Media", possession: 0, attack: 0, defense: 0, risk: 0, fatigue: 0 },
+      wide: { label: "Amplia", possession: 1, attack: 3, defense: -2, risk: 3, fatigue: 1, chance: 2 }
+    },
+    defensiveLine: {
+      deep: { label: "Baja", possession: -2, attack: -2, defense: 5, risk: -5, fatigue: -1 },
+      standard: { label: "Media", possession: 0, attack: 0, defense: 0, risk: 0, fatigue: 0 },
+      high: { label: "Alta", possession: 2, attack: 3, defense: -3, risk: 6, fatigue: 2, fouls: 2 }
+    },
+    role: {
+      balanced: { label: "Equilibrado", attack: 0, defense: 0, risk: 0, fatigue: 0 },
+      attacking: { label: "Ataque", attack: 1.4, defense: -0.7, risk: 0.8, fatigue: 0.5 },
+      defensive: { label: "Defensa", attack: -0.8, defense: 1.3, risk: -0.8, fatigue: 0.2 },
+      support: { label: "Apoyo", possession: 0.9, attack: 0.4, defense: 0.4, risk: -0.2, fatigue: 0.3 }
+    }
+  };
+
+  FMG.INDIVIDUAL_INSTRUCTIONS = {
+    none: { label: "Normal", attack: 0, defense: 0, risk: 0, fatigue: 0 },
+    pressMore: { label: "Presionar", attack: 0.4, defense: 0.2, risk: 0.6, fatigue: 0.7, fouls: 0.5 },
+    stayBack: { label: "Guardar posicion", attack: -0.5, defense: 0.8, risk: -0.6, fatigue: -0.2 },
+    takeRisks: { label: "Arriesgar", possession: -0.4, attack: 0.9, risk: 0.8, fatigue: 0.3 }
+  };
+
+  function defaultPlayerRoles() {
+    return { POR: "balanced", DEF: "defensive", MED: "support", EXT: "attacking", DEL: "attacking" };
+  }
+
+  function createDefaultTeamPlan(formation) {
+    return {
+      formation,
+      trainingFocus: "balanced",
+      mentality: "balanced",
+      pressing: "medium",
+      tempo: "normal",
+      passing: "mixed",
+      width: "balanced",
+      defensiveLine: "standard",
+      playerRoles: defaultPlayerRoles(),
+      instructions: {},
+      lineup: []
+    };
+  }
+
+  function normalizeTeamPlan(plan, formation) {
+    const normalized = { ...createDefaultTeamPlan(formation), ...(plan || {}) };
+    normalized.playerRoles = { ...defaultPlayerRoles(), ...(normalized.playerRoles || {}) };
+    normalized.instructions = normalized.instructions || {};
+    return normalized;
+  }
+
   function ratingForSlot(player, slot) {
     let score = player.overall;
     if (player.position === slot) score += 8;
@@ -56,11 +129,8 @@
     state.tactics.teamSettings = state.tactics.teamSettings || {};
     state.teams.forEach((team, index) => {
       const defaultFormation = index % 3 === 0 ? "4-3-3" : index % 3 === 1 ? "4-4-2" : "3-5-2";
-      state.tactics.teamSettings[team.id] = {
-        formation: state.tactics.teamSettings[team.id]?.formation || defaultFormation,
-        trainingFocus: state.tactics.teamSettings[team.id]?.trainingFocus || "balanced",
-        lineup: state.tactics.teamSettings[team.id]?.lineup || []
-      };
+      const current = state.tactics.teamSettings[team.id] || {};
+      state.tactics.teamSettings[team.id] = normalizeTeamPlan(current, current.formation || defaultFormation);
       FMG.autoSelectLineup(state, team.id);
     });
   };
@@ -109,6 +179,72 @@
     plan.formation = formation;
     FMG.autoSelectLineup(state, state.userTeamId);
     return { ok: true, message: `Formacion cambiada a ${formation}.` };
+  };
+
+  FMG.setTeamTactic = function (state, key, value) {
+    if (!FMG.TACTIC_OPTIONS[key] || !FMG.TACTIC_OPTIONS[key][value]) {
+      return { ok: false, message: "Ajuste tactico no disponible." };
+    }
+    const plan = FMG.getTeamPlan(state, state.userTeamId);
+    plan[key] = value;
+    return { ok: true, message: `${FMG.TACTIC_OPTIONS[key][value].label} aplicado.` };
+  };
+
+  FMG.setPositionRole = function (state, position, role) {
+    if (!["POR", "DEF", "MED", "EXT", "DEL"].includes(position) || !FMG.TACTIC_OPTIONS.role[role]) {
+      return { ok: false, message: "Rol no disponible." };
+    }
+    const plan = FMG.getTeamPlan(state, state.userTeamId);
+    plan.playerRoles[position] = role;
+    return { ok: true, message: `Rol ${FMG.TACTIC_OPTIONS.role[role].label.toLowerCase()} asignado a ${position}.` };
+  };
+
+  FMG.setPlayerInstruction = function (state, playerId, instruction) {
+    if (!FMG.INDIVIDUAL_INSTRUCTIONS[instruction]) return { ok: false, message: "Instruccion no disponible." };
+    const player = state.players.find((item) => item.id === playerId && item.teamId === state.userTeamId);
+    if (!player) return { ok: false, message: "Jugador no disponible." };
+    const plan = FMG.getTeamPlan(state, state.userTeamId);
+    plan.instructions[playerId] = instruction;
+    return { ok: true, message: `${player.name}: ${FMG.INDIVIDUAL_INSTRUCTIONS[instruction].label}.` };
+  };
+
+  FMG.getTacticalMatchProfile = function (state, teamId) {
+    const plan = FMG.getTeamPlan(state, teamId);
+    const squad = FMG.getMatchSquad(state, teamId);
+    const profile = {
+      possession: 0,
+      attack: 0,
+      defense: 0,
+      risk: 0,
+      fatigue: 0,
+      fouls: 0,
+      chance: 0,
+      description: []
+    };
+    ["mentality", "pressing", "tempo", "passing", "width", "defensiveLine"].forEach((key) => {
+      const option = FMG.TACTIC_OPTIONS[key][plan[key]] || FMG.TACTIC_OPTIONS[key][Object.keys(FMG.TACTIC_OPTIONS[key])[0]];
+      Object.keys(profile).forEach((metric) => {
+        if (Number.isFinite(option[metric])) profile[metric] += option[metric];
+      });
+      profile.description.push(option.label);
+    });
+    squad.forEach((player) => {
+      const role = FMG.TACTIC_OPTIONS.role[plan.playerRoles[player.position] || "balanced"];
+      const instruction = FMG.INDIVIDUAL_INSTRUCTIONS[plan.instructions[player.id] || "none"];
+      [role, instruction].forEach((source) => {
+        Object.keys(profile).forEach((metric) => {
+          if (Number.isFinite(source[metric])) profile[metric] += source[metric] / 11;
+        });
+      });
+    });
+    profile.possession = FMG.clamp(profile.possession, -12, 12);
+    profile.attack = FMG.clamp(profile.attack, -12, 12);
+    profile.defense = FMG.clamp(profile.defense, -12, 12);
+    profile.risk = FMG.clamp(profile.risk, -14, 14);
+    profile.fatigue = FMG.clamp(profile.fatigue, -5, 8);
+    profile.fouls = FMG.clamp(profile.fouls, -5, 8);
+    profile.chance = FMG.clamp(profile.chance, -6, 8);
+    return profile;
   };
 
   FMG.setTrainingFocus = function (state, focus) {

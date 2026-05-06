@@ -11,7 +11,7 @@
   };
 
   FMG.gameState = {
-    version: 3,
+    version: 4,
     initialized: false,
     route: FMG.ROUTES.dashboard,
     selectionMode: true,
@@ -28,6 +28,7 @@
     userTeamId: null,
     userClub: null,
     currentMatch: null,
+    liveMatch: null,
     lastResults: [],
     standings: [],
     market: {

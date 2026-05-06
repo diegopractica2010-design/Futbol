@@ -2,7 +2,7 @@
 
 Simulador web de gestion futbolistica inspirado en el rol de manager de un club chileno. El proyecto funciona como SPA sin frameworks, con estado centralizado, simulacion semanal de temporada, mercado de fichajes, finanzas, eventos aleatorios y persistencia en `localStorage`.
 
-Estado actual: Fase 2 iniciada. Esta base todavia no es el juego final en cancha; queda como nucleo manager/datos para seguir construyendo fases.
+Estado actual: Fase 4 implementada. Esta base ya permite jugar el partido del usuario minuto a minuto y configurar tacticas profundas, aunque todavia quedan fases de plantilla avanzada, contratos, carrera, IA rival avanzada y contenido final.
 
 ## Caracteristicas
 
@@ -18,6 +18,9 @@ Estado actual: Fase 2 iniciada. Esta base todavia no es el juego final en cancha
 - Formaciones, once titular automatico, entrenamiento semanal, contratos, lesiones y sanciones.
 - Ventanas de mercado al inicio y cierre de temporada.
 - Simulador de partido por eventos con posesion, remates, xG, faltas, tarjetas, lesiones y relato minuto a minuto.
+- Partido en vivo con avance por minutos, velocidades, cambios, ajustes tacticos basicos, momentum y cierre de fecha.
+- Tacticas avanzadas con mentalidad, presion, ritmo, pase, anchura, linea defensiva, roles por posicion e instrucciones individuales.
+- Previa tactica del siguiente rival con comparacion de perfiles.
 
 ## Estructura
 

@@ -3,6 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test": "node tests/phase0.test.js && node tests/phase1.test.js && node tests/phase2.test.js"
+    "test": "node tests/phase0.test.js && node tests/phase1.test.js && node tests/phase2.test.js && node tests/phase3.test.js && node tests/phase4.test.js"
   }
 }

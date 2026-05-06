@@ -92,118 +92,42 @@
     state.market.windowOpen = openWeeks;
   }
 
-  function reviveState(state) {
-    const revived = FMG.deepClone(state);
-    revived.version = Math.max(revived.version || 1, 3);
-    revived.route = revived.route || FMG.ROUTES.dashboard;
-    revived.notifications = revived.notifications || [];
-    revived.market = revived.market || { listings: [], refreshCost: 2500000, windowOpen: true };
-    revived.market.windowOpen = revived.market.windowOpen !== false;
-    revived.finances = revived.finances || { balance: 0, incomeHistory: [], expenseHistory: [], weeklyReport: [] };
-    revived.eventsLog = revived.eventsLog || [];
-    revived.lastResults = revived.lastResults || [];
-    revived.seasonLog = revived.seasonLog || [];
-    revived.seasonNumber = revived.seasonNumber || 1;
-    revived.seasonHistory = revived.seasonHistory || [];
-    revived.completedWeeks = revived.fixtures ? revived.fixtures.filter((fixture) => fixture.played).length : 0;
-    revived.seasonComplete = revived.seasonComplete || (revived.fixtures && revived.fixtures.every((fixture) => fixture.played));
-    revived.champion = revived.champion || (revived.seasonComplete ? getChampion(revived) : null);
-    revived.selectionMode = !revived.userTeamId;
-    revived.userClub = revived.teams.find((team) => team.id === revived.userTeamId) || null;
-    FMG.preparePlayersForSeason(revived.players);
-    FMG.initializeTeamPlans(revived);
-    updateMarketWindow(revived);
-    return revived;
+  function getCurrentFixture(state) {
+    return state.fixtures.find((fixture) => !fixture.played && fixture.week === state.currentWeek) || getNextUnplayedFixture(state);
   }
 
-  FMG.initializeGame = function (teams, players) {
-    FMG.validateSeedData(teams, players);
-    const fixtures = buildSeasonFixtures(teams);
-    const seasonPlayers = ensureSquadDepth(teams, players);
-    FMG.preparePlayersForSeason(seasonPlayers);
-    FMG.replaceGameState({
-      version: 3,
-      initialized: true,
-      route: FMG.ROUTES.dashboard,
-      selectionMode: true,
-      teams: FMG.deepClone(teams),
-      players: seasonPlayers,
-      fixtures,
-      currentWeek: 1,
-      totalWeeks: fixtures.length,
-      completedWeeks: 0,
-      seasonComplete: false,
-      champion: null,
-      seasonNumber: 1,
-      seasonHistory: [],
-      userTeamId: null,
-      userClub: null,
-      currentMatch: null,
-      lastResults: [],
-      standings: FMG.createInitialStandings(teams),
-      market: { listings: [], refreshCost: 2500000, windowOpen: true },
-      tactics: { teamSettings: {}, trainingUsedWeek: 0 },
-      finances: { balance: 0, incomeHistory: [], expenseHistory: [], weeklyReport: [] },
-      eventsLog: [],
-      notifications: [],
-      seasonLog: []
-    });
-    FMG.initializeTeamPlans(FMG.gameState);
-    updateMarketWindow(FMG.gameState);
-  };
-
-  FMG.selectClub = function (teamId) {
-    const team = FMG.gameState.teams.find((item) => item.id === teamId);
-    if (!team) return;
-    FMG.gameState.userTeamId = team.id;
-    FMG.gameState.userClub = team;
-    FMG.gameState.selectionMode = false;
-    FMG.gameState.finances.balance = 0;
-    FMG.registerFinanceEntry(FMG.gameState.finances, "income", "Capital inicial de temporada", team.budget);
-    FMG.autoSelectLineup(FMG.gameState, team.id);
-    FMG.buildTransferMarket(FMG.gameState);
-    FMG.pushNotification(`Tomaste el control de ${team.name}.`);
-  };
-
-  FMG.advanceWeek = function () {
-    const state = FMG.gameState;
-    if (state.seasonComplete) return { ok: false, message: "La temporada ya termino." };
-
-    const currentFixture = state.fixtures.find((fixture) => !fixture.played && fixture.week === state.currentWeek) || getNextUnplayedFixture(state);
-    if (!currentFixture) {
-      state.seasonComplete = true;
-      state.champion = getChampion(state);
-      return { ok: false, message: "No quedan fechas por disputar." };
-    }
+  function prepareWeek(state, currentFixture) {
     state.currentWeek = currentFixture.week;
-
     FMG.tickPlayerAvailability(state);
     state.players.forEach((player) => {
       player.energy = FMG.clamp(player.energy + FMG.randomInt(4, 8), 0, 100);
     });
     state.teams.forEach((team) => FMG.autoSelectLineup(state, team.id));
+  }
 
-    const results = currentFixture.matches.map((match) => {
-      const homeTeam = state.teams.find((team) => team.id === match.homeTeamId);
-      const awayTeam = state.teams.find((team) => team.id === match.awayTeamId);
-      const result = FMG.simulateMatch({ homeTeam, awayTeam, players: state.players, state });
-      result.week = currentFixture.week;
+  function registerMatchIncidents(state, currentFixture, result) {
+    [...(result.cards || []), ...(result.injuries || [])].forEach((incident) => {
+      const isInjury = Boolean(incident.duration);
+      state.eventsLog.unshift({
+        week: currentFixture.week,
+        title: isInjury ? "Lesion de partido" : incident.color === "red" ? "Tarjeta roja" : "Tarjeta amarilla",
+        detail: isInjury
+          ? `${incident.playerName} estara fuera ${incident.duration} semana(s).`
+          : `${incident.playerName} recibe ${incident.color === "red" ? "roja y queda suspendido" : "amarilla"}.`
+      });
+    });
+    state.eventsLog = state.eventsLog.slice(0, 12);
+  }
+
+  function finishFixture(state, currentFixture, results) {
+    results.forEach((result) => {
       FMG.updateStandings(state.standings, result);
       FMG.applyMatchSquadStats(state, result);
-      [...(result.cards || []), ...(result.injuries || [])].forEach((incident) => {
-        const isInjury = Boolean(incident.duration);
-        state.eventsLog.unshift({
-          week: currentFixture.week,
-          title: isInjury ? "Lesion de partido" : incident.color === "red" ? "Tarjeta roja" : "Tarjeta amarilla",
-          detail: isInjury
-            ? `${incident.playerName} estara fuera ${incident.duration} semana(s).`
-            : `${incident.playerName} recibe ${incident.color === "red" ? "roja y queda suspendido" : "amarilla"}.`
-        });
-      });
-      state.eventsLog = state.eventsLog.slice(0, 12);
+      registerMatchIncidents(state, currentFixture, result);
+      const homeTeam = state.teams.find((team) => team.id === result.homeTeamId);
+      const awayTeam = state.teams.find((team) => team.id === result.awayTeamId);
       homeTeam.form = FMG.clamp(homeTeam.form + (result.homeGoals >= result.awayGoals ? 1 : -1), 0, 20);
       awayTeam.form = FMG.clamp(awayTeam.form + (result.awayGoals >= result.homeGoals ? 1 : -1), 0, 20);
-      return result;
     });
 
     currentFixture.played = true;
@@ -239,6 +163,190 @@
         : `Semana de descanso completada. Proximo rival: ${nextOpponent ? nextOpponent.name : "por definir"}.`;
     FMG.pushNotification(message);
     return { ok: true, message: "Fecha simulada correctamente." };
+  }
+
+  function reviveState(state) {
+    const revived = FMG.deepClone(state);
+    revived.version = Math.max(revived.version || 1, 4);
+    revived.route = revived.route || FMG.ROUTES.dashboard;
+    revived.notifications = revived.notifications || [];
+    revived.market = revived.market || { listings: [], refreshCost: 2500000, windowOpen: true };
+    revived.market.windowOpen = revived.market.windowOpen !== false;
+    revived.finances = revived.finances || { balance: 0, incomeHistory: [], expenseHistory: [], weeklyReport: [] };
+    revived.eventsLog = revived.eventsLog || [];
+    revived.lastResults = revived.lastResults || [];
+    revived.seasonLog = revived.seasonLog || [];
+    revived.seasonNumber = revived.seasonNumber || 1;
+    revived.seasonHistory = revived.seasonHistory || [];
+    revived.completedWeeks = revived.fixtures ? revived.fixtures.filter((fixture) => fixture.played).length : 0;
+    revived.seasonComplete = revived.seasonComplete || (revived.fixtures && revived.fixtures.every((fixture) => fixture.played));
+    revived.champion = revived.champion || (revived.seasonComplete ? getChampion(revived) : null);
+    revived.liveMatch = revived.liveMatch || null;
+    revived.selectionMode = !revived.userTeamId;
+    revived.userClub = revived.teams.find((team) => team.id === revived.userTeamId) || null;
+    FMG.preparePlayersForSeason(revived.players);
+    FMG.initializeTeamPlans(revived);
+    updateMarketWindow(revived);
+    return revived;
+  }
+
+  FMG.initializeGame = function (teams, players) {
+    FMG.validateSeedData(teams, players);
+    const fixtures = buildSeasonFixtures(teams);
+    const seasonPlayers = ensureSquadDepth(teams, players);
+    FMG.preparePlayersForSeason(seasonPlayers);
+    FMG.replaceGameState({
+      version: 4,
+      initialized: true,
+      route: FMG.ROUTES.dashboard,
+      selectionMode: true,
+      teams: FMG.deepClone(teams),
+      players: seasonPlayers,
+      fixtures,
+      currentWeek: 1,
+      totalWeeks: fixtures.length,
+      completedWeeks: 0,
+      seasonComplete: false,
+      champion: null,
+      seasonNumber: 1,
+      seasonHistory: [],
+      userTeamId: null,
+      userClub: null,
+      currentMatch: null,
+      liveMatch: null,
+      lastResults: [],
+      standings: FMG.createInitialStandings(teams),
+      market: { listings: [], refreshCost: 2500000, windowOpen: true },
+      tactics: { teamSettings: {}, trainingUsedWeek: 0 },
+      finances: { balance: 0, incomeHistory: [], expenseHistory: [], weeklyReport: [] },
+      eventsLog: [],
+      notifications: [],
+      seasonLog: []
+    });
+    FMG.initializeTeamPlans(FMG.gameState);
+    updateMarketWindow(FMG.gameState);
+  };
+
+  FMG.selectClub = function (teamId) {
+    const team = FMG.gameState.teams.find((item) => item.id === teamId);
+    if (!team) return;
+    FMG.gameState.userTeamId = team.id;
+    FMG.gameState.userClub = team;
+    FMG.gameState.selectionMode = false;
+    FMG.gameState.finances.balance = 0;
+    FMG.registerFinanceEntry(FMG.gameState.finances, "income", "Capital inicial de temporada", team.budget);
+    FMG.autoSelectLineup(FMG.gameState, team.id);
+    FMG.buildTransferMarket(FMG.gameState);
+    FMG.pushNotification(`Tomaste el control de ${team.name}.`);
+  };
+
+  FMG.advanceWeek = function () {
+    const state = FMG.gameState;
+    if (state.seasonComplete) return { ok: false, message: "La temporada ya termino." };
+    if (state.liveMatch && !state.liveMatch.completed) return { ok: false, message: "Hay un partido en vivo pendiente." };
+
+    const currentFixture = getCurrentFixture(state);
+    if (!currentFixture) {
+      state.seasonComplete = true;
+      state.champion = getChampion(state);
+      return { ok: false, message: "No quedan fechas por disputar." };
+    }
+    prepareWeek(state, currentFixture);
+
+    const results = currentFixture.matches.map((match) => {
+      const homeTeam = state.teams.find((team) => team.id === match.homeTeamId);
+      const awayTeam = state.teams.find((team) => team.id === match.awayTeamId);
+      const result = FMG.simulateMatch({ homeTeam, awayTeam, players: state.players, state });
+      result.week = currentFixture.week;
+      return result;
+    });
+    return finishFixture(state, currentFixture, results);
+  };
+
+  FMG.startLiveUserMatch = function () {
+    const state = FMG.gameState;
+    if (state.seasonComplete) return { ok: false, message: "La temporada ya termino." };
+    if (state.liveMatch && !state.liveMatch.completed) return { ok: false, message: "Ya hay un partido en vivo." };
+
+    const currentFixture = getCurrentFixture(state);
+    if (!currentFixture) return { ok: false, message: "No quedan fechas por disputar." };
+    const userMatch = currentFixture.matches.find((match) => match.homeTeamId === state.userTeamId || match.awayTeamId === state.userTeamId);
+    if (!userMatch) return { ok: false, message: "Tu club descansa esta semana." };
+
+    prepareWeek(state, currentFixture);
+    const homeTeam = state.teams.find((team) => team.id === userMatch.homeTeamId);
+    const awayTeam = state.teams.find((team) => team.id === userMatch.awayTeamId);
+    const otherMatches = currentFixture.matches.filter((match) => match !== userMatch);
+    state.liveMatch = FMG.createLiveMatch({ homeTeam, awayTeam, state, week: currentFixture.week, otherMatches });
+    state.route = FMG.ROUTES.matches;
+    FMG.pushNotification(`Partido en vivo iniciado: ${homeTeam.name} vs ${awayTeam.name}.`);
+    return { ok: true, message: "Partido en vivo iniciado." };
+  };
+
+  FMG.finishLiveUserMatch = function () {
+    const state = FMG.gameState;
+    const liveMatch = state.liveMatch;
+    if (!liveMatch) return { ok: false, message: "No hay partido en vivo." };
+    if (!liveMatch.completed) return { ok: false, message: "El partido todavia no termina." };
+
+    const currentFixture = state.fixtures.find((fixture) => !fixture.played && fixture.week === liveMatch.week);
+    if (!currentFixture) return { ok: false, message: "La fecha ya fue cerrada." };
+    const results = liveMatch.otherMatches.map((match) => {
+      const homeTeam = state.teams.find((team) => team.id === match.homeTeamId);
+      const awayTeam = state.teams.find((team) => team.id === match.awayTeamId);
+      const result = FMG.simulateMatch({ homeTeam, awayTeam, players: state.players, state });
+      result.week = currentFixture.week;
+      return result;
+    });
+    liveMatch.result.week = currentFixture.week;
+    results.push(liveMatch.result);
+    state.liveMatch = null;
+    return finishFixture(state, currentFixture, results);
+  };
+
+  FMG.advanceLiveUserMatch = function (minutes) {
+    const result = FMG.advanceLiveMatch(FMG.gameState, minutes);
+    if (result.ok && FMG.gameState.liveMatch && FMG.gameState.liveMatch.completed) {
+      FMG.pushNotification("Final del partido. Cierra la fecha para procesar tabla y finanzas.");
+    }
+    return result;
+  };
+
+  FMG.setLiveMatchSpeed = function (speed) {
+    const liveMatch = FMG.gameState.liveMatch;
+    if (!liveMatch) return { ok: false, message: "No hay partido en vivo." };
+    liveMatch.speed = FMG.clamp(Number(speed) || 5, 1, 30);
+    return { ok: true, message: `Velocidad fijada en ${liveMatch.speed} minutos.` };
+  };
+
+  FMG.applyLiveTacticalShift = function (mode) {
+    const liveMatch = FMG.gameState.liveMatch;
+    if (!liveMatch || liveMatch.completed) return { ok: false, message: "No hay partido en vivo activo." };
+    const userSide = liveMatch.homeTeamId === FMG.gameState.userTeamId ? "home" : "away";
+    const value = mode === "attack" ? 4 : mode === "defend" ? -3 : 0;
+    liveMatch.tacticalBoost[userSide] = value;
+    return { ok: true, message: mode === "attack" ? "El equipo adelanta lineas." : mode === "defend" ? "El equipo protege mejor su area." : "El equipo vuelve al plan equilibrado." };
+  };
+
+  FMG.makeLiveSubstitution = function (outPlayerId, inPlayerId) {
+    const state = FMG.gameState;
+    const liveMatch = state.liveMatch;
+    if (!liveMatch || liveMatch.completed) return { ok: false, message: "No hay partido en vivo activo." };
+    const userSide = liveMatch.homeTeamId === state.userTeamId ? "home" : "away";
+    const lineupKey = userSide === "home" ? "homeLineupIds" : "awayLineupIds";
+    const benchKey = userSide === "home" ? "homeBenchIds" : "awayBenchIds";
+    if (liveMatch.substitutions[userSide] >= 5) return { ok: false, message: "Ya usaste los cinco cambios." };
+    if (!liveMatch[lineupKey].includes(outPlayerId) || !liveMatch[benchKey].includes(inPlayerId)) {
+      return { ok: false, message: "Cambio no disponible." };
+    }
+
+    liveMatch[lineupKey] = liveMatch[lineupKey].map((id) => id === outPlayerId ? inPlayerId : id);
+    liveMatch[benchKey] = liveMatch[benchKey].map((id) => id === inPlayerId ? outPlayerId : id);
+    liveMatch.substitutions[userSide] += 1;
+    const incoming = state.players.find((player) => player.id === inPlayerId);
+    const outgoing = state.players.find((player) => player.id === outPlayerId);
+    if (incoming) incoming.energy = FMG.clamp(incoming.energy + 8, 0, 100);
+    return { ok: true, message: `${incoming ? incoming.name : "Jugador"} entra por ${outgoing ? outgoing.name : "un titular"}.` };
   };
 
   FMG.startNewSeason = function () {
@@ -253,6 +361,7 @@
     state.seasonComplete = false;
     state.champion = null;
     state.currentMatch = null;
+    state.liveMatch = null;
     state.lastResults = [];
     state.standings = FMG.createInitialStandings(state.teams);
     state.seasonLog = [];

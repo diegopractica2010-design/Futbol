@@ -187,6 +187,68 @@ button:disabled {
   margin: 14px 0;
 }
 
+.live-match { overflow: hidden; }
+
+.live-scoreboard {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.momentum {
+  position: relative;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(15, 107, 59, 0.18), rgba(179, 67, 47, 0.18));
+  margin: 8px 0 18px;
+}
+
+.momentum > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), #49a168);
+  transition: width 0.25s ease;
+}
+
+.sub-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 16px;
+}
+
+.tactic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.tactic-control {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--line);
+}
+
+.compact-control .button-row button { padding: 10px 12px; }
+.tactical-table .table-row { grid-template-columns: 1fr 1fr 1fr; }
+
+.event-goal {
+  border-color: rgba(15, 107, 59, 0.36);
+  background: rgba(15, 107, 59, 0.08);
+}
+
+.event-red-card, .event-injury {
+  border-color: rgba(179, 67, 47, 0.34);
+  background: rgba(179, 67, 47, 0.08);
+}
+
 .score { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 900; }
 .match-stats {
   display: grid;
@@ -268,4 +330,5 @@ button:disabled {
   .panel, .card, .selector-card { padding: 18px; border-radius: 22px; }
   .table-row { grid-template-columns: 36px 1fr repeat(4, 46px); font-size: 13px; }
   .list-row, .match-score { grid-template-columns: 1fr; flex-direction: column; }
+  .live-scoreboard, .sub-grid { grid-template-columns: 1fr; }
 }

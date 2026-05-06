@@ -41,7 +41,7 @@ const homeTeam = FMG.gameState.teams[0];
 const awayTeam = FMG.gameState.teams[1];
 const result = FMG.simulateMatch({ homeTeam, awayTeam, players: FMG.gameState.players, state: FMG.gameState });
 
-assert.equal(FMG.gameState.version, 3, "fase 2 debe usar estado version 3");
+assert.ok(FMG.gameState.version >= 3, "fase 2 debe usar estado versionado desde 3");
 assert.ok(result.stats, "el partido debe incluir estadisticas");
 assert.ok(result.timeline.length > 0, "el partido debe incluir relato minuto a minuto");
 assert.ok(Number.isFinite(result.stats.home.xg), "xG local debe ser numerico");
