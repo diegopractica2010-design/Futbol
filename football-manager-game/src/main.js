@@ -1,6 +1,13 @@
 (function () {
   const FMG = (window.FMG = window.FMG || {});
   const app = document.querySelector("#app");
+  let menuAudio = null;
+
+  function ensureMenuAudio() {
+    if (menuAudio || !FMG.Phase23?.StadiumAudio) return;
+    menuAudio = new FMG.Phase23.StadiumAudio();
+    menuAudio.startMenuMusic();
+  }
 
   async function loadSeedData() {
     const [teamsResponse, playersResponse] = await Promise.all([
@@ -56,7 +63,14 @@
       [FMG.ROUTES.news, "Noticias", "Mundo vivo"],
       [FMG.ROUTES.settings, "Config", "Guardado y configuracion"],
       [FMG.ROUTES.phase15, "Jugar v1", "Partido jugable Fase 15"],
-      [FMG.ROUTES.phase16, "Jugar v2", "Framework modular Fase 16"]
+      [FMG.ROUTES.phase16, "Jugar v2", "Framework modular Fase 16"],
+      [FMG.ROUTES.phase17, "Jugar v3", "Animaciones base Fase 17"],
+      [FMG.ROUTES.phase18, "Jugar v4", "IA de partido Fase 18"],
+      [FMG.ROUTES.phase19, "Jugar v5", "Porteros Fase 19"],
+      [FMG.ROUTES.phase20, "Jugar v6", "Camara Broadcast Fase 20"],
+      [FMG.ROUTES.phase21, "Jugar v7", "Estadio Premium Fase 21"],
+      [FMG.ROUTES.phase22, "Jugar v8", "HUD Final Fase 22"],
+      [FMG.ROUTES.phase23, "Jugar v9", "Audio de Partido Fase 23"]
     ];
 
     return `
@@ -75,6 +89,18 @@
       </div>`).join("");
   }
 
+  function syncLiveVisualizer() {
+    const container = document.querySelector("#match-visualizer-container");
+    const liveMatch = FMG.gameState.liveMatch;
+    if (!container || !liveMatch || !FMG.matchVisualController) return;
+
+    const currentCanvas = FMG.matchVisualController.visualizer?.renderer?.domElement;
+    if (!currentCanvas || !container.contains(currentCanvas)) {
+      FMG.matchVisualController.initMatch(container, liveMatch, FMG.gameState);
+    }
+    if (FMG.matchVisualController.syncLiveMatch) FMG.matchVisualController.syncLiveMatch(liveMatch);
+  }
+
   function renderRoute() {
     const helpers = { nextOpponent: FMG.getNextOpponent(), upcomingMatches: FMG.getUpcomingFixture() };
     switch (FMG.gameState.route) {
@@ -91,6 +117,13 @@
       case FMG.ROUTES.table: return FMG.renderTableView(FMG.gameState);
       case FMG.ROUTES.phase15: return FMG.renderPhase15View();
       case FMG.ROUTES.phase16: return FMG.renderPhase16View();
+      case FMG.ROUTES.phase17: return FMG.renderPhase17View();
+      case FMG.ROUTES.phase18: return FMG.renderPhase18View();
+      case FMG.ROUTES.phase19: return FMG.renderPhase19View();
+      case FMG.ROUTES.phase20: return FMG.renderPhase20View();
+      case FMG.ROUTES.phase21: return FMG.renderPhase21View();
+      case FMG.ROUTES.phase22: return FMG.renderPhase22View();
+      case FMG.ROUTES.phase23: return FMG.renderPhase23View();
       default: return FMG.renderDashboard(FMG.gameState, helpers);
     }
   }
@@ -108,6 +141,13 @@
     if (action === "change-route") {
       if (FMG.gameState.route === FMG.ROUTES.phase15) FMG.unmountPhase15();
       if (FMG.gameState.route === FMG.ROUTES.phase16) FMG.unmountPhase16();
+      if (FMG.gameState.route === FMG.ROUTES.phase17) FMG.unmountPhase17();
+      if (FMG.gameState.route === FMG.ROUTES.phase18) FMG.unmountPhase18();
+      if (FMG.gameState.route === FMG.ROUTES.phase19) FMG.unmountPhase19();
+      if (FMG.gameState.route === FMG.ROUTES.phase20) FMG.unmountPhase20();
+      if (FMG.gameState.route === FMG.ROUTES.phase21) FMG.unmountPhase21();
+      if (FMG.gameState.route === FMG.ROUTES.phase22) FMG.unmountPhase22();
+      if (FMG.gameState.route === FMG.ROUTES.phase23) FMG.unmountPhase23();
       FMG.gameState.route = target.dataset.route;
     }
     if (action === "advance-week") {
@@ -150,6 +190,8 @@
     }
     if (action === "set-live-speed") FMG.pushNotification(FMG.setLiveMatchSpeed(Number(target.dataset.speed)).message);
     if (action === "live-tactic") FMG.pushNotification(FMG.applyLiveTacticalShift(target.dataset.mode).message);
+    if (action === "live-team-order") FMG.pushNotification(FMG.setLiveTeamOrder(target.dataset.group, target.dataset.value).message);
+    if (action === "live-player-order") FMG.pushNotification(FMG.setLivePlayerOrder(target.dataset.playerId, target.dataset.order).message);
     if (action === "live-substitution") {
       FMG.pushNotification(FMG.makeLiveSubstitution(target.dataset.outPlayerId, target.dataset.inPlayerId).message);
     }
@@ -254,11 +296,20 @@
     if (action === "sell-player") FMG.pushNotification(FMG.sellPlayer(FMG.gameState, target.dataset.playerId).message);
     if (FMG.handlePhase15Action && FMG.handlePhase15Action(action)) return;
     if (FMG.handlePhase16Action && FMG.handlePhase16Action(action)) return;
+    if (FMG.handlePhase17Action && FMG.handlePhase17Action(action)) return;
+    if (FMG.handlePhase18Action && FMG.handlePhase18Action(action)) return;
+    if (FMG.handlePhase19Action && FMG.handlePhase19Action(action)) return;
+    if (FMG.handlePhase20Action && FMG.handlePhase20Action(action)) return;
+    if (FMG.handlePhase21Action && FMG.handlePhase21Action(action)) return;
+    if (FMG.handlePhase22Action && FMG.handlePhase22Action(action)) return;
+    if (FMG.handlePhase23Action && FMG.handlePhase23Action(action)) return;
     if (action === "dismiss-toast") FMG.dismissNotification(target.dataset.id);
     render();
+    syncLiveVisualizer();
   }
 
   document.addEventListener("click", (event) => {
+    ensureMenuAudio();
     const target = event.target.closest("[data-action]");
     if (target) handleAction(target.dataset.action, target);
   });

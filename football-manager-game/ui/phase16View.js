@@ -44,7 +44,7 @@
         </div>
         <div class="log-item" style="margin-top:14px;">
           <strong>Controles</strong>
-          <p class="muted">Mover: WASD / Flechas &nbsp;|&nbsp; Pase: Z o J &nbsp;|&nbsp; Tiro: X o K &nbsp;|&nbsp; Pausa: P &nbsp;|&nbsp; Reiniciar: R</p>
+          <p class="muted">Mover: WASD / Flechas &nbsp;|&nbsp; Sprint: Shift &nbsp;|&nbsp; Cambio: Q/E &nbsp;|&nbsp; Pase: Z o J &nbsp;|&nbsp; Pase largo: Espacio/L &nbsp;|&nbsp; Entrada: C &nbsp;|&nbsp; Tiro: X o K &nbsp;|&nbsp; Pausa: P &nbsp;|&nbsp; Reiniciar: R</p>
         </div>
       </section>
     `;

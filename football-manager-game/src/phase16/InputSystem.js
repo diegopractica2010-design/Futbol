@@ -48,7 +48,11 @@
   InputSystem.prototype.isDirLeft= function () { return this.isDown("ArrowLeft")  || this.isDown("a"); };
   InputSystem.prototype.isDirRight=function () { return this.isDown("ArrowRight") || this.isDown("d"); };
   InputSystem.prototype.isPass   = function () { return this.isDown("z") || this.isDown("j"); };
+  InputSystem.prototype.isLongPass = function () { return this.isDown(" ") || this.isDown("l") || this.isDown("L"); };
   InputSystem.prototype.isShoot  = function () { return this.isDown("x") || this.isDown("k"); };
+  InputSystem.prototype.isSprint = function () { return this.isDown("Shift"); };
+  InputSystem.prototype.isTackle = function () { return this.isDown("c") || this.isDown("C"); };
+  InputSystem.prototype.isSwitch = function () { return this.isDown("q") || this.isDown("Q") || this.isDown("e") || this.isDown("E"); };
   InputSystem.prototype.isPause  = function () { return this.isDown("p") || this.isDown("P"); };
   InputSystem.prototype.isRestart= function () { return this.isDown("r") || this.isDown("R"); };
 

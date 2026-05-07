@@ -59,6 +59,8 @@
       ],
       // Jugador controlado por el usuario (el más cercano al balón)
       controlled: null,
+      controlledIndex: 4,
+      manualControlTicks: 0,
       keys: {},
       tickCount: 0,
       goalFlash: 0  // frames de flash al marcar gol
@@ -112,19 +114,36 @@
   // ---- Control usuario ----
 
   function updateControlled(state) {
+    if (state.manualControlTicks > 0 && state.userTeam[state.controlledIndex]) {
+      state.manualControlTicks--;
+      state.controlled = state.userTeam[state.controlledIndex];
+      return;
+    }
+
     // El jugador controlado es el más cercano al balón del equipo usuario
     let best = null, bestD = Infinity;
-    state.userTeam.forEach((p) => {
+    state.userTeam.forEach((p, index) => {
       const d = dist(p, state.ball);
-      if (d < bestD) { bestD = d; best = p; }
+      if (d < bestD) { bestD = d; best = p; state.controlledIndex = index; }
     });
     state.controlled = best;
   }
 
   function applyUserInput(state) {
-    const p = state.controlled;
+    let p = state.controlled;
     if (!p) return;
     const k = state.keys;
+
+    if ((k["q"] || k["e"]) && !k["_switchUsed"]) {
+      k["_switchUsed"] = true;
+      const step = k["q"] ? -1 : 1;
+      state.controlledIndex = (state.controlledIndex + step + state.userTeam.length) % state.userTeam.length;
+      state.controlled = state.userTeam[state.controlledIndex];
+      state.manualControlTicks = 120;
+      p = state.controlled;
+    }
+    if (!k["q"] && !k["e"]) k["_switchUsed"] = false;
+
     let dx = 0, dy = 0;
     if (k["ArrowLeft"] || k["a"]) dx -= 1;
     if (k["ArrowRight"] || k["d"]) dx += 1;
@@ -132,21 +151,36 @@
     if (k["ArrowDown"] || k["s"]) dy += 1;
     if (dx !== 0 || dy !== 0) {
       const d = norm(vec(dx, dy));
-      movePlayer(p, d.x, d.y, PLAYER_SPEED);
+      const sprint = (k["Shift"] || k["ShiftLeft"] || k["ShiftRight"]) ? 1.45 : 1;
+      movePlayer(p, d.x, d.y, PLAYER_SPEED * sprint);
     }
 
-    // Pase: Z / J
-    if ((k["z"] || k["j"]) && !k["_passUsed"]) {
+    // Entrada defensiva / intercepcion: C
+    if (k["c"] && !k["_tackleUsed"]) {
+      k["_tackleUsed"] = true;
+      if (dist(p, state.ball) < PLAYER_R + BALL_R + 20) {
+        const dir = norm(sub(vec(FIELD.w, FIELD.h / 2), state.ball));
+        state.ball.vx = dir.x * PASS_POWER * 0.85;
+        state.ball.vy = dir.y * PASS_POWER * 0.85;
+        state.ball.owner = null;
+      }
+    }
+    if (!k["c"]) k["_tackleUsed"] = false;
+
+    // Pase corto: Z / J. Pase largo: Espacio / L.
+    if ((k["z"] || k["j"] || k[" "] || k["l"]) && !k["_passUsed"]) {
       k["_passUsed"] = true;
       const target = nearestTeammate(p, state.userTeam);
       if (target) {
         const dir = norm(sub(target, state.ball));
-        state.ball.vx = dir.x * PASS_POWER;
-        state.ball.vy = dir.y * PASS_POWER;
+        const longPass = k[" "] || k["l"];
+        const error = longPass ? 0.35 : 0.12;
+        state.ball.vx = (dir.x + (Math.random() - 0.5) * error) * PASS_POWER * (longPass ? 1.45 : 1);
+        state.ball.vy = (dir.y + (Math.random() - 0.5) * error) * PASS_POWER * (longPass ? 1.45 : 1);
         state.ball.owner = null;
       }
     }
-    if (!k["z"] && !k["j"]) k["_passUsed"] = false;
+    if (!k["z"] && !k["j"] && !k[" "] && !k["l"]) k["_passUsed"] = false;
 
     // Tiro: X / K
     if ((k["x"] || k["k"]) && !k["_shootUsed"]) {

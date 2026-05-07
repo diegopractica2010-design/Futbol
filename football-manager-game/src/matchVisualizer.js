@@ -94,7 +94,8 @@
       this.createHUD();
 
       // Event listeners
-      window.addEventListener("resize", () => this.onWindowResize());
+      this._resizeHandler = () => this.onWindowResize();
+      window.addEventListener("resize", this._resizeHandler);
 
       // Iniciar renderizado
       this.startRendering();
@@ -122,14 +123,29 @@
 
       // Pasto
       const grassGeometry = new THREE.PlaneGeometry(fieldWidth, fieldHeight);
-      const grassMaterial = new THREE.MeshPhongMaterial({
-        color: 0x2d8659,
-        shininess: 20
+      const grassMaterial = new THREE.MeshLambertMaterial({
+        color: 0x2f6f42
       });
       const grassMesh = new THREE.Mesh(grassGeometry, grassMaterial);
       grassMesh.rotation.x = -Math.PI / 2;
       grassMesh.receiveShadow = false;
       this.scene.add(grassMesh);
+
+      // Franjas sutiles para evitar look plastico plano.
+      const stripeWidth = fieldWidth / 10;
+      for (let i = 0; i < 10; i += 1) {
+        const stripeGeometry = new THREE.PlaneGeometry(stripeWidth, fieldHeight);
+        const stripeMaterial = new THREE.MeshBasicMaterial({
+          color: i % 2 === 0 ? 0x255f38 : 0x347a48,
+          transparent: true,
+          opacity: 0.34,
+          depthWrite: false
+        });
+        const stripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+        stripe.rotation.x = -Math.PI / 2;
+        stripe.position.set(-fieldWidth / 2 + stripeWidth * i + stripeWidth / 2, 0.012, 0);
+        this.scene.add(stripe);
+      }
 
       // Líneas de cancha
       this.drawFieldLines();
@@ -147,10 +163,10 @@
         linewidth: 2
       });
 
-      // Línea media
+      // Linea media: divide ambos campos por la mitad en el eje X.
       const midGeometry = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-fieldWidth / 2, 0.01, 0),
-        new THREE.Vector3(fieldWidth / 2, 0.01, 0)
+        new THREE.Vector3(0, 0.01, -fieldHeight / 2),
+        new THREE.Vector3(0, 0.01, fieldHeight / 2)
       ]);
       this.scene.add(new THREE.Line(midGeometry, lineMaterial));
 
@@ -471,6 +487,10 @@
 
     dispose() {
       this.stopRendering();
+      if (this._resizeHandler) {
+        window.removeEventListener("resize", this._resizeHandler);
+        this._resizeHandler = null;
+      }
 
       // Limpiar geometrías y materiales
       this.scene.traverse((child) => {

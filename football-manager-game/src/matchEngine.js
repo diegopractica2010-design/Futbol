@@ -87,8 +87,10 @@
     const { homePlayers, awayPlayers } = getLiveSquads(liveMatch, state);
     const homeProfile = FMG.getTacticalMatchProfile(state, liveMatch.homeTeamId);
     const awayProfile = FMG.getTacticalMatchProfile(state, liveMatch.awayTeamId);
-    const homeStrength = FMG.computeTeamStrength(homeTeam, state.players, state) + 4 + (liveMatch.tacticalBoost.home || 0);
-    const awayStrength = FMG.computeTeamStrength(awayTeam, state.players, state) + (liveMatch.tacticalBoost.away || 0);
+    applyLiveOrders(liveMatch.liveOrders?.home, homeProfile);
+    applyLiveOrders(liveMatch.liveOrders?.away, awayProfile);
+    const homeStrength = FMG.computeTeamStrength(homeTeam, state.players, state) + 4 + (liveMatch.tacticalBoost.home || 0) + liveOrderStrength(liveMatch.liveOrders?.home);
+    const awayStrength = FMG.computeTeamStrength(awayTeam, state.players, state) + (liveMatch.tacticalBoost.away || 0) + liveOrderStrength(liveMatch.liveOrders?.away);
     const strengthDelta = FMG.clamp(homeStrength - awayStrength, -24, 24);
     const baseHomePossession = FMG.clamp(Math.round(50 + strengthDelta * 0.38 + (homeProfile.possession - awayProfile.possession) * 0.75 + FMG.randomInt(-4, 4)), 32, 68);
     const homePossession = FMG.clamp(Math.round((liveMatch.result.stats.home.possession * 0.85) + (baseHomePossession * 0.15)), 32, 68);
@@ -109,7 +111,7 @@
     const defendStrength = isHomeAttack ? awayStrength : homeStrength;
     const attackProfile = isHomeAttack ? homeProfile : awayProfile;
     const defendProfile = isHomeAttack ? awayProfile : homeProfile;
-    const attacker = pickAttacker(attackSquad);
+    const attacker = pickLiveAttacker(attackSquad, liveMatch.playerOrders);
     const defender = pickDefender(defendSquad);
     const pressure = FMG.clamp(
       0.34 + (attackStrength - defendStrength) / 115 + (attackProfile.chance + attackProfile.attack - defendProfile.defense + defendProfile.risk * 0.25) / 135 + FMG.randomInt(-8, 8) / 100,
@@ -183,6 +185,40 @@
         addTimeline(result.timeline, minute, "injury", injured.teamId, `${injured.name} queda sentido y sera baja ${duration} semana(s).`, { playerId: injured.id });
       }
     }
+  }
+
+  function applyLiveOrders(orders, profile) {
+    if (!orders) return profile;
+    if (orders.mentality === "attack") { profile.attack += 4; profile.defense -= 2; profile.risk += 4; }
+    if (orders.mentality === "defend") { profile.attack -= 3; profile.defense += 5; profile.risk -= 4; }
+    if (orders.press === "high") { profile.possession += 3; profile.fouls += 3; profile.fatigue += 2; profile.risk += 2; }
+    if (orders.press === "low") { profile.defense += 2; profile.fouls -= 2; profile.fatigue -= 1; }
+    if (orders.tempo === "fast") { profile.attack += 3; profile.chance += 3; profile.risk += 3; }
+    if (orders.tempo === "slow") { profile.possession += 3; profile.risk -= 2; }
+    if (orders.risk === "safe") { profile.risk -= 4; profile.defense += 2; profile.attack -= 1; }
+    if (orders.risk === "direct") { profile.risk += 4; profile.attack += 3; profile.possession -= 2; }
+    return profile;
+  }
+
+  function liveOrderStrength(orders) {
+    if (!orders) return 0;
+    let value = 0;
+    if (orders.mentality === "attack") value += 1.5;
+    if (orders.mentality === "defend") value += 0.5;
+    if (orders.press === "high") value += 1;
+    if (orders.tempo === "fast") value += 1;
+    if (orders.risk === "direct") value += 0.8;
+    if (orders.risk === "safe") value -= 0.4;
+    return value;
+  }
+
+  function pickLiveAttacker(players, playerOrders) {
+    const focused = players.filter((player) => {
+      const order = playerOrders && playerOrders[player.id];
+      return order === "shoot" || order === "free" || order === "run";
+    });
+    if (focused.length && Math.random() < 0.55) return FMG.sample(focused);
+    return pickAttacker(players);
   }
 
   FMG.computeTeamStrength = function (team, players, state) {
@@ -354,6 +390,11 @@
       awayBenchIds: awayBench.slice(0, 7).map((player) => player.id),
       substitutions: { home: 0, away: 0 },
       tacticalBoost: { home: 0, away: 0 },
+      liveOrders: {
+        home: { mentality: "balanced", press: "normal", tempo: "normal", risk: "normal" },
+        away: { mentality: "balanced", press: "normal", tempo: "normal", risk: "normal" }
+      },
+      playerOrders: {},
       momentum: 50,
       result: createBlankResult(homeTeam, awayTeam)
     };

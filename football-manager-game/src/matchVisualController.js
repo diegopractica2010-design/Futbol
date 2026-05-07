@@ -11,6 +11,7 @@
       this.matchState = null;
       this.eventQueue = [];
       this.isProcessingEvents = false;
+      this._seenTimelineLength = 0;
     }
 
     // Inicializar visualizador cuando empieza el partido
@@ -21,6 +22,7 @@
 
       this.visualizer = new FMG.MatchVisualizer(container);
       this.visualizer.init();
+      this._seenTimelineLength = matchData.result ? matchData.result.timeline.length : 0;
 
       // Configurar equipos
       const homeTeam = state.teams.find((t) => t.id === matchData.homeTeamId);
@@ -67,6 +69,7 @@
 
     // Obtener color del equipo (simplificado - usar colores reales si están en data)
     getTeamColor(team) {
+      if (!team) return 0x333333;
       const colorMap = {
         "colo-colo": 0xffffff,
         "universidad-de-chile": 0x003366,
@@ -130,6 +133,42 @@
     // Actualizar estado del partido
     updateMatchState(minute, homeGoals, awayGoals, possession) {
       this.visualizer.updateMatchState(minute, homeGoals, awayGoals, possession);
+    }
+
+    syncLiveMatch(liveMatch) {
+      if (!this.visualizer || !liveMatch || !liveMatch.result) return;
+      const stats = liveMatch.result.stats || {};
+      const possession = stats.home ? stats.home.possession : 50;
+      this.visualizer.updateMatchState(
+        liveMatch.minute,
+        liveMatch.result.homeGoals,
+        liveMatch.result.awayGoals,
+        possession
+      );
+
+      const timeline = liveMatch.result.timeline || [];
+      const fresh = timeline.slice(this._seenTimelineLength);
+      this._seenTimelineLength = timeline.length;
+      fresh.forEach((event) => this.queueTimelineEvent(event, liveMatch));
+    }
+
+    queueTimelineEvent(event, liveMatch) {
+      const homeEvent = event.teamId === liveMatch.homeTeamId;
+      const lineup = homeEvent ? liveMatch.homeLineupIds : liveMatch.awayLineupIds;
+      const playerId = event.playerId || lineup[Math.min(8, lineup.length - 1)] || lineup[0];
+      const targetGoal = homeEvent ? "away" : "home";
+
+      if (event.type === "goal") {
+        this.queueEvent("shot", { fromPlayer: playerId, toGoal: targetGoal });
+        this.queueEvent("goal", { goalPos: targetGoal });
+      } else if (event.type === "chance") {
+        this.queueEvent("shot", { fromPlayer: playerId, toGoal: targetGoal });
+      } else if (event.type === "foul" || event.type === "yellow-card" || event.type === "red-card") {
+        this.queueEvent("tackle", { playerId });
+      } else {
+        const toPlayer = lineup.find((id) => id !== playerId);
+        if (toPlayer) this.queueEvent("pass", { fromPlayer: playerId, toPlayer });
+      }
     }
 
     // Cola de eventos para procesarlos secuencialmente
@@ -244,6 +283,7 @@
       }
       this.eventQueue = [];
       this.matchState = null;
+      this._seenTimelineLength = 0;
     }
   }
 

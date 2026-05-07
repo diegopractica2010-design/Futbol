@@ -132,7 +132,7 @@
     ctx.fillRect(0, FIELD.h - 22, FIELD.w, 22);
     ctx.fillStyle = "rgba(255,255,255,0.7)";
     ctx.font = "11px 'Segoe UI', Arial, sans-serif";
-    ctx.fillText("Mover: WASD / Flechas  |  Pase: Z/J  |  Tiro: X/K  |  Pausa: P", FIELD.w / 2, FIELD.h - 7);
+    ctx.fillText("Mover: WASD/Flechas | Sprint: Shift | Cambio: Q/E | Pase: Z/J | Largo: Espacio/L | Entrada: C | Tiro: X/K", FIELD.w / 2, FIELD.h - 7);
 
     // Flash de gol
     if (state.goalFlash > 0) {

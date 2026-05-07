@@ -1,12 +1,12 @@
 :root {
   --bg: #101611;
-  --surface: rgba(248, 246, 238, 0.94);
-  --surface-2: rgba(255, 255, 255, 0.78);
-  --line: rgba(24, 38, 29, 0.16);
-  --text: #172019;
-  --muted: #5c675f;
-  --primary: #146c43;
-  --primary-2: #c89528;
+  --surface: rgba(247, 248, 242, 0.95);
+  --surface-2: rgba(255, 255, 255, 0.82);
+  --line: rgba(29, 42, 37, 0.16);
+  --text: #17211d;
+  --muted: #61706a;
+  --primary: #0f7a5a;
+  --primary-2: #d28a2e;
   --danger: #a6382b;
   --success: #08784a;
   --focus: #f0b429;
@@ -25,9 +25,9 @@ body {
   font-family: "Segoe UI", "Trebuchet MS", Arial, sans-serif;
   color: var(--text);
   background:
-    linear-gradient(130deg, rgba(20, 108, 67, 0.2), transparent 36%),
-    linear-gradient(230deg, rgba(200, 149, 40, 0.18), transparent 38%),
-    linear-gradient(180deg, #eef0e7 0%, #dfe6d8 45%, #cad6c6 100%);
+    linear-gradient(130deg, rgba(15, 122, 90, 0.18), transparent 34%),
+    linear-gradient(230deg, rgba(210, 138, 46, 0.14), transparent 40%),
+    linear-gradient(180deg, #eef2ea 0%, #dbe4d8 46%, #c7d8cb 100%);
   min-height: 100vh;
 }
 
@@ -199,6 +199,27 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
 .list-row, .table-row { border-radius: var(--radius-md); padding: 15px; }
 .list-row { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(120px, auto) minmax(180px, auto); align-items: center; gap: 12px; }
 .list-row.compact { grid-template-columns: minmax(0, 1fr) auto; }
+.squad-row {
+  grid-template-columns: minmax(260px, 1.1fr) minmax(170px, 0.55fr) minmax(260px, 0.9fr);
+  align-items: start;
+}
+.squad-row .meta span, .chip, .eyebrow {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+.squad-row .button-row button, .live-player-order .button-row button, .live-order-control button {
+  padding: 9px 11px;
+  min-height: 36px;
+  font-size: 12px;
+}
+.live-player-order {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.2fr);
+  align-items: center;
+  gap: 12px;
+}
 .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .meta span { background: rgba(255, 255, 255, 0.76); }
 
@@ -334,6 +355,7 @@ textarea {
 @media (max-width: 1040px) {
   .hero, .content-grid { grid-template-columns: 1fr; }
   .nav { position: static; }
+  .squad-row, .live-player-order { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 720px) {
@@ -375,4 +397,3 @@ textarea {
     height: 320px;
   }
 }
-

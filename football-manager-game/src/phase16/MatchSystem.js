@@ -14,11 +14,17 @@
   }
 
   const HOME_POS = [
-    [60,              C.FIELD_H / 2],
-    [180,             C.FIELD_H / 2 - 100],
-    [180,             C.FIELD_H / 2 + 100],
-    [300,             C.FIELD_H / 2 - 60],
-    [300,             C.FIELD_H / 2 + 60]
+    [52,              C.FIELD_H / 2],
+    [150,             C.FIELD_H * 0.18],
+    [142,             C.FIELD_H * 0.38],
+    [142,             C.FIELD_H * 0.62],
+    [150,             C.FIELD_H * 0.82],
+    [292,             C.FIELD_H * 0.24],
+    [282,             C.FIELD_H * 0.50],
+    [292,             C.FIELD_H * 0.76],
+    [430,             C.FIELD_H * 0.24],
+    [452,             C.FIELD_H * 0.50],
+    [430,             C.FIELD_H * 0.76]
   ];
 
   const AWAY_POS = HOME_POS.map(([x, y]) => [C.FIELD_W - x, y]);
@@ -30,6 +36,8 @@
     this.paused      = false;
     this.finished    = false;
     this.controlled  = null;   // jugador usuario activo
+    this._manualControlTicks = 0;
+    this._selectedUserIndex = 10;
     this.userTeam    = HOME_POS.map(([x, y], i) => makePlayer("u" + i, x, y, 0));
     this.aiTeam      = AWAY_POS.map(([x, y], i) => makePlayer("a" + i, x, y, 1));
   }
@@ -47,6 +55,8 @@
     this.paused    = false;
     this.finished  = false;
     this.controlled = null;
+    this._manualControlTicks = 0;
+    this._selectedUserIndex = 10;
     this.userTeam  = HOME_POS.map(([x, y], i) => makePlayer("u" + i, x, y, 0));
     this.aiTeam    = AWAY_POS.map(([x, y], i) => makePlayer("a" + i, x, y, 1));
   };
@@ -76,12 +86,26 @@
 
   // Actualiza qué jugador usuario está controlado (el más cercano al balón)
   MatchSystem.prototype.updateControlled = function (ballX, ballY) {
+    if (this._manualControlTicks > 0 && this.userTeam[this._selectedUserIndex]) {
+      this._manualControlTicks--;
+      this.controlled = this.userTeam[this._selectedUserIndex];
+      return;
+    }
+
     let best = null, bestD = Infinity;
-    this.userTeam.forEach((p) => {
+    this.userTeam.forEach((p, index) => {
       const d = Math.hypot(p.x - ballX, p.y - ballY);
-      if (d < bestD) { bestD = d; best = p; }
+      if (d < bestD) { bestD = d; best = p; this._selectedUserIndex = index; }
     });
     this.controlled = best;
+  };
+
+  MatchSystem.prototype.selectNextUser = function (direction) {
+    const step = direction < 0 ? -1 : 1;
+    this._selectedUserIndex = (this._selectedUserIndex + step + this.userTeam.length) % this.userTeam.length;
+    this.controlled = this.userTeam[this._selectedUserIndex];
+    this._manualControlTicks = C.FPS * 2;
+    return this.controlled;
   };
 
   // Mueve un jugador dentro de los límites de la cancha

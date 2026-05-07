@@ -121,7 +121,7 @@
     const selectedPlayer = state.players.find((player) => player.id === state.squadView.selectedPlayerId && player.teamId === state.userTeamId && !player.retired) || squad[0];
 
     return `
-      <section class="content-grid">
+      <section class="side-stack">
       <section class="card">
         <div class="section-title"><h2>${FMG.clubBadge(state.userClub, "sm")} Plan deportivo</h2><span class="chip">${plan.formation}</span></div>
         <div class="stats-grid">
@@ -173,7 +173,7 @@
         </div>
         <div class="list">
           ${squad.map((player) => `
-            <article class="list-row">
+            <article class="list-row squad-row">
               <div>
                 <strong>${FMG.escapeHtml(player.name)} ${plan.captainId === player.id ? "(C)" : ""}</strong>
                 <div class="meta">

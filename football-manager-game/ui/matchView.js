@@ -72,6 +72,60 @@
     `;
   }
 
+  function renderOrderButtons(liveMatch, group, options, label) {
+    const userSide = liveMatch.homeTeamId === window.FMG.gameState.userTeamId ? "home" : "away";
+    const current = liveMatch.liveOrders?.[userSide]?.[group] || "normal";
+    return `
+      <div class="tactic-control compact-control live-order-control">
+        <strong>${label}</strong>
+        <div class="button-row">
+          ${options.map(([value, text]) => `
+            <button class="${current === value ? "active" : "btn-ghost"}" data-action="live-team-order" data-group="${group}" data-value="${value}">${FMG.escapeHtml(text)}</button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderLiveOrders(state, liveMatch) {
+    const userSide = liveMatch.homeTeamId === state.userTeamId ? "home" : "away";
+    const lineupIds = userSide === "home" ? liveMatch.homeLineupIds : liveMatch.awayLineupIds;
+    const players = lineupIds.map((id) => state.players.find((player) => player.id === id)).filter(Boolean);
+    const keyPlayers = players
+      .filter((player) => ["MED", "EXT", "DEL"].includes(player.position))
+      .sort((left, right) => right.overall - left.overall)
+      .slice(0, 6);
+
+    return `
+      <section class="card">
+        <div class="section-title"><h2>Ordenes del partido</h2><span class="chip">Pizarra en vivo</span></div>
+        <div class="tactic-grid">
+          ${renderOrderButtons(liveMatch, "mentality", [["attack", "Atacar"], ["balanced", "Equilibrar"], ["defend", "Defender"]], "Mentalidad")}
+          ${renderOrderButtons(liveMatch, "press", [["high", "Presion alta"], ["normal", "Normal"], ["low", "Bloque bajo"]], "Presion")}
+          ${renderOrderButtons(liveMatch, "tempo", [["fast", "Ritmo alto"], ["normal", "Normal"], ["slow", "Pausar"]], "Ritmo")}
+          ${renderOrderButtons(liveMatch, "risk", [["direct", "Directo"], ["normal", "Normal"], ["safe", "Seguro"]], "Riesgo")}
+        </div>
+        <div class="log-list" style="margin-top:14px;">
+          ${keyPlayers.map((player) => {
+            const current = liveMatch.playerOrders?.[player.id] || "normal";
+            const orders = [["normal", "Normal"], ["shoot", "Rematar"], ["safe", "Simple"], ["press", "Presionar"], ["free", "Libertad"], ["run", "Al espacio"]];
+            return `
+              <div class="log-item live-player-order">
+                <div>
+                  <strong>${FMG.escapeHtml(player.name)}</strong>
+                  <p class="muted">${FMG.escapeHtml(player.position)} | OVR ${player.overall} | Energia ${player.energy}</p>
+                </div>
+                <div class="button-row">
+                  ${orders.map(([order, text]) => `<button class="${current === order ? "active" : "btn-ghost"}" data-action="live-player-order" data-player-id="${player.id}" data-order="${order}">${text}</button>`).join("")}
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </section>
+    `;
+  }
+
   function renderLiveMatch(state) {
     const liveMatch = state.liveMatch;
     const homeTeam = state.teams.find((team) => team.id === liveMatch.homeTeamId);
@@ -116,6 +170,7 @@
               </div>`).join("") || `<div class="empty-state">El partido espera el pitazo inicial.</div>`}
           </div>
         </section>
+        ${renderLiveOrders(state, liveMatch)}
         ${renderLiveSubstitutions(state, liveMatch)}
       </section>
     `;

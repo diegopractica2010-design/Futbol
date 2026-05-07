@@ -544,7 +544,12 @@
   };
 
   FMG.advanceLiveUserMatch = function (minutes) {
+    const beforeTimelineLength = FMG.gameState.liveMatch?.result?.timeline?.length || 0;
     const result = FMG.advanceLiveMatch(FMG.gameState, minutes);
+    if (result.ok && FMG.gameState.liveMatch && FMG.matchVisualController?.visualizer) {
+      FMG.matchVisualController._seenTimelineLength = beforeTimelineLength;
+      FMG.matchVisualController.syncLiveMatch(FMG.gameState.liveMatch);
+    }
     if (result.ok && FMG.gameState.liveMatch && FMG.gameState.liveMatch.completed) {
       FMG.pushNotification("Final del partido. Cierra la fecha para procesar tabla y finanzas.");
     }
@@ -565,6 +570,39 @@
     const value = mode === "attack" ? 4 : mode === "defend" ? -3 : 0;
     liveMatch.tacticalBoost[userSide] = value;
     return { ok: true, message: mode === "attack" ? "El equipo adelanta lineas." : mode === "defend" ? "El equipo protege mejor su area." : "El equipo vuelve al plan equilibrado." };
+  };
+
+  FMG.setLiveTeamOrder = function (group, value) {
+    const liveMatch = FMG.gameState.liveMatch;
+    if (!liveMatch || liveMatch.completed) return { ok: false, message: "No hay partido en vivo activo." };
+    const userSide = liveMatch.homeTeamId === FMG.gameState.userTeamId ? "home" : "away";
+    liveMatch.liveOrders = liveMatch.liveOrders || {};
+    liveMatch.liveOrders[userSide] = liveMatch.liveOrders[userSide] || { mentality: "balanced", press: "normal", tempo: "normal", risk: "normal" };
+    const allowed = {
+      mentality: ["attack", "balanced", "defend"],
+      press: ["high", "normal", "low"],
+      tempo: ["fast", "normal", "slow"],
+      risk: ["direct", "normal", "safe"]
+    };
+    if (!allowed[group] || !allowed[group].includes(value)) return { ok: false, message: "Orden no disponible." };
+    liveMatch.liveOrders[userSide][group] = value;
+    const labels = { attack: "Atacar", balanced: "Equilibrar", defend: "Defender", high: "Presion alta", low: "Bloque bajo", normal: "Normal", fast: "Ritmo alto", slow: "Pausar", direct: "Directo", safe: "Seguro" };
+    return { ok: true, message: `Orden aplicada: ${labels[value] || value}.` };
+  };
+
+  FMG.setLivePlayerOrder = function (playerId, order) {
+    const liveMatch = FMG.gameState.liveMatch;
+    if (!liveMatch || liveMatch.completed) return { ok: false, message: "No hay partido en vivo activo." };
+    const userSide = liveMatch.homeTeamId === FMG.gameState.userTeamId ? "home" : "away";
+    const lineup = userSide === "home" ? liveMatch.homeLineupIds : liveMatch.awayLineupIds;
+    if (!lineup.includes(playerId)) return { ok: false, message: "Jugador no esta en cancha." };
+    const allowed = ["normal", "shoot", "safe", "press", "free", "run"];
+    if (!allowed.includes(order)) return { ok: false, message: "Orden individual no disponible." };
+    liveMatch.playerOrders = liveMatch.playerOrders || {};
+    liveMatch.playerOrders[playerId] = order;
+    const player = FMG.gameState.players.find((item) => item.id === playerId);
+    const labels = { normal: "normal", shoot: "rematar mas", safe: "jugar simple", press: "presionar", free: "libertad", run: "picar al espacio" };
+    return { ok: true, message: `${player ? player.name : "Jugador"}: ${labels[order]}.` };
   };
 
   FMG.makeLiveSubstitution = function (outPlayerId, inPlayerId) {

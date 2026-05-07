@@ -86,13 +86,14 @@
     const ctx = this.ctx;
 
     ctx.fillStyle = "rgba(0,0,0,0.25)";
+    var h = Math.min(ball.z || 0, 14);
     ctx.beginPath();
-    ctx.ellipse(ball.x + 2, ball.y + C.BALL_R - 1, C.BALL_R * 0.9, C.BALL_R * 0.4, 0, 0, Math.PI * 2);
+    ctx.ellipse(ball.x + 2, ball.y + C.BALL_R - 1, C.BALL_R * Math.max(0.35, 0.9 - h * 0.03), C.BALL_R * 0.4, 0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = C.COLOR_BALL;
     ctx.beginPath();
-    ctx.arc(ball.x, ball.y, C.BALL_R, 0, Math.PI * 2);
+    ctx.arc(ball.x, ball.y - h, C.BALL_R, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.strokeStyle = "rgba(0,0,0,0.3)";
@@ -121,7 +122,7 @@
     ctx.fillRect(0, C.FIELD_H - 22, C.FIELD_W, 22);
     ctx.fillStyle = "rgba(255,255,255,0.7)";
     ctx.font      = "11px 'Segoe UI',Arial,sans-serif";
-    ctx.fillText("Mover: WASD/Flechas  |  Pase: Z/J  |  Tiro: X/K  |  Pausa: P  |  Reiniciar: R", C.FIELD_W / 2, C.FIELD_H - 7);
+    ctx.fillText("WASD/Flechas: Mover | Shift: Sprint | Q/E: Cambio | Z/J: Pase | Espacio/L: Largo | C: Entrada | X/K: Tiro | P: Pausa", C.FIELD_W / 2, C.FIELD_H - 7);
   };
 
   // --- Overlays ---

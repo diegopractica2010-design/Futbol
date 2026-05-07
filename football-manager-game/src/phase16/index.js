@@ -73,7 +73,7 @@
   };
 
   Phase16Game.prototype._applyInput = function () {
-    const p = this.match.controlled;
+    let p = this.match.controlled;
     if (!p) return;
 
     // Pausa
@@ -94,24 +94,52 @@
 
     // Movimiento
     let dx = 0, dy = 0;
+    if (this.input.isSwitch()) {
+      const dir = this.input.isDown("q") || this.input.isDown("Q") ? -1 : 1;
+      p = this.match.selectNextUser(dir);
+      this.input.consume("q"); this.input.consume("Q"); this.input.consume("e"); this.input.consume("E");
+    }
+
     if (this.input.isDirLeft())  dx -= 1;
     if (this.input.isDirRight()) dx += 1;
     if (this.input.isDirUp())    dy -= 1;
     if (this.input.isDirDown())  dy += 1;
     if (dx !== 0 || dy !== 0) {
       const len = Math.hypot(dx, dy) || 1;
-      this.match.movePlayer(p, dx / len, dy / len, C.PLAYER_SPEED);
+      const sprint = this.input.isSprint() ? 1.45 : 1;
+      this.match.movePlayer(p, dx / len, dy / len, C.PLAYER_SPEED * sprint);
+    }
+
+    if (this.input.isTackle()) {
+      this.input.consume("c"); this.input.consume("C");
+      if (this.animMgr && this.animMgr.notifyAction) this.animMgr.notifyAction(p.id, "tackle");
+      if (this.ball.distTo(p) < C.PLAYER_R + C.BALL_R + 18) {
+        const gx = C.FIELD_W - this.ball.ball.x;
+        const gy = C.FIELD_H / 2 - this.ball.ball.y;
+        const glen = Math.hypot(gx, gy) || 1;
+        this.ball.applyImpulse((gx / glen) * C.PASS_POWER * 0.75, (gy / glen) * C.PASS_POWER * 0.75, { error: 0.4, spin: 0.8 });
+      }
     }
 
     // Pase
-    if (this.input.isPass()) {
+    if (this.input.isPass() || this.input.isLongPass()) {
+      const longPass = this.input.isLongPass();
       this.input.consume("z"); this.input.consume("j");
+      this.input.consume(" "); this.input.consume("l"); this.input.consume("L");
       const target = this._nearestTeammate(p);
       if (target) {
         const dx2 = target.x - this.ball.ball.x;
         const dy2 = target.y - this.ball.ball.y;
         const len = Math.hypot(dx2, dy2) || 1;
-        this.ball.applyImpulse((dx2 / len) * C.PASS_POWER, (dy2 / len) * C.PASS_POWER);
+        const power = longPass ? C.PASS_POWER * 1.45 : C.PASS_POWER;
+        this.ball.applyImpulse((dx2 / len) * power, (dy2 / len) * power, {
+          targetX: target.x,
+          targetY: target.y,
+          assist: longPass ? 0.008 : 0.018,
+          lift: longPass ? 5.2 : 0.8,
+          error: longPass ? 0.7 : 0.25,
+          spin: longPass ? 1.2 : 0.55
+        });
         this.audio.playKick();
       }
     }
@@ -122,7 +150,7 @@
       const gx = C.FIELD_W - this.ball.ball.x;
       const gy = C.FIELD_H / 2 - this.ball.ball.y;
       const len = Math.hypot(gx, gy) || 1;
-      this.ball.applyImpulse((gx / len) * C.SHOOT_POWER, (gy / len) * C.SHOOT_POWER);
+      this.ball.applyImpulse((gx / len) * C.SHOOT_POWER, (gy / len) * C.SHOOT_POWER, { lift: 2.4, error: 0.55, spin: 1.6 });
       this.audio.playKick();
     }
   };
