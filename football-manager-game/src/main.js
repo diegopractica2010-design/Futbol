@@ -55,7 +55,8 @@
       [FMG.ROUTES.career, "Carrera", "Manager"],
       [FMG.ROUTES.news, "Noticias", "Mundo vivo"],
       [FMG.ROUTES.settings, "Config", "Guardado y configuracion"],
-      [FMG.ROUTES.phase15, "Jugar", "Partido jugable Fase 15"]
+      [FMG.ROUTES.phase15, "Jugar v1", "Partido jugable Fase 15"],
+      [FMG.ROUTES.phase16, "Jugar v2", "Framework modular Fase 16"]
     ];
 
     return `
@@ -89,6 +90,7 @@
       case FMG.ROUTES.settings: return FMG.renderSettingsView(FMG.gameState);
       case FMG.ROUTES.table: return FMG.renderTableView(FMG.gameState);
       case FMG.ROUTES.phase15: return FMG.renderPhase15View();
+      case FMG.ROUTES.phase16: return FMG.renderPhase16View();
       default: return FMG.renderDashboard(FMG.gameState, helpers);
     }
   }
@@ -105,6 +107,7 @@
     if (action === "select-club") FMG.selectClub(target.dataset.teamId);
     if (action === "change-route") {
       if (FMG.gameState.route === FMG.ROUTES.phase15) FMG.unmountPhase15();
+      if (FMG.gameState.route === FMG.ROUTES.phase16) FMG.unmountPhase16();
       FMG.gameState.route = target.dataset.route;
     }
     if (action === "advance-week") {
@@ -249,9 +252,8 @@
     if (action === "buy-player") FMG.pushNotification(FMG.buyPlayer(FMG.gameState, target.dataset.playerId).message);
     if (action === "sell-player" && !target.dataset.confirm && !window.confirm("Poner en venta a este jugador?")) return;
     if (action === "sell-player") FMG.pushNotification(FMG.sellPlayer(FMG.gameState, target.dataset.playerId).message);
-    if (FMG.handlePhase15Action && FMG.handlePhase15Action(action, target)) {
-      return; // accion manejada por fase 15, no re-renderizar SPA
-    }
+    if (FMG.handlePhase15Action && FMG.handlePhase15Action(action)) return;
+    if (FMG.handlePhase16Action && FMG.handlePhase16Action(action)) return;
     if (action === "dismiss-toast") FMG.dismissNotification(target.dataset.id);
     render();
   }

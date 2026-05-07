@@ -14,7 +14,8 @@
     calendar: "calendar",
     settings: "settings",
     table: "table",
-    phase15: "phase15"
+    phase15: "phase15",
+    phase16: "phase16"
   };
 
   FMG.gameState = {
