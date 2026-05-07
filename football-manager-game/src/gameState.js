@@ -7,7 +7,7 @@
     rival: "rival", calendar: "calendar", settings: "settings", table: "table",
     phase15: "phase15", phase16: "phase16", phase17: "phase17",
     phase18: "phase18", phase19: "phase19", phase20: "phase20", phase21: "phase21",
-    phase22: "phase22", phase23: "phase23"
+    phase22: "phase22", phase23: "phase23", phase24: "phase24"
   };
 
   FMG.gameState = {

@@ -70,7 +70,8 @@
       [FMG.ROUTES.phase20, "Jugar v6", "Camara Broadcast Fase 20"],
       [FMG.ROUTES.phase21, "Jugar v7", "Estadio Premium Fase 21"],
       [FMG.ROUTES.phase22, "Jugar v8", "HUD Final Fase 22"],
-      [FMG.ROUTES.phase23, "Jugar v9", "Audio de Partido Fase 23"]
+      [FMG.ROUTES.phase23, "Jugar v9", "Audio de Partido Fase 23"],
+      [FMG.ROUTES.phase24, "Jugar v10", "Tácticas en Cancha Fase 24"]
     ];
 
     return `
@@ -124,6 +125,7 @@
       case FMG.ROUTES.phase21: return FMG.renderPhase21View();
       case FMG.ROUTES.phase22: return FMG.renderPhase22View();
       case FMG.ROUTES.phase23: return FMG.renderPhase23View();
+      case FMG.ROUTES.phase24: return FMG.renderPhase24View();
       default: return FMG.renderDashboard(FMG.gameState, helpers);
     }
   }
@@ -148,6 +150,7 @@
       if (FMG.gameState.route === FMG.ROUTES.phase21) FMG.unmountPhase21();
       if (FMG.gameState.route === FMG.ROUTES.phase22) FMG.unmountPhase22();
       if (FMG.gameState.route === FMG.ROUTES.phase23) FMG.unmountPhase23();
+      if (FMG.gameState.route === FMG.ROUTES.phase24) FMG.unmountPhase24();
       FMG.gameState.route = target.dataset.route;
     }
     if (action === "advance-week") {
@@ -303,6 +306,7 @@
     if (FMG.handlePhase21Action && FMG.handlePhase21Action(action)) return;
     if (FMG.handlePhase22Action && FMG.handlePhase22Action(action)) return;
     if (FMG.handlePhase23Action && FMG.handlePhase23Action(action)) return;
+    if (FMG.handlePhase24Action && FMG.handlePhase24Action(action)) return;
     if (action === "dismiss-toast") FMG.dismissNotification(target.dataset.id);
     render();
     syncLiveVisualizer();
