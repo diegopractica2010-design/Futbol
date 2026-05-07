@@ -1,0 +1,255 @@
+(function () {
+  const FMG = (window.FMG = window.FMG || {});
+
+  // =============================================================================
+  // MATCH VISUAL CONTROLLER - SINCRONIZACIÓN DE EVENTOS Y POSICIONES
+  // =============================================================================
+
+  class MatchVisualController {
+    constructor() {
+      this.visualizer = null;
+      this.matchState = null;
+      this.eventQueue = [];
+      this.isProcessingEvents = false;
+    }
+
+    // Inicializar visualizador cuando empieza el partido
+    initMatch(container, matchData, state) {
+      if (this.visualizer) {
+        this.visualizer.dispose();
+      }
+
+      this.visualizer = new FMG.MatchVisualizer(container);
+      this.visualizer.init();
+
+      // Configurar equipos
+      const homeTeam = state.teams.find((t) => t.id === matchData.homeTeamId);
+      const awayTeam = state.teams.find((t) => t.id === matchData.awayTeamId);
+
+      const homeColor = this.getTeamColor(homeTeam);
+      const awayColor = this.getTeamColor(awayTeam);
+
+      this.visualizer.setTeamInfo(
+        matchData.homeTeamId,
+        homeColor,
+        matchData.awayTeamId,
+        awayColor
+      );
+
+      // Crear balón
+      this.visualizer.createBall();
+
+      // Agregar jugadores iniciales
+      const homeSquad = FMG.getAvailablePlayers(state.players, matchData.homeTeamId);
+      const awaySquad = FMG.getAvailablePlayers(state.players, matchData.awayTeamId);
+
+      const homeLineup = matchData.homeLineupIds
+        .map((id) => homeSquad.find((p) => p.id === id))
+        .filter(Boolean);
+      const awayLineup = matchData.awayLineupIds
+        .map((id) => awaySquad.find((p) => p.id === id))
+        .filter(Boolean);
+
+      // Posición inicial: formación básica en cancha
+      this.positionPlayersInFormation(
+        homeLineup,
+        true,
+        matchData.homeFormation || "4-3-3"
+      );
+      this.positionPlayersInFormation(
+        awayLineup,
+        false,
+        matchData.awayFormation || "4-3-3"
+      );
+
+      this.matchState = matchData;
+    }
+
+    // Obtener color del equipo (simplificado - usar colores reales si están en data)
+    getTeamColor(team) {
+      const colorMap = {
+        "colo-colo": 0xffffff,
+        "universidad-de-chile": 0x003366,
+        "universidad-catolica": 0x0066cc,
+        coquimbo: 0x2e5c8a,
+        "magallanes": 0x1e3a8a,
+        "iquique": 0xff6600,
+        "antofagasta": 0xffcc00,
+        "union-la-calera": 0xff0000
+      };
+      return colorMap[team.id.toLowerCase()] || 0x333333;
+    }
+
+    // Posicionar jugadores en formación inicial
+    positionPlayersInFormation(players, isHome, formation) {
+      const fieldWidth = 105;
+      const fieldHeight = 68;
+
+      // Formación simple: 4-3-3, 5-3-2, etc.
+      const formations = {
+        "4-3-3": { defenders: 4, midfielders: 3, forwards: 3 },
+        "5-3-2": { defenders: 5, midfielders: 3, forwards: 2 },
+        "3-5-2": { defenders: 3, midfielders: 5, forwards: 2 }
+      };
+
+      const form = formations[formation] || formations["4-3-3"];
+      const startZ = isHome ? -fieldHeight / 2 + 10 : fieldHeight / 2 - 10;
+
+      // Orden esperado: POR (1), DEF (4), MED (3-5), DEL (2-3)
+      let defIndex = 0,
+        midIndex = 0,
+        fwdIndex = 0;
+
+      players.forEach((player) => {
+        let x, z;
+
+        if (player.position === "POR") {
+          x = 0;
+          z = isHome ? -fieldHeight / 2 + 2 : fieldHeight / 2 - 2;
+        } else if (["DEF"].includes(player.position) && defIndex < form.defenders) {
+          const spacing = fieldWidth / (form.defenders + 1);
+          x = -fieldWidth / 2 + spacing * (defIndex + 1);
+          z = startZ;
+          defIndex++;
+        } else if (["MED"].includes(player.position) && midIndex < form.midfielders) {
+          const spacing = fieldWidth / (form.midfielders + 1);
+          x = -fieldWidth / 2 + spacing * (midIndex + 1);
+          z = startZ + 15;
+          midIndex++;
+        } else {
+          const spacing = fieldWidth / (form.forwards + 1);
+          x = -fieldWidth / 2 + spacing * (fwdIndex + 1);
+          z = startZ + 30;
+          fwdIndex++;
+        }
+
+        this.visualizer.addPlayer(player.id, { x, y: 0, z }, isHome);
+      });
+    }
+
+    // Actualizar estado del partido
+    updateMatchState(minute, homeGoals, awayGoals, possession) {
+      this.visualizer.updateMatchState(minute, homeGoals, awayGoals, possession);
+    }
+
+    // Cola de eventos para procesarlos secuencialmente
+    queueEvent(eventType, data) {
+      this.eventQueue.push({ type: eventType, data });
+      this.processEventQueue();
+    }
+
+    async processEventQueue() {
+      if (this.isProcessingEvents || this.eventQueue.length === 0) return;
+
+      this.isProcessingEvents = true;
+
+      while (this.eventQueue.length > 0) {
+        const event = this.eventQueue.shift();
+        await this.animateEvent(event.type, event.data);
+        // Esperar 200ms entre eventos para fluidez
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+
+      this.isProcessingEvents = false;
+    }
+
+    // Animar eventos del partido
+    async animateEvent(type, data) {
+      switch (type) {
+        case "pass":
+          await this.animatePass(data);
+          break;
+        case "shot":
+          await this.animateShot(data);
+          break;
+        case "goal":
+          await this.animateGoal(data);
+          break;
+        case "foul":
+          await this.animateFoul(data);
+          break;
+        case "tackle":
+          await this.animateTackle(data);
+          break;
+        default:
+          break;
+      }
+    }
+
+    async animatePass(data) {
+      const { fromPlayer, toPlayer } = data;
+      const from = this.visualizer.players[fromPlayer];
+      const to = this.visualizer.players[toPlayer];
+
+      if (!from || !to) return;
+
+      const fromPos = from.mesh.position;
+      const toPos = to.mesh.position;
+
+      // Balón viaja del jugador A al jugador B
+      this.visualizer.animateBallMove(
+        { x: toPos.x, y: toPos.y + 0.5, z: toPos.z },
+        400,
+        1
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
+
+    async animateShot(data) {
+      const { fromPlayer, toGoal } = data;
+      const from = this.visualizer.players[fromPlayer];
+
+      if (!from) return;
+
+      // Tiro hacia el arco
+      const goalPos = toGoal === "home" ? 
+        { x: 0, y: 1.5, z: 34 } :
+        { x: 0, y: 1.5, z: -34 };
+
+      this.visualizer.animateShot(goalPos, 300);
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+
+    async animateGoal(data) {
+      const { goalPos } = data;
+
+      // Animación de celebración: desplazar todos los jugadores del equipo que marcó hacia arriba
+      // Por ahora, solo animamos el balón entrando a la red
+      if (goalPos === "home") {
+        this.visualizer.animateShot({ x: 0, y: 2, z: 34 }, 200);
+      } else {
+        this.visualizer.animateShot({ x: 0, y: 2, z: -34 }, 200);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    async animateFoul(data) {
+      // Animación de caída/contacto
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+
+    async animateTackle(data) {
+      // Animación de colisión
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+
+    // Limpiar visualizador
+    dispose() {
+      if (this.visualizer) {
+        this.visualizer.dispose();
+        this.visualizer = null;
+      }
+      this.eventQueue = [];
+      this.matchState = null;
+    }
+  }
+
+  // =============================================================================
+  // INSTANCIA GLOBAL
+  // =============================================================================
+
+  FMG.matchVisualController = new MatchVisualController();
+})();

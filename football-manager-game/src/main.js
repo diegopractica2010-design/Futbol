@@ -54,7 +54,8 @@
       [FMG.ROUTES.finances, "Finanzas", "Presupuesto del club"],
       [FMG.ROUTES.career, "Carrera", "Manager"],
       [FMG.ROUTES.news, "Noticias", "Mundo vivo"],
-      [FMG.ROUTES.settings, "Config", "Guardado y configuracion"]
+      [FMG.ROUTES.settings, "Config", "Guardado y configuracion"],
+      [FMG.ROUTES.phase15, "Jugar", "Partido jugable Fase 15"]
     ];
 
     return `
@@ -87,6 +88,7 @@
       case FMG.ROUTES.rival: return FMG.renderRivalClubView(FMG.gameState);
       case FMG.ROUTES.settings: return FMG.renderSettingsView(FMG.gameState);
       case FMG.ROUTES.table: return FMG.renderTableView(FMG.gameState);
+      case FMG.ROUTES.phase15: return FMG.renderPhase15View();
       default: return FMG.renderDashboard(FMG.gameState, helpers);
     }
   }
@@ -101,12 +103,28 @@
     if (!action) return;
     if (target.dataset.confirm && !window.confirm(target.dataset.confirm)) return;
     if (action === "select-club") FMG.selectClub(target.dataset.teamId);
-    if (action === "change-route") FMG.gameState.route = target.dataset.route;
+    if (action === "change-route") {
+      if (FMG.gameState.route === FMG.ROUTES.phase15) FMG.unmountPhase15();
+      FMG.gameState.route = target.dataset.route;
+    }
     if (action === "advance-week") {
       const result = FMG.advanceWeek();
       if (!result.ok) FMG.pushNotification(result.message);
     }
-    if (action === "start-live-match") FMG.pushNotification(FMG.startLiveUserMatch().message);
+    if (action === "start-live-match") {
+      FMG.pushNotification(FMG.startLiveUserMatch().message);
+      // Esperar a que el DOM se actualice antes de inicializar visualizador
+      setTimeout(() => {
+        const container = document.querySelector("#match-visualizer-container");
+        if (container && FMG.gameState.liveMatch) {
+          FMG.matchVisualController.initMatch(
+            container,
+            FMG.gameState.liveMatch,
+            FMG.gameState
+          );
+        }
+      }, 50);
+    }
     if (action === "advance-live-match") {
       const result = FMG.advanceLiveUserMatch(FMG.gameState.liveMatch ? FMG.gameState.liveMatch.speed : 5);
       if (!result.ok) FMG.pushNotification(result.message);
@@ -122,7 +140,11 @@
       const result = FMG.advanceLiveUserMatch(liveMatch ? 90 - liveMatch.minute : 90);
       if (!result.ok) FMG.pushNotification(result.message);
     }
-    if (action === "finish-live-match") FMG.pushNotification(FMG.finishLiveUserMatch().message);
+    if (action === "finish-live-match") {
+      FMG.pushNotification(FMG.finishLiveUserMatch().message);
+      // Destruir visualizador
+      FMG.matchVisualController.dispose();
+    }
     if (action === "set-live-speed") FMG.pushNotification(FMG.setLiveMatchSpeed(Number(target.dataset.speed)).message);
     if (action === "live-tactic") FMG.pushNotification(FMG.applyLiveTacticalShift(target.dataset.mode).message);
     if (action === "live-substitution") {
@@ -227,6 +249,9 @@
     if (action === "buy-player") FMG.pushNotification(FMG.buyPlayer(FMG.gameState, target.dataset.playerId).message);
     if (action === "sell-player" && !target.dataset.confirm && !window.confirm("Poner en venta a este jugador?")) return;
     if (action === "sell-player") FMG.pushNotification(FMG.sellPlayer(FMG.gameState, target.dataset.playerId).message);
+    if (FMG.handlePhase15Action && FMG.handlePhase15Action(action, target)) {
+      return; // accion manejada por fase 15, no re-renderizar SPA
+    }
     if (action === "dismiss-toast") FMG.dismissNotification(target.dataset.id);
     render();
   }

@@ -8,7 +8,7 @@
   ];
 
   function ensureSquadDepth(teams, players) {
-    const enrichedPlayers = [...FMG.deepClone(players)];
+    const enrichedPlayers = players.map(FMG.clonePlayer);
     const positions = ["POR", "DEF", "DEF", "DEF", "DEF", "MED", "MED", "MED", "EXT", "EXT", "DEL", "POR", "DEF", "DEF", "MED", "MED", "EXT", "DEL"];
 
     teams.forEach((team, teamIndex) => {
@@ -373,7 +373,7 @@
       initialized: true,
       route: FMG.ROUTES.dashboard,
       selectionMode: true,
-      teams: FMG.deepClone(teams),
+      teams: teams.map(FMG.cloneTeam),
       players: seasonPlayers,
       fixtures,
       currentWeek: 1,

@@ -86,6 +86,7 @@
           <h2>Partido en vivo</h2>
           <span class="chip">${liveMatch.completed ? "Final" : `${liveMatch.minute}'`}</span>
         </div>
+        <div id="match-visualizer-container" style="width:100%;height:500px;background:#1a1a1a;border-radius:8px;margin-bottom:16px;position:relative;overflow:hidden;"></div>
         <div class="live-scoreboard">
           <div>${FMG.clubBadge(homeTeam, "md")}<strong>${FMG.escapeHtml(homeTeam.name)}</strong><p class="muted">${liveMatch.homeLineupIds.length} en cancha</p></div>
           <div class="score">${result.homeGoals} - ${result.awayGoals}</div>
