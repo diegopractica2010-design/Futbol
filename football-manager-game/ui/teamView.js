@@ -123,7 +123,7 @@
     return `
       <section class="content-grid">
       <section class="card">
-        <div class="section-title"><h2>Plan deportivo</h2><span class="chip">${plan.formation}</span></div>
+        <div class="section-title"><h2>${FMG.clubBadge(state.userClub, "sm")} Plan deportivo</h2><span class="chip">${plan.formation}</span></div>
         <div class="stats-grid">
           <article class="stat-card"><div class="muted">Titulares disponibles</div><div class="stat-value">${starters.length}/11</div></article>
           <article class="stat-card"><div class="muted">Entrenamiento</div><div class="stat-value">${FMG.escapeHtml(FMG.TRAINING_FOCUS[plan.trainingFocus].label)}</div></article>
@@ -137,7 +137,7 @@
         <div class="button-row">
           ${Object.entries(FMG.TRAINING_FOCUS).map(([focus, config]) => `
             <button class="${plan.trainingFocus === focus ? "active" : "btn-secondary"}" data-action="set-training" data-focus="${focus}">${FMG.escapeHtml(config.label)}</button>`).join("")}
-          <button class="btn-primary" data-action="train-squad">Entrenar semana</button>
+          <button class="btn-primary" data-action="train-squad" title="Aplicar entrenamiento semanal">Entrenar semana</button>
         </div>
       </section>
       <section class="card">
@@ -191,9 +191,9 @@
                 <div class="muted">Moral</div>
                 <div class="morale-bar"><span style="width:${player.morale}%"></span></div>
                 <div class="button-row" style="margin-top:10px;">
-                  <button class="btn-primary" data-action="select-squad-player" data-player-id="${player.id}">Ficha</button>
+                  <button class="btn-primary" data-action="select-squad-player" data-player-id="${player.id}" title="Abrir vista completa de ${FMG.escapeHtml(player.name)}">Ficha</button>
                   ${starterIds.has(player.id) ? renderInstructionButtons(plan, player) : ""}
-                  <button class="btn-danger" data-action="sell-player" data-player-id="${player.id}">Vender</button>
+                  <button class="btn-danger" data-action="sell-player" data-player-id="${player.id}" data-confirm="Poner en venta a ${FMG.escapeHtml(player.name)}?">Vender</button>
                 </div>
               </div>
             </article>`).join("")}

@@ -14,7 +14,7 @@
       <section class="hero">
         <div class="panel hero-main">
           <span class="eyebrow">Temporada en marcha</span>
-          <h1 class="hero-title">${FMG.escapeHtml(state.userClub.name)}</h1>
+          <div class="club-heading">${FMG.clubBadge(state.userClub, "lg")}<h1 class="hero-title">${FMG.escapeHtml(state.userClub.name)}</h1></div>
           <p class="hero-copy">Administra presupuesto, mercado y vestuario para competir por la liga. Cada semana mezcla futbol, riesgo financiero y decisiones de plantilla.</p>
           <div class="chips">
             <span class="chip">${FMG.escapeHtml(state.userClub.city)}</span>
@@ -23,7 +23,7 @@
           </div>
           <div class="hero-actions">
             <button class="btn-primary" data-action="advance-week">Simular semana</button>
-            ${state.seasonComplete ? `<button class="btn-primary" data-action="new-season">Nueva temporada</button>` : ""}
+            ${state.seasonComplete ? `<button class="btn-primary" data-action="new-season" data-confirm="Iniciar temporada ${state.seasonNumber + 1}?">Nueva temporada</button>` : ""}
             <button class="btn-secondary" data-action="save-game">Guardar partida</button>
             <button class="btn-ghost" data-action="load-game">Cargar partida</button>
           </div>

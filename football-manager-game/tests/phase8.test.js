@@ -21,6 +21,10 @@ global.localStorage = {
   "src/finances.js",
   "src/events.js",
   "src/transfers.js",
+  "src/career.js",
+  "src/news.js",
+  "src/presentation.js",
+  "src/saveSystem.js",
   "src/gameEngine.js"
 ].forEach((file) => {
   vm.runInThisContext(fs.readFileSync(path.join(root, file), "utf8"), { filename: file });
@@ -33,7 +37,7 @@ const players = JSON.parse(fs.readFileSync(path.join(root, "data/players.json"),
 FMG.initializeGame(teams, players);
 FMG.selectClub("colo-colo");
 
-assert.equal(FMG.gameState.version, 8, "fase 8 debe usar estado version 8");
+assert.ok(FMG.gameState.version >= 8, "fase 8 debe usar estado versionado desde 8");
 assert.ok(FMG.gameState.competitions, "debe existir estado de competencias");
 assert.ok(FMG.gameState.competitions.rankings, "debe existir estado de rankings");
 
@@ -71,7 +75,7 @@ parsed.version = 7;
 delete parsed.competitions;
 localStorage.data[FMG.STORAGE_KEY] = JSON.stringify(parsed);
 assert.equal(FMG.loadGame().ok, true, "debe migrar save anterior sin competencias");
-assert.equal(FMG.gameState.version, 8, "save debe migrar a version 8");
+assert.ok(FMG.gameState.version >= 8, "save debe migrar a version 8 o superior");
 assert.ok(FMG.gameState.competitions.rankings, "save migrado debe crear rankings");
 
 console.log("Phase 8 tests passed");

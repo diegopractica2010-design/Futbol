@@ -50,7 +50,7 @@
             <div class="log-item">
               <strong>${FMG.escapeHtml(offer.buyerTeamName)} por ${FMG.escapeHtml(player ? player.name : "Jugador")}</strong>
               <p class="muted">${FMG.currency(offer.fee)} | ${FMG.escapeHtml(offer.status)}</p>
-              ${offer.status === "pending" ? `<div class="button-row" style="margin-top:10px;"><button class="btn-primary" data-action="accept-incoming-offer" data-offer-id="${offer.id}">Aceptar</button><button class="btn-ghost" data-action="reject-incoming-offer" data-offer-id="${offer.id}">Rechazar</button></div>` : ""}
+              ${offer.status === "pending" ? `<div class="button-row" style="margin-top:10px;"><button class="btn-primary" data-action="accept-incoming-offer" data-offer-id="${offer.id}" data-confirm="Aceptar oferta de ${FMG.escapeHtml(offer.buyerTeamName)}?">Aceptar</button><button class="btn-ghost" data-action="reject-incoming-offer" data-offer-id="${offer.id}">Rechazar</button></div>` : ""}
             </div>`;
         }).join("")
       : `<div class="empty-state">Todavia no llegan ofertas por tu plantilla.</div>`;

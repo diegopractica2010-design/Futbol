@@ -54,6 +54,47 @@
         FMG.registerFinanceEntry(state.finances, "expense", "Premio por rendimiento", amount);
         return "El directorio autorizo un premio interno para sostener la competitividad del plantel.";
       }
+    },
+    {
+      title: "Reunion de referentes",
+      execute(state) {
+        const leaders = state.players.filter((player) => player.teamId === state.userClub.id && !player.retired).sort((left, right) => (right.leadership || 50) - (left.leadership || 50)).slice(0, 3);
+        leaders.forEach((player) => {
+          player.morale = FMG.clamp(player.morale + 3, 0, 100);
+          player.happiness = FMG.clamp((player.happiness || 55) + 2, 0, 100);
+        });
+        return `${leaders.map((player) => player.name).join(", ")} lideraron una reunion para ordenar el vestuario.`;
+      }
+    },
+    {
+      title: "Filtracion de prensa",
+      execute(state) {
+        const player = FMG.sample(state.players.filter((item) => item.teamId === state.userClub.id && !item.retired));
+        player.happiness = FMG.clamp((player.happiness || 55) - 5, 0, 100);
+        player.moraleReason = "Filtracion en prensa";
+        if (state.career?.relations) state.career.relations.press = FMG.clamp(state.career.relations.press - 4, 0, 100);
+        return `Una filtracion sobre el rol de ${player.name} incomodo al plantel y bajo su felicidad a ${player.happiness}/100.`;
+      }
+    },
+    {
+      title: "Promesa juvenil",
+      execute(state) {
+        const prospect = state.players.filter((player) => player.teamId === state.userClub.id && !player.retired && player.age <= 23).sort((left, right) => (right.potential || right.overall) - (left.potential || left.overall))[0];
+        if (!prospect) return "El area formativa no encontro juveniles listos para subir exigencia esta semana.";
+        prospect.morale = FMG.clamp(prospect.morale + 5, 0, 100);
+        prospect.happiness = FMG.clamp((prospect.happiness || 55) + 4, 0, 100);
+        return `${prospect.name} recibio elogios internos por su potencial ${prospect.potential || prospect.overall} y empuja por mas minutos.`;
+      }
+    },
+    {
+      title: "Viaje exigente",
+      execute(state) {
+        const squad = state.players.filter((player) => player.teamId === state.userClub.id && !player.retired);
+        squad.forEach((player) => {
+          player.energy = FMG.clamp(player.energy - 4, 0, 100);
+        });
+        return `${state.userClub.name} tuvo una semana logistica pesada y el plantel perdio energia antes de la fecha.`;
+      }
     }
   ];
 

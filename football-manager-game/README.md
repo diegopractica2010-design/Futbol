@@ -2,7 +2,7 @@
 
 Simulador web de gestion futbolistica inspirado en el rol de manager de un club chileno. El proyecto funciona como SPA sin frameworks, con estado centralizado, simulacion semanal de temporada, mercado de fichajes, finanzas, eventos aleatorios y persistencia en `localStorage`.
 
-Estado actual: Fase 8 implementada. Esta base ya permite jugar el partido del usuario minuto a minuto, configurar tacticas profundas, gestionar jugadores en profundidad, negociar contratos/mercado con ofertas reales, ver clubes rivales actuar con IA propia y competir en un ecosistema con liga, copa, supercopa e internacional.
+Estado actual: Fase 13 implementada. Esta base ya permite jugar el partido del usuario minuto a minuto, configurar tacticas profundas, gestionar jugadores en profundidad, negociar contratos/mercado con ofertas reales, ver clubes rivales actuar con IA propia, competir en un ecosistema con liga/copa/supercopa/internacional, administrar finanzas institucionales avanzadas, construir una carrera de manager entre clubes, seguir un mundo narrativo con noticias contextuales, usar una interfaz final con identidad visual por club y sostener sesiones largas con guardado robusto.
 
 ## Caracteristicas
 
@@ -26,6 +26,11 @@ Estado actual: Fase 8 implementada. Esta base ya permite jugar el partido del us
 - Mercado con valor dinamico, negociaciones, contraofertas, agentes libres, cesiones, renovaciones, ofertas recibidas e historial de transferencias.
 - IA de clubes rivales con presupuestos, necesidades de plantilla, rotacion, ajustes tacticos, renovaciones y movimientos de mercado.
 - Competencias completas con Copa Chile, Supercopa, copa internacional simplificada, premios, clasificaciones, rankings y ascenso/descenso sintetico.
+- Finanzas avanzadas con presupuestos separados, deuda, prestamos, sponsors, TV, infraestructura, staff, fair play financiero, crisis y confianza del directorio.
+- Carrera de manager con perfil, reputacion, historial, objetivos del directorio, despidos, ofertas de otros clubes, cambio de club, logros, trofeos, estilo de manager, relaciones con hinchas/jugadores/prensa y decisiones narrativas con consecuencias.
+- Centro de noticias con rumores de mercado, previas, cronicas post partido, reacciones de hinchas, declaraciones, preguntas de prensa, rivalidades, clasicos, crisis de vestuario, rachas e historias emergentes basadas en datos reales del estado.
+- UI final con emblemas y colores por club, navegacion principal mejorada, vista de jugador, informe de club rival, calendario, tabla ordenable, confirmaciones, tooltips, foco accesible, mejor respuesta movil, estados vacios cuidados y feedback visual.
+- Guardado robusto con multiples slots, autosave configurable, exportacion/importacion, migracion entre versiones, confirmacion de sobrescritura, dificultad, velocidad de simulacion, opciones de temporada, reinicio seguro y errores visibles.
 
 ## Estructura
 

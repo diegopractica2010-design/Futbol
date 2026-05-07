@@ -21,6 +21,10 @@ global.localStorage = {
   "src/finances.js",
   "src/events.js",
   "src/transfers.js",
+  "src/career.js",
+  "src/news.js",
+  "src/presentation.js",
+  "src/saveSystem.js",
   "src/gameEngine.js"
 ].forEach((file) => {
   vm.runInThisContext(fs.readFileSync(path.join(root, file), "utf8"), { filename: file });

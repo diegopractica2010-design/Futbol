@@ -2,6 +2,10 @@
   const FMG = (window.FMG = window.FMG || {});
 
   FMG.STORAGE_KEY = "football-manager-game-save";
+  FMG.SAVE_INDEX_KEY = "football-manager-game-save-index";
+  FMG.SAVE_SLOT_PREFIX = "football-manager-game-slot-";
+  FMG.SETTINGS_KEY = "football-manager-game-settings";
+  FMG.CURRENT_VERSION = 13;
 
   FMG.clamp = function (value, min, max) {
     return Math.max(min, Math.min(max, value));

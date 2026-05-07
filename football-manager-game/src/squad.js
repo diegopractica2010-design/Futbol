@@ -284,7 +284,7 @@
 
   FMG.setSquadRole = function (state, playerId, role) {
     if (!FMG.SQUAD_ROLES[role]) return { ok: false, message: "Rol de plantilla no disponible." };
-    const player = state.players.find((item) => item.id === playerId && item.teamId === state.userTeamId && !item.retired);
+    const player = state.players.find((item) => item.id === playerId && !item.retired);
     if (!player) return { ok: false, message: "Jugador no disponible." };
     player.squadRole = role;
     player.morale = FMG.clamp(player.morale + FMG.SQUAD_ROLES[role].morale, 0, 100);
@@ -335,6 +335,7 @@
 
   FMG.progressPlayersForNewSeason = function (state) {
     const retired = [];
+    let improvedPlayers = 0;
     state.players.forEach((player) => {
       if (player.retired) return;
       const minutesFactor = Math.min(1, (player.seasonStats?.minutes || 0) / 1800);
@@ -342,6 +343,7 @@
       const veteranDecline = player.age >= 32 && Math.random() < 0.25 + (player.age - 32) * 0.04;
       if (youngGrowth) {
         player.overall += 1;
+        improvedPlayers += 1;
         Object.keys(player.attributes || {}).forEach((key) => {
           if (Math.random() < 0.38) player.attributes[key] = FMG.clamp(player.attributes[key] + 1, 35, 99);
         });
@@ -363,6 +365,7 @@
     retired.forEach((player) => {
       state.eventsLog.unshift({ week: state.currentWeek, title: "Retiro profesional", detail: `${player.name} anuncio su retiro del futbol.` });
     });
+    if (improvedPlayers && FMG.recordCareerDevelopment) FMG.recordCareerDevelopment(state, improvedPlayers, "Progresion de cierre de temporada");
     state.eventsLog = state.eventsLog.slice(0, 12);
     return retired;
   };
@@ -421,16 +424,19 @@
     const plan = FMG.getTeamPlan(state, state.userTeamId);
     const focus = FMG.TRAINING_FOCUS[plan.trainingFocus] || FMG.TRAINING_FOCUS.balanced;
     const squad = state.players.filter((player) => player.teamId === state.userTeamId);
+    let improvedPlayers = 0;
     squad.forEach((player) => {
       player.energy = FMG.clamp(player.energy + focus.energy, 0, 100);
       player.morale = FMG.clamp(player.morale + focus.morale, 0, 100);
       if (player.overall < player.potential && Math.random() < focus.overallChance) {
         player.overall += 1;
+        improvedPlayers += 1;
       }
     });
 
     state.tactics.trainingUsedWeek = state.currentWeek;
     FMG.autoSelectLineup(state, state.userTeamId);
+    if (improvedPlayers && FMG.recordCareerDevelopment) FMG.recordCareerDevelopment(state, improvedPlayers, "Entrenamiento semanal");
     return { ok: true, message: `Entrenamiento ${focus.label.toLowerCase()} completado.` };
   };
 

@@ -87,9 +87,9 @@
           <span class="chip">${liveMatch.completed ? "Final" : `${liveMatch.minute}'`}</span>
         </div>
         <div class="live-scoreboard">
-          <div><strong>${FMG.escapeHtml(homeTeam.name)}</strong><p class="muted">${liveMatch.homeLineupIds.length} en cancha</p></div>
+          <div>${FMG.clubBadge(homeTeam, "md")}<strong>${FMG.escapeHtml(homeTeam.name)}</strong><p class="muted">${liveMatch.homeLineupIds.length} en cancha</p></div>
           <div class="score">${result.homeGoals} - ${result.awayGoals}</div>
-          <div><strong>${FMG.escapeHtml(awayTeam.name)}</strong><p class="muted">${liveMatch.awayLineupIds.length} en cancha</p></div>
+          <div>${FMG.clubBadge(awayTeam, "md")}<strong>${FMG.escapeHtml(awayTeam.name)}</strong><p class="muted">${liveMatch.awayLineupIds.length} en cancha</p></div>
         </div>
         <div class="momentum">
           <span style="width:${momentumHome}%"></span>
@@ -169,9 +169,9 @@
               ? `<article class="match-card">
                   <p class="muted">Semana ${currentMatch.week || Math.max(state.currentWeek - 1, 1)}</p>
                   <div class="match-score">
-                    <div><strong>${FMG.escapeHtml(homeTeam.name)}</strong></div>
+                    <div>${FMG.clubBadge(homeTeam, "md")}<strong>${FMG.escapeHtml(homeTeam.name)}</strong></div>
                     <div class="score">${currentMatch.homeGoals} - ${currentMatch.awayGoals}</div>
-                    <div><strong>${FMG.escapeHtml(awayTeam.name)}</strong></div>
+                    <div>${FMG.clubBadge(awayTeam, "md")}<strong>${FMG.escapeHtml(awayTeam.name)}</strong></div>
                   </div>
                   <p class="muted">${FMG.escapeHtml(currentMatch.summary)}</p>
                   ${stats ? `
@@ -200,7 +200,7 @@
               upcomingMatches && upcomingMatches.length
                 ? upcomingMatches.map((match) => `
                     <article class="list-row compact">
-                      <div><strong>${FMG.escapeHtml(match.homeTeam.name)}</strong><p class="muted">vs ${FMG.escapeHtml(match.awayTeam.name)}</p></div>
+                      <div><strong>${FMG.clubBadge(match.homeTeam, "sm")} ${FMG.escapeHtml(match.homeTeam.name)}</strong><p class="muted">vs ${FMG.clubBadge(match.awayTeam, "sm")} ${FMG.escapeHtml(match.awayTeam.name)}</p></div>
                       <span class="chip">${match.homeTeamId === state.userTeamId || match.awayTeamId === state.userTeamId ? "Tu partido" : "Liga"}</span>
                     </article>`).join("")
                 : `<div class="empty-state">Calendario completado.</div>`

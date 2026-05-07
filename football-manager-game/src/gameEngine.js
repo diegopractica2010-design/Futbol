@@ -55,8 +55,9 @@
     return rounds;
   }
 
-  function buildSeasonFixtures(teams) {
+  function buildSeasonFixtures(teams, seasonOptions = {}) {
     const firstLeg = createRoundRobin(teams.map((team) => team.id));
+    if (seasonOptions.format === "short") return firstLeg.map((matches, index) => ({ week: index + 1, played: false, matches }));
     const secondLeg = firstLeg.map((round) => round.map((match) => ({ homeTeamId: match.awayTeamId, awayTeamId: match.homeTeamId })));
     return [...firstLeg, ...secondLeg].map((matches, index) => ({ week: index + 1, played: false, matches }));
   }
@@ -204,7 +205,10 @@
     ensureCompetitions(state);
     const previous = state.seasonHistory[0];
     const championId = previous?.championTeamId || FMG.sortStandings(state.standings)[0]?.teamId || state.teams[0].id;
-    const cupChampionId = state.competitions.nationalCup?.championTeamId || state.teams.find((team) => team.id !== championId)?.id;
+    let cupChampionId = state.competitions.nationalCup?.championTeamId || state.teams.find((team) => team.id !== championId)?.id;
+    if (cupChampionId === championId) {
+      cupChampionId = state.competitions.qualification?.find((entry) => entry.teamId !== championId)?.teamId || state.teams.find((team) => team.id !== championId)?.id;
+    }
     if (!championId || !cupChampionId || championId === cupChampionId) return null;
     const match = knockoutWinner(state, championId, cupChampionId, "Supercopa", "Final");
     state.competitions.superCup = { seasonNumber: state.seasonNumber, match, championTeamId: match.winnerTeamId, championName: match.winnerName };
@@ -230,7 +234,8 @@
   }
 
   function updateMarketWindow(state) {
-    const openWeeks = state.currentWeek <= 3 || state.currentWeek >= Math.max(1, state.totalWeeks - 2) || state.seasonComplete;
+    const generous = state.settings?.seasonOptions?.marketWindows === "generous";
+    const openWeeks = generous || state.currentWeek <= 3 || state.currentWeek >= Math.max(1, state.totalWeeks - 2) || state.seasonComplete;
     state.market.windowOpen = openWeeks;
   }
 
@@ -240,6 +245,7 @@
 
   function prepareWeek(state, currentFixture) {
     state.currentWeek = currentFixture.week;
+    if (FMG.generateFixturePreviews) FMG.generateFixturePreviews(state, currentFixture);
     FMG.tickPlayerAvailability(state);
     state.players.forEach((player) => {
       player.energy = FMG.clamp(player.energy + FMG.randomInt(4, 8), 0, 100);
@@ -278,9 +284,12 @@
     state.standings = FMG.sortStandings(state.standings);
     const userMatch = results.find((result) => result.homeTeamId === state.userTeamId || result.awayTeamId === state.userTeamId) || null;
     if (userMatch) state.currentMatch = userMatch;
+    if (userMatch) FMG.recordCareerMatchImpact(state, userMatch);
+    if (FMG.generatePostMatchNews) results.forEach((result) => FMG.generatePostMatchNews(state, result));
 
     const event = FMG.applyWeeklyEvent(state);
     const financeReport = FMG.processWeeklyFinances(state);
+    FMG.applyInfrastructureEffects(state);
     FMG.generateIncomingOffers(state);
     FMG.runRivalAIWeek(state, { afterMatches: true });
     state.teams.forEach((team) => FMG.autoSelectLineup(state, team.id));
@@ -290,6 +299,7 @@
     state.completedWeeks = state.fixtures.filter((fixture) => fixture.played).length;
     FMG.updateSquadHappiness(state);
     updateCompetitionRankings(state);
+    if (FMG.generateContextualWeeklyNews) FMG.generateContextualWeeklyNews(state, event);
 
     const nextFixture = getNextUnplayedFixture(state);
     if (nextFixture) {
@@ -298,8 +308,10 @@
       state.seasonComplete = true;
       state.champion = getChampion(state);
       completeSeasonCompetitions(state);
-      state.seasonHistory.unshift(createSeasonRecord(state));
+      const seasonRecord = createSeasonRecord(state);
+      state.seasonHistory.unshift(seasonRecord);
       state.seasonHistory = state.seasonHistory.slice(0, 8);
+      FMG.evaluateCareerSeasonEnd(state, seasonRecord);
     }
     updateMarketWindow(state);
 
@@ -315,7 +327,7 @@
 
   function reviveState(state) {
     const revived = FMG.deepClone(state);
-    revived.version = Math.max(revived.version || 1, 8);
+    revived.version = FMG.CURRENT_VERSION;
     revived.route = revived.route || FMG.ROUTES.dashboard;
     revived.notifications = revived.notifications || [];
     revived.market = revived.market || { listings: [], refreshCost: 2500000, windowOpen: true };
@@ -338,6 +350,12 @@
     ensureCompetitions(revived);
     revived.selectionMode = !revived.userTeamId;
     revived.userClub = revived.teams.find((team) => team.id === revived.userTeamId) || null;
+    FMG.ensureAdvancedFinances(revived);
+    FMG.ensureCareerState(revived);
+    FMG.ensureWorldNews(revived);
+    FMG.ensureUIState(revived);
+    FMG.ensureSettingsState(revived);
+    if (revived.userTeamId && !revived.career.objectives.length) FMG.createBoardObjectives(revived);
     FMG.preparePlayersForSeason(revived.players);
     FMG.initializeTeamPlans(revived);
     FMG.initializeRivalAI(revived);
@@ -351,7 +369,7 @@
     const seasonPlayers = ensureSquadDepth(teams, players);
     FMG.preparePlayersForSeason(seasonPlayers);
     FMG.replaceGameState({
-      version: 8,
+      version: FMG.CURRENT_VERSION,
       initialized: true,
       route: FMG.ROUTES.dashboard,
       selectionMode: true,
@@ -385,12 +403,42 @@
         prizeLog: []
       },
       finances: { balance: 0, incomeHistory: [], expenseHistory: [], weeklyReport: [] },
+      managerProfile: { name: "Manager Local", nationality: "Chile", age: 36, style: "balanced" },
+      career: {
+        status: "unemployed",
+        reputation: 45,
+        history: [],
+        objectives: [],
+        offers: [],
+        achievements: [],
+        trophies: [],
+        decisions: [],
+        narrativeLog: [],
+        relations: { fans: 60, players: 60, press: 55 },
+        record: { wins: 0, draws: 0, losses: 0 },
+        spendingThisSeason: 0,
+        transferProfitThisSeason: 0,
+        developedPlayersThisSeason: 0,
+        currentClubStartedSeason: 1,
+        lastEvaluation: null,
+        sackingHistory: []
+      },
+      worldNews: { items: [], rivalries: [], streaks: {}, pressQuestions: [], weeklyEvents: [], filter: "all" },
+      ui: { selectedRivalId: null, tableSort: "points", tableFilter: "all", calendarFilter: "all", reducedMotion: false },
+      settings: FMG.deepClone(FMG.defaultGameSettings),
+      saveMeta: { activeSlotId: "slot-1", lastSavedAt: null, lastLoadedAt: null, autosaveWeek: 0 },
+      systemErrors: [],
       eventsLog: [],
       notifications: [],
       seasonLog: []
     });
     FMG.initializeTeamPlans(FMG.gameState);
     FMG.initializeRivalAI(FMG.gameState);
+    FMG.ensureAdvancedFinances(FMG.gameState);
+    FMG.ensureCareerState(FMG.gameState);
+    FMG.ensureWorldNews(FMG.gameState);
+    FMG.ensureUIState(FMG.gameState);
+    FMG.ensureSettingsState(FMG.gameState);
     updateMarketWindow(FMG.gameState);
   };
 
@@ -400,15 +448,33 @@
     FMG.gameState.userTeamId = team.id;
     FMG.gameState.userClub = team;
     FMG.gameState.selectionMode = false;
+    FMG.gameState.route = FMG.ROUTES.dashboard;
+    FMG.gameState.career.status = "employed";
+    FMG.gameState.career.currentClubStartedSeason = FMG.gameState.seasonNumber;
     FMG.gameState.finances.balance = 0;
+    FMG.ensureAdvancedFinances(FMG.gameState);
     FMG.registerFinanceEntry(FMG.gameState.finances, "income", "Capital inicial de temporada", team.budget);
+    FMG.createBoardObjectives(FMG.gameState);
     FMG.autoSelectLineup(FMG.gameState, team.id);
     FMG.buildTransferMarket(FMG.gameState);
+    FMG.ensureUIState(FMG.gameState);
+    FMG.generateMarketRumors(FMG.gameState);
+    FMG.addNewsItem(FMG.gameState, {
+      type: "career",
+      title: `${team.name} presenta a ${FMG.gameState.managerProfile.name}`,
+      body: `${FMG.gameState.managerProfile.name} toma el mando de ${team.name} con presupuesto ${FMG.currency(team.budget)}, hinchada base de ${team.fanBase.toLocaleString("es-CL")} y estilo institucional ${team.style}.`,
+      tags: ["carrera"],
+      importance: 80,
+      entities: { teamId: team.id },
+      dedupeKey: `manager-start-${FMG.gameState.seasonNumber}-${team.id}`
+    });
     FMG.pushNotification(`Tomaste el control de ${team.name}.`);
+    FMG.autosaveIfNeeded(FMG.gameState, "select-club");
   };
 
   FMG.advanceWeek = function () {
     const state = FMG.gameState;
+    if (state.career?.status === "sacked") return { ok: false, message: "Fuiste despedido. Acepta una oferta para continuar la carrera." };
     if (state.seasonComplete) return { ok: false, message: "La temporada ya termino." };
     if (state.liveMatch && !state.liveMatch.completed) return { ok: false, message: "Hay un partido en vivo pendiente." };
 
@@ -427,11 +493,14 @@
       result.week = currentFixture.week;
       return result;
     });
-    return finishFixture(state, currentFixture, results);
+    const finished = finishFixture(state, currentFixture, results);
+    FMG.autosaveIfNeeded(state, "advance-week");
+    return finished;
   };
 
   FMG.startLiveUserMatch = function () {
     const state = FMG.gameState;
+    if (state.career?.status === "sacked") return { ok: false, message: "Fuiste despedido. Acepta una oferta para volver al banco." };
     if (state.seasonComplete) return { ok: false, message: "La temporada ya termino." };
     if (state.liveMatch && !state.liveMatch.completed) return { ok: false, message: "Ya hay un partido en vivo." };
 
@@ -445,6 +514,7 @@
     const awayTeam = state.teams.find((team) => team.id === userMatch.awayTeamId);
     const otherMatches = currentFixture.matches.filter((match) => match !== userMatch);
     state.liveMatch = FMG.createLiveMatch({ homeTeam, awayTeam, state, week: currentFixture.week, otherMatches });
+    state.liveMatch.speed = state.settings?.simulationSpeed || state.liveMatch.speed;
     state.route = FMG.ROUTES.matches;
     FMG.pushNotification(`Partido en vivo iniciado: ${homeTeam.name} vs ${awayTeam.name}.`);
     return { ok: true, message: "Partido en vivo iniciado." };
@@ -468,7 +538,9 @@
     liveMatch.result.week = currentFixture.week;
     results.push(liveMatch.result);
     state.liveMatch = null;
-    return finishFixture(state, currentFixture, results);
+    const finished = finishFixture(state, currentFixture, results);
+    FMG.autosaveIfNeeded(state, "finish-live-match");
+    return finished;
   };
 
   FMG.advanceLiveUserMatch = function (minutes) {
@@ -518,8 +590,9 @@
 
   FMG.startNewSeason = function () {
     const state = FMG.gameState;
+    if (state.career?.status === "sacked") return { ok: false, message: "Acepta una oferta antes de iniciar otra temporada." };
     if (!state.seasonComplete) return { ok: false, message: "Debes terminar la temporada actual antes de iniciar otra." };
-    const fixtures = buildSeasonFixtures(state.teams);
+    const fixtures = buildSeasonFixtures(state.teams, state.settings?.seasonOptions || {});
     state.seasonNumber += 1;
     state.fixtures = fixtures;
     state.currentWeek = 1;
@@ -535,6 +608,7 @@
     state.eventsLog = [];
     state.tactics.trainingUsedWeek = 0;
     ensureCompetitions(state);
+    FMG.prepareCareerNewSeason(state);
     state.teams.forEach((team) => {
       team.form = FMG.clamp(9 + FMG.randomInt(0, 5), 0, 20);
     });
@@ -549,10 +623,12 @@
     FMG.preparePlayersForSeason(state.players, { newSeason: true });
     FMG.initializeTeamPlans(state);
     FMG.initializeRivalAI(state);
+    FMG.ensureWorldNews(state);
     updateMarketWindow(state);
     FMG.buildTransferMarket(state);
     playSuperCup(state);
     FMG.pushNotification(`Temporada ${state.seasonNumber} iniciada.`);
+    FMG.autosaveIfNeeded(state, "new-season");
     return { ok: true, message: "Nueva temporada iniciada." };
   };
 
@@ -589,14 +665,12 @@
     FMG.gameState.notifications = FMG.gameState.notifications.filter((item) => item.id !== id);
   };
 
+  FMG.migrateSaveState = reviveState;
+
   FMG.saveGame = function () {
-    try {
-      localStorage.setItem(FMG.STORAGE_KEY, JSON.stringify(FMG.gameState));
-      FMG.pushNotification("Partida guardada en el navegador.");
-      return { ok: true, message: "Partida guardada." };
-    } catch (error) {
-      return { ok: false, message: "No se pudo guardar la partida." };
-    }
+    const result = FMG.saveToSlot(FMG.gameState, FMG.gameState.saveMeta?.activeSlotId || "slot-1", { overwrite: true });
+    if (result.ok) FMG.pushNotification("Partida guardada en el navegador.");
+    return result;
   };
 
   FMG.loadGame = function () {

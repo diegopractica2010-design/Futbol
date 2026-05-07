@@ -191,7 +191,13 @@
     const tacticalBonus = team.style === "Presion" ? 3 : team.style === "Posesion" ? 2 : 1;
     const profile = state ? FMG.getTacticalMatchProfile(state, team.id) : { attack: 0, defense: 0 };
     const availabilityPenalty = squad.length < 11 ? (11 - squad.length) * 4 : 0;
-    return base + tacticalBonus + profile.attack * 0.35 + profile.defense * 0.2 + team.form * 0.6 - availabilityPenalty;
+    const difficulty = state?.settings?.difficulty || "normal";
+    const userAdjustment = state && team.id === state.userTeamId
+      ? difficulty === "easy" ? 4 : difficulty === "hard" ? -3 : difficulty === "expert" ? -6 : 0
+      : state && team.id !== state.userTeamId
+        ? difficulty === "easy" ? -1 : difficulty === "hard" ? 2 : difficulty === "expert" ? 4 : 0
+        : 0;
+    return base + tacticalBonus + profile.attack * 0.35 + profile.defense * 0.2 + team.form * 0.6 - availabilityPenalty + userAdjustment;
   };
 
   FMG.simulateMatch = function ({ homeTeam, awayTeam, players, state }) {

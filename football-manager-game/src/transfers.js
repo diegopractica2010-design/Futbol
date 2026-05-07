@@ -129,7 +129,8 @@
     const clubAccepts = negotiation.type === "free" || isFreeAgent(player) || negotiation.fee >= requiredFee * 0.9;
     const playerAccepts = negotiation.wage >= requiredWage * 0.92 && FMG.SQUAD_ROLES[negotiation.role];
 
-    if (state.finances.balance < totalCost) {
+    FMG.ensureAdvancedFinances(state);
+    if (state.finances.balance < totalCost || state.finances.budgets.transfers < totalCost) {
       negotiation.status = "rejected";
       negotiation.message = "Presupuesto insuficiente";
       return { ok: false, message: "No hay presupuesto para cerrar la operacion." };
@@ -156,6 +157,12 @@
     negotiation.status = "accepted";
     negotiation.message = "Operacion cerrada";
     FMG.registerFinanceEntry(state.finances, "expense", `${negotiation.type === "loan" ? "Cesion" : "Fichaje"} de ${player.name}`, -totalCost);
+    state.finances.budgets.transfers = Math.max(0, state.finances.budgets.transfers - totalCost);
+    FMG.recordCareerTransferImpact(state, {
+      type: negotiation.type === "loan" ? "loan" : "purchase",
+      amount: totalCost,
+      playerId: player.id
+    });
     state.market.transferHistory.unshift({
       week: state.currentWeek,
       type: negotiation.type,
@@ -168,6 +175,17 @@
     });
     state.market.transferHistory = state.market.transferHistory.slice(0, 16);
     state.market.listings = state.market.listings.filter((item) => item.playerId !== player.id);
+    if (FMG.addNewsItem) {
+      FMG.addNewsItem(state, {
+        type: "transfer",
+        title: `${player.name} firma con ${state.userClub.name}`,
+        body: `${state.userClub.name} cerro la ${negotiation.type === "loan" ? "cesion" : "compra"} de ${player.name} por costo inicial ${FMG.currency(totalCost)} y salario ${FMG.currency(negotiation.wage)}. Llega con OVR ${player.overall} y rol ${FMG.SQUAD_ROLES[negotiation.role]?.label || negotiation.role}.`,
+        tags: ["mercado"],
+        importance: player.overall >= 75 ? 82 : 64,
+        entities: { playerId: player.id, teamId: state.userTeamId },
+        dedupeKey: `transfer-${state.seasonNumber}-${state.currentWeek}-${player.id}`
+      });
+    }
     FMG.autoSelectLineup(state, state.userTeamId);
     if (oldTeamId && state.teams.some((team) => team.id === oldTeamId)) FMG.autoSelectLineup(state, oldTeamId);
     return { ok: true, message: `${player.name} firma con ${state.userClub.name}.`, negotiation };
@@ -181,6 +199,8 @@
     const years = FMG.clamp(Number(options.years || 3), 1, 5);
     const demanded = FMG.estimatePlayerWageDemand(player, role);
     if (wage < demanded * 0.88) return { ok: false, message: "El jugador rechaza la renovacion por salario bajo." };
+    FMG.ensureAdvancedFinances(state);
+    if (wage > state.finances.budgets.wages) return { ok: false, message: "La renovacion excede el presupuesto salarial." };
     player.salary = wage;
     player.contractYears = years;
     player.squadRole = role;
@@ -232,6 +252,12 @@
     player.contractYears = Math.max(2, player.contractYears || 2);
     offer.status = "accepted";
     FMG.registerFinanceEntry(state.finances, "income", `Venta de ${player.name}`, offer.fee);
+    FMG.recordCareerTransferImpact(state, {
+      type: "sale",
+      amount: offer.fee,
+      playerId: player.id,
+      important: player.overall >= 76 || player.squadRole === "key"
+    });
     state.market.transferHistory.unshift({
       week: state.currentWeek,
       type: "sale",
@@ -242,6 +268,17 @@
       fee: offer.fee,
       wage: player.salary
     });
+    if (FMG.addNewsItem) {
+      FMG.addNewsItem(state, {
+        type: "transfer",
+        title: `${player.name} deja ${state.userClub.name}`,
+        body: `${player.name} fue vendido a ${offer.buyerTeamName} por ${FMG.currency(offer.fee)}. En el plantel saliente tenia OVR ${player.overall}, salario ${FMG.currency(player.salary)} y rol ${FMG.SQUAD_ROLES[player.squadRole]?.label || "sin rol definido"}.`,
+        tags: ["mercado"],
+        importance: player.overall >= 76 ? 80 : 58,
+        entities: { playerId: player.id, fromTeamId: state.userTeamId, toTeamId: offer.buyerTeamId },
+        dedupeKey: `sale-${state.seasonNumber}-${state.currentWeek}-${player.id}`
+      });
+    }
     FMG.autoSelectLineup(state, state.userTeamId);
     FMG.autoSelectLineup(state, offer.buyerTeamId);
     return { ok: true, message: `${player.name} fue vendido a ${offer.buyerTeamName}.` };

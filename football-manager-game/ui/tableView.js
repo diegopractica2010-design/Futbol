@@ -36,16 +36,33 @@
   }
 
   FMG.renderTableView = function (state) {
+    FMG.ensureUIState(state);
     const competitions = state.competitions || { rankings: {}, qualification: [] };
+    const sorters = {
+      points: (left, right) => right.points - left.points || right.goalDifference - left.goalDifference,
+      goals: (left, right) => right.goalsFor - left.goalsFor,
+      defense: (left, right) => left.goalsAgainst - right.goalsAgainst,
+      name: (left, right) => left.name.localeCompare(right.name)
+    };
+    const visibleStandings = [...state.standings]
+      .filter((entry) => state.ui.tableFilter === "all" || (state.ui.tableFilter === "mine" ? entry.teamId === state.userTeamId : true))
+      .sort(sorters[state.ui.tableSort] || sorters.points);
     return `
       <section class="card">
         <div class="section-title"><h2>Tabla de posiciones</h2><span class="chip">${state.totalWeeks} semanas</span></div>
+        <div class="button-row" role="toolbar" aria-label="Controles de tabla">
+          ${[["points", "Puntos"], ["goals", "Goles"], ["defense", "Defensa"], ["name", "Nombre"]].map(([sort, label]) => `<button class="${state.ui.tableSort === sort ? "active" : "btn-ghost"}" data-action="set-table-sort" data-sort="${sort}" title="Ordenar por ${label.toLowerCase()}">${label}</button>`).join("")}
+          ${[["all", "Todos"], ["mine", "Mi club"]].map(([filter, label]) => `<button class="${state.ui.tableFilter === filter ? "active" : "btn-secondary"}" data-action="set-table-filter" data-filter="${filter}">${label}</button>`).join("")}
+        </div>
         <div class="table">
           <div class="table-row header"><span>#</span><span>Equipo</span><span>Pts</span><span>DG</span><span>GF</span><span>PJ</span></div>
-          ${state.standings.map((entry, index) => `
+          ${visibleStandings.map((entry, index) => {
+            const club = state.teams.find((team) => team.id === entry.teamId);
+            return `
             <div class="table-row">
-              <span>${index + 1}</span><span>${FMG.escapeHtml(entry.name)}${entry.teamId === state.userTeamId ? " (Tu club)" : ""}</span><span>${entry.points}</span><span>${entry.goalDifference}</span><span>${entry.goalsFor}</span><span>${entry.played}</span>
-            </div>`).join("")}
+              <span>${index + 1}</span><span>${FMG.clubBadge(club, "sm")} ${FMG.escapeHtml(entry.name)}${entry.teamId === state.userTeamId ? " (Tu club)" : ""}</span><span>${entry.points}</span><span>${entry.goalDifference}</span><span>${entry.goalsFor}</span><span>${entry.played}</span>
+            </div>`;
+          }).join("")}
         </div>
       </section>
       <section class="content-grid">
