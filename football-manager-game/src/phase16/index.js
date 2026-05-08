@@ -17,6 +17,9 @@
     this._rafId  = null;
     this._last   = 0;
     this._TICK   = 1000 / C.FPS;
+    this._accumulator = 0;
+    this._maxFrameMs = 100;
+    this._maxStepsPerFrame = 4;
 
     // Instanciar sistemas
     this.input  = new P16.InputSystem();
@@ -27,6 +30,9 @@
     this.camera = new P16.CameraSystem(canvas);
     this.hud    = new P16.HUDSystem(this._ctx);
     this.audio  = new P16.AudioSystem();
+    this.profiler = new window.FMG.Performance.Profiler({ sampleWindow: 90 });
+    this.renderOptimizer = new window.FMG.Performance.RenderOptimizer();
+    this.hud.renderOptimizer = this.renderOptimizer;
 
     this._resizeHandler = () => this.camera.onResize();
     window.addEventListener("resize", this._resizeHandler);
@@ -40,15 +46,21 @@
 
     if (!match.running || match.paused) return;
 
+    this.profiler.begin("input");
     // 1. Input -> mover jugador controlado
     match.updateControlled(ball.ball.x, ball.ball.y);
     this._applyInput();
+    this.profiler.end("input");
 
+    this.profiler.begin("ai");
     // 2. IA
     this.ai.tick(match, ball);
+    this.profiler.end("ai");
 
+    this.profiler.begin("physics");
     // 3. Colisiones jugador-balon
-    match.allPlayers().forEach((p) => ball.resolvePlayerCollision(p));
+    const players = match.allPlayers();
+    for (let i = 0; i < players.length; i++) ball.resolvePlayerCollision(players[i]);
 
     // 4. Fisica del balon
     const goalEvent = ball.tick();
@@ -68,6 +80,7 @@
 
     // 7. Tiempo
     match.advanceTick();
+    this.profiler.end("physics");
 
     if (match.finished) this.audio.playWhistle();
   };
@@ -169,11 +182,31 @@
 
   Phase16Game.prototype._loop = function (ts) {
     this._rafId = requestAnimationFrame((t) => this._loop(t));
-    if (ts - this._last >= this._TICK) {
-      this._last = ts;
+    if (!this._last) this._last = ts;
+
+    this.profiler.beginFrame();
+    let frameMs = Math.min(ts - this._last, this._maxFrameMs);
+    this._last = ts;
+    this._accumulator += frameMs;
+
+    let steps = 0;
+    while (this._accumulator >= this._TICK && steps < this._maxStepsPerFrame) {
+      this.profiler.begin("logic");
       this._logicTick();
-      this.hud.render(this.match, this.ball, this.anim);
+      this.profiler.end("logic");
+      this._accumulator -= this._TICK;
+      steps++;
     }
+
+    if (steps === this._maxStepsPerFrame && this._accumulator >= this._TICK) {
+      this._accumulator = this._TICK * 0.5;
+    }
+
+    this.renderOptimizer.beginFrame(this._canvas, this.camCtrl ? this.camCtrl.state : null, C.FIELD_W, C.FIELD_H);
+    this.profiler.begin("render");
+    this.hud.render(this.match, this.ball, this.anim);
+    this.profiler.end("render");
+    this.profiler.endFrame();
   };
 
   // ---- API publica ----
@@ -189,6 +222,8 @@
     this.match.reset();
     this.ball.reset();
     this.anim.goalFlash = 0;
+    this._accumulator = 0;
+    this._last = 0;
   };
 
   Phase16Game.prototype.dispose = function () {

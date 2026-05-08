@@ -94,7 +94,7 @@
   };
 
   // Render completo de jugadores + balon + efectos
-  AnimationManager.prototype.render = function (ctx, match, ball) {
+  AnimationManager.prototype.render = function (ctx, match, ball, renderOptimizer) {
     var self = this;
 
     // Efectos debajo de jugadores
@@ -104,12 +104,12 @@
     match.aiTeam.forEach(function (p) {
       var ps   = self._getState(p);
       var pose = self._blendTree.evaluate(ps);
-      self._playerRen.draw(ctx, ps, pose, false);
+      self._playerRen.draw(ctx, ps, pose, false, renderOptimizer);
     });
     match.userTeam.forEach(function (p) {
       var ps   = self._getState(p);
       var pose = self._blendTree.evaluate(ps);
-      self._playerRen.draw(ctx, ps, pose, p === match.controlled);
+      self._playerRen.draw(ctx, ps, pose, p === match.controlled, renderOptimizer);
     });
 
     // Balon
@@ -188,7 +188,7 @@
       game.hud._drawField();
 
       // Jugadores y balon con animaciones
-      animMgr.render(ctx, match, ball);
+      animMgr.render(ctx, match, ball, game.renderOptimizer);
 
       // HUD superpuesto (marcador, overlays)
       game.hud._drawScorebar(match);

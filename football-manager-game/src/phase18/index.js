@@ -18,6 +18,7 @@
     this._userBrain = null;
     this._aiBrain   = null;
     this._tick      = 0;
+    this._nonControlled = [];
   }
 
   MatchAI.prototype.init = function () {
@@ -33,7 +34,7 @@
     this._tick++;
 
     // Equipo IA: todos los jugadores
-    match.aiTeam.forEach(function (p, index) { p._teamIndex = index; });
+    for (var aiIndex = 0; aiIndex < match.aiTeam.length; aiIndex++) match.aiTeam[aiIndex]._teamIndex = aiIndex;
     this._aiBrain.tick(
       match.aiTeam,
       match.userTeam,
@@ -44,10 +45,13 @@
 
     // Equipo usuario: solo los NO controlados
     var controlled = match.controlled;
-    match.userTeam.forEach(function (p, index) { p._teamIndex = index; });
-    var nonControlled = match.userTeam.filter(function (p) {
-      return p !== controlled;
-    });
+    var nonControlled = this._nonControlled;
+    nonControlled.length = 0;
+    for (var userIndex = 0; userIndex < match.userTeam.length; userIndex++) {
+      var p = match.userTeam[userIndex];
+      p._teamIndex = userIndex;
+      if (p !== controlled) nonControlled.push(p);
+    }
 
     if (nonControlled.length > 0) {
       this._userBrain.tick(

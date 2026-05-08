@@ -292,6 +292,7 @@
     FMG.applyInfrastructureEffects(state);
     FMG.generateIncomingOffers(state);
     FMG.runRivalAIWeek(state, { afterMatches: true });
+    if (FMG.simulationScheduler) FMG.simulationScheduler.runDue(state, { phase: "post-week" });
     state.teams.forEach((team) => FMG.autoSelectLineup(state, team.id));
 
     state.seasonLog.unshift({ week: state.currentWeek, headline: FMG.financeHeadline(financeReport), event });
@@ -322,6 +323,18 @@
         ? `Semana completada. Proximo rival: ${nextOpponent ? nextOpponent.name : "descanso"}.`
         : `Semana de descanso completada. Proximo rival: ${nextOpponent ? nextOpponent.name : "por definir"}.`;
     FMG.pushNotification(message);
+    if (FMG.emitGameEvent) {
+      FMG.emitGameEvent(FMG.EventTypes.MATCH_ENDED, {
+        source: "simulation",
+        week: currentFixture.week,
+        results: results.map((result) => ({
+          homeTeamId: result.homeTeamId,
+          awayTeamId: result.awayTeamId,
+          homeGoals: result.homeGoals,
+          awayGoals: result.awayGoals
+        }))
+      });
+    }
     return { ok: true, message: "Fecha simulada correctamente." };
   }
 
@@ -360,6 +373,7 @@
     FMG.initializeTeamPlans(revived);
     FMG.initializeRivalAI(revived);
     updateMarketWindow(revived);
+    if (FMG.ensureSeparatedState) FMG.ensureSeparatedState(revived);
     return revived;
   }
 
@@ -440,6 +454,7 @@
     FMG.ensureUIState(FMG.gameState);
     FMG.ensureSettingsState(FMG.gameState);
     updateMarketWindow(FMG.gameState);
+    if (FMG.ensureSeparatedState) FMG.ensureSeparatedState(FMG.gameState);
   };
 
   FMG.selectClub = function (teamId) {
@@ -469,6 +484,12 @@
       dedupeKey: `manager-start-${FMG.gameState.seasonNumber}-${team.id}`
     });
     FMG.pushNotification(`Tomaste el control de ${team.name}.`);
+    if (FMG.emitGameEvent) {
+      FMG.emitGameEvent(FMG.EventTypes.BOARD_OBJECTIVE_UPDATED, {
+        teamId: team.id,
+        objectives: FMG.gameState.career.objectives
+      });
+    }
     FMG.autosaveIfNeeded(FMG.gameState, "select-club");
   };
 
@@ -514,9 +535,23 @@
     const awayTeam = state.teams.find((team) => team.id === userMatch.awayTeamId);
     const otherMatches = currentFixture.matches.filter((match) => match !== userMatch);
     state.liveMatch = FMG.createLiveMatch({ homeTeam, awayTeam, state, week: currentFixture.week, otherMatches });
+    if (state.matchState) {
+      state.matchState.status = "live";
+      state.matchState.homeTeamId = homeTeam.id;
+      state.matchState.awayTeamId = awayTeam.id;
+      state.matchState.week = currentFixture.week;
+    }
     state.liveMatch.speed = state.settings?.simulationSpeed || state.liveMatch.speed;
     state.route = FMG.ROUTES.matches;
     FMG.pushNotification(`Partido en vivo iniciado: ${homeTeam.name} vs ${awayTeam.name}.`);
+    if (FMG.emitGameEvent) {
+      FMG.emitGameEvent(FMG.EventTypes.MATCH_STARTED, {
+        source: "manager-live",
+        homeTeamId: homeTeam.id,
+        awayTeamId: awayTeam.id,
+        week: currentFixture.week
+      });
+    }
     return { ok: true, message: "Partido en vivo iniciado." };
   };
 
@@ -538,6 +573,7 @@
     liveMatch.result.week = currentFixture.week;
     results.push(liveMatch.result);
     state.liveMatch = null;
+    if (state.matchState) state.matchState.status = "idle";
     const finished = finishFixture(state, currentFixture, results);
     FMG.autosaveIfNeeded(state, "finish-live-match");
     return finished;
@@ -666,6 +702,7 @@
     FMG.buildTransferMarket(state);
     playSuperCup(state);
     FMG.pushNotification(`Temporada ${state.seasonNumber} iniciada.`);
+    if (FMG.ensureSeparatedState) FMG.ensureSeparatedState(state);
     FMG.autosaveIfNeeded(state, "new-season");
     return { ok: true, message: "Nueva temporada iniciada." };
   };

@@ -111,15 +111,8 @@
           game.hud._drawField();
 
           // Dibujar jugadores desde el frame (posiciones interpoladas)
-          var allPlayers = frame.a.concat(frame.u);
-          allPlayers.forEach(function (fp) {
-            // Buscar el jugador real para obtener team
-            var real = match.allPlayers().find(function (p) { return p.id === fp.id; });
-            if (real) {
-              var fakePl = { x: fp.x, y: fp.y, team: real.team };
-              game.hud._drawPlayer(fakePl, false);
-            }
-          });
+          drawReplayTeam(frame.a, match, game);
+          drawReplayTeam(frame.u, match, game);
 
           // Dibujar balon del frame
           var fakeBall = { x: frame.bx, y: frame.by };
@@ -145,7 +138,7 @@
 
       // Dibujar jugadores y balon con animaciones (Fase 17-19)
       if (game.animMgr) {
-        game.animMgr.render(ctx, match, ball);
+        game.animMgr.render(ctx, match, ball, game.renderOptimizer);
       } else {
         match.aiTeam.forEach(function (p)   { game.hud._drawPlayer(p, false); });
         match.userTeam.forEach(function (p) { game.hud._drawPlayer(p, p === match.controlled); });
@@ -184,4 +177,20 @@
 
     return game;
   };
+
+  function drawReplayTeam(frameTeam, match, game) {
+    for (var i = 0; i < frameTeam.length; i++) {
+      var fp = frameTeam[i];
+      var real = findPlayerById(match, fp.id);
+      if (real) game.hud._drawPlayer({ x: fp.x, y: fp.y, team: real.team }, false);
+    }
+  }
+
+  function findPlayerById(match, id) {
+    var players = match.allPlayers();
+    for (var i = 0; i < players.length; i++) {
+      if (players[i].id === id) return players[i];
+    }
+    return null;
+  }
 })();

@@ -54,7 +54,9 @@
   };
 
   FMG.replaceGameState = function (nextState) {
+    if (FMG.ensureSeparatedState) FMG.ensureSeparatedState(nextState);
     Object.keys(FMG.gameState).forEach((key) => { delete FMG.gameState[key]; });
     Object.assign(FMG.gameState, nextState);
+    if (FMG.syncLegacyStateFacets) FMG.syncLegacyStateFacets(FMG.gameState);
   };
 })();

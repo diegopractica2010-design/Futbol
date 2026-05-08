@@ -3,6 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test": "node tests/phase0.test.js && node tests/phase1.test.js && node tests/phase2.test.js && node tests/phase3.test.js && node tests/phase4.test.js && node tests/phase5.test.js && node tests/phase6.test.js && node tests/phase7.test.js && node tests/phase8.test.js && node tests/phase9.test.js && node tests/phase10.test.js && node tests/phase11.test.js && node tests/phase12.test.js && node tests/phase13.test.js && node tests/phase19_22.test.js && node tests/phase24.test.js"
+    "test": "node tests/phase0.test.js && node tests/phase1.test.js && node tests/phase2.test.js && node tests/phase3.test.js && node tests/phase4.test.js && node tests/phase5.test.js && node tests/phase6.test.js && node tests/phase7.test.js && node tests/phase8.test.js && node tests/phase9.test.js && node tests/phase10.test.js && node tests/phase11.test.js && node tests/phase12.test.js && node tests/phase13.test.js && node tests/phase19_22.test.js && node tests/phase24.test.js && node tests/performance_foundation.test.js && node tests/phase2_architecture.test.js"
   }
 }

@@ -96,6 +96,7 @@ global.webkitAudioContext = FakeAudioContext;
 window.FMG = {};
 
 [
+  "src/performance.js",
   "src/phase16/constants.js",
   "src/phase16/InputSystem.js",
   "src/phase16/BallSystem.js",

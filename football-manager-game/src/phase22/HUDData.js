@@ -27,10 +27,12 @@
     // Posesion: quien esta mas cerca del balon
     var b = ball.ball;
     var minDist = Infinity, closestTeam = -1;
-    match.allPlayers().forEach(function (p) {
+    var players = match.allPlayers();
+    for (var i = 0; i < players.length; i++) {
+      var p = players[i];
       var d = Math.hypot(p.x - b.x, p.y - b.y);
       if (d < minDist) { minDist = d; closestTeam = p.team; }
-    });
+    }
     if (closestTeam >= 0 && minDist < 60) {
       this._possFrames[closestTeam]++;
       var total = this._possFrames[0] + this._possFrames[1] || 1;
@@ -71,10 +73,16 @@
     this.tickBroadcastEvents(match);
 
     // Decrementar timers de lower thirds
-    this.lowerThirds = this.lowerThirds.filter(function (lt) {
+    var write = 0;
+    for (var i = 0; i < this.lowerThirds.length; i++) {
+      var lt = this.lowerThirds[i];
       lt.timer--;
-      return lt.timer > 0;
-    });
+      if (lt.timer > 0) {
+        this.lowerThirds[write] = lt;
+        write++;
+      }
+    }
+    this.lowerThirds.length = write;
   };
 
   // Agregar lower third (evento del partido)

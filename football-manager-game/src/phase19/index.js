@@ -133,7 +133,7 @@
     // Parchear AnimationManager para usar poses de portero
     if (game.animMgr) {
       var origAnimRender = game.animMgr.render.bind(game.animMgr);
-      game.animMgr.render = function (ctx, match, ball) {
+      game.animMgr.render = function (ctx, match, ball, renderOptimizer) {
         var self = game.animMgr;
         var GkClip = window.FMG.Phase19.GoalkeeperAnimClip;
 
@@ -160,7 +160,7 @@
             }
 
             var isControlled = entry.isUser && p === match.controlled;
-            self._playerRen.draw(ctx, ps, pose, isControlled);
+            self._playerRen.draw(ctx, ps, pose, isControlled, renderOptimizer);
           });
         });
 

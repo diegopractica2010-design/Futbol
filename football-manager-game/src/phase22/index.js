@@ -196,7 +196,7 @@
       game.hud._drawField();
 
       if (game.animMgr) {
-        game.animMgr.render(ctx, match, ball);
+        game.animMgr.render(ctx, match, ball, game.renderOptimizer);
       } else {
         match.aiTeam.forEach(function (p) { game.hud._drawPlayer(p, false); });
         match.userTeam.forEach(function (p) { game.hud._drawPlayer(p, p === match.controlled); });
@@ -222,10 +222,8 @@
     game.camCtrl.beginWorldTransform();
     game.hud._drawField();
 
-    frame.a.concat(frame.u).forEach(function (fp) {
-      var real = match.allPlayers().find(function (p) { return p.id === fp.id; });
-      if (real) game.hud._drawPlayer({ x: fp.x, y: fp.y, team: real.team }, false);
-    });
+    drawReplayTeam(frame.a, match, game);
+    drawReplayTeam(frame.u, match, game);
     game.hud._drawBall({ x: frame.bx, y: frame.by });
 
     game.camCtrl.endWorldTransform();
@@ -278,6 +276,22 @@
       }
     });
     return best;
+  }
+
+  function drawReplayTeam(frameTeam, match, game) {
+    for (var i = 0; i < frameTeam.length; i++) {
+      var fp = frameTeam[i];
+      var real = findPlayerById(match, fp.id);
+      if (real) game.hud._drawPlayer({ x: fp.x, y: fp.y, team: real.team }, false);
+    }
+  }
+
+  function findPlayerById(match, id) {
+    var players = match.allPlayers();
+    for (var i = 0; i < players.length; i++) {
+      if (players[i].id === id) return players[i];
+    }
+    return null;
   }
 
   function notifyKick(game, player, action, power) {

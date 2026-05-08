@@ -40,12 +40,21 @@
     this._selectedUserIndex = 10;
     this.userTeam    = HOME_POS.map(([x, y], i) => makePlayer("u" + i, x, y, 0));
     this.aiTeam      = AWAY_POS.map(([x, y], i) => makePlayer("a" + i, x, y, 1));
+    this._allPlayers = this.userTeam.concat(this.aiTeam);
   }
 
   MatchSystem.prototype.start = function () {
     this.running  = true;
     this.paused   = false;
     this.finished = false;
+    this._matchEndedEmitted = false;
+    if (window.FMG.emitGameEvent) {
+      window.FMG.emitGameEvent(window.FMG.EventTypes.MATCH_STARTED, {
+        source: "phase16",
+        tick: this.tickCount,
+        score: this.score.slice()
+      });
+    }
   };
 
   MatchSystem.prototype.reset = function () {
@@ -59,6 +68,7 @@
     this._selectedUserIndex = 10;
     this.userTeam  = HOME_POS.map(([x, y], i) => makePlayer("u" + i, x, y, 0));
     this.aiTeam    = AWAY_POS.map(([x, y], i) => makePlayer("a" + i, x, y, 1));
+    this._allPlayers = this.userTeam.concat(this.aiTeam);
   };
 
   MatchSystem.prototype.kickoff = function () {
@@ -70,6 +80,14 @@
     // side: "goal-left" = marcó equipo usuario (ataca derecha), "goal-right" = marcó IA
     if (side === "goal-left")  this.score[0]++;
     if (side === "goal-right") this.score[1]++;
+    if (window.FMG.emitGameEvent) {
+      window.FMG.emitGameEvent(window.FMG.EventTypes.GOAL_SCORED, {
+        side,
+        team: side === "goal-left" ? 0 : 1,
+        score: this.score.slice(),
+        tick: this.tickCount
+      });
+    }
   };
 
   MatchSystem.prototype.advanceTick = function () {
@@ -77,6 +95,14 @@
     if (this.tickCount >= C.MATCH_SECS * C.FPS) {
       this.running  = false;
       this.finished = true;
+      if (!this._matchEndedEmitted && window.FMG.emitGameEvent) {
+        this._matchEndedEmitted = true;
+        window.FMG.emitGameEvent(window.FMG.EventTypes.MATCH_ENDED, {
+          source: "phase16",
+          tick: this.tickCount,
+          score: this.score.slice()
+        });
+      }
     }
   };
 
@@ -116,7 +142,7 @@
 
   // Todos los jugadores (para iteración en colisiones)
   MatchSystem.prototype.allPlayers = function () {
-    return this.userTeam.concat(this.aiTeam);
+    return this._allPlayers;
   };
 
   window.FMG.Phase16.MatchSystem = MatchSystem;

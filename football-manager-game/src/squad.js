@@ -287,9 +287,18 @@
     const player = state.players.find((item) => item.id === playerId && !item.retired);
     if (!player) return { ok: false, message: "Jugador no disponible." };
     player.squadRole = role;
+    const beforeMorale = player.morale;
     player.morale = FMG.clamp(player.morale + FMG.SQUAD_ROLES[role].morale, 0, 100);
     player.moraleReason = `Rol definido: ${FMG.SQUAD_ROLES[role].label}`;
     addMoraleEntry(player, player.moraleReason, FMG.SQUAD_ROLES[role].morale);
+    if (FMG.emitGameEvent && beforeMorale !== player.morale) {
+      FMG.emitGameEvent(FMG.EventTypes.PLAYER_MORALE_CHANGED, {
+        playerId: player.id,
+        before: beforeMorale,
+        after: player.morale,
+        reason: player.moraleReason
+      });
+    }
     return { ok: true, message: `${player.name} queda como ${FMG.SQUAD_ROLES[role].label.toLowerCase()}.` };
   };
 
@@ -437,6 +446,14 @@
     state.tactics.trainingUsedWeek = state.currentWeek;
     FMG.autoSelectLineup(state, state.userTeamId);
     if (improvedPlayers && FMG.recordCareerDevelopment) FMG.recordCareerDevelopment(state, improvedPlayers, "Entrenamiento semanal");
+    if (FMG.emitGameEvent) {
+      FMG.emitGameEvent(FMG.EventTypes.TRAINING_COMPLETED, {
+        week: state.currentWeek,
+        teamId: state.userTeamId,
+        focus: plan.trainingFocus,
+        improvedPlayers
+      });
+    }
     return { ok: true, message: `Entrenamiento ${focus.label.toLowerCase()} completado.` };
   };
 
@@ -496,6 +513,14 @@
         player.injuryHistory = player.injuryHistory.slice(0, 8);
         player.moraleReason = "Lesionado";
         addMoraleEntry(player, player.moraleReason, -4);
+        if (FMG.emitGameEvent) {
+          FMG.emitGameEvent(FMG.EventTypes.PLAYER_INJURED, {
+            playerId: player.id,
+            teamId: player.teamId,
+            duration: injury.duration,
+            week: result.week || state.currentWeek
+          });
+        }
       }
     });
   };

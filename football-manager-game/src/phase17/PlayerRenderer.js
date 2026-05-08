@@ -34,11 +34,12 @@
 
   function PlayerRenderer() {}
 
-  PlayerRenderer.prototype.draw = function (ctx, state, pose, isControlled) {
+  PlayerRenderer.prototype.draw = function (ctx, state, pose, isControlled, renderOptimizer) {
     if (!C) C = window.FMG.Phase16.C;
 
     var x   = state.x;
     var y   = state.y + pose.bobY;
+    if (renderOptimizer && !renderOptimizer.shouldDrawWorld(x, y, C.PLAYER_R + 22)) return;
     var ang = state.facingAngle;
     var col = TEAM_COLORS[state.team] || TEAM_COLORS[0];
 

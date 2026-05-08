@@ -175,6 +175,16 @@
     });
     state.market.transferHistory = state.market.transferHistory.slice(0, 16);
     state.market.listings = state.market.listings.filter((item) => item.playerId !== player.id);
+    if (FMG.emitGameEvent) {
+      FMG.emitGameEvent(FMG.EventTypes.TRANSFER_COMPLETED, {
+        type: negotiation.type,
+        playerId: player.id,
+        fromTeamId: oldTeamId,
+        toTeamId: state.userTeamId,
+        fee: negotiation.fee,
+        wage: negotiation.wage
+      });
+    }
     if (FMG.addNewsItem) {
       FMG.addNewsItem(state, {
         type: "transfer",
@@ -277,6 +287,16 @@
         importance: player.overall >= 76 ? 80 : 58,
         entities: { playerId: player.id, fromTeamId: state.userTeamId, toTeamId: offer.buyerTeamId },
         dedupeKey: `sale-${state.seasonNumber}-${state.currentWeek}-${player.id}`
+      });
+    }
+    if (FMG.emitGameEvent) {
+      FMG.emitGameEvent(FMG.EventTypes.TRANSFER_COMPLETED, {
+        type: "sale",
+        playerId: player.id,
+        fromTeamId: state.userTeamId,
+        toTeamId: offer.buyerTeamId,
+        fee: offer.fee,
+        wage: player.salary
       });
     }
     FMG.autoSelectLineup(state, state.userTeamId);

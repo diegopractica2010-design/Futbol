@@ -11,6 +11,7 @@
 
   function HUDSystem(ctx) {
     this.ctx = ctx;
+    this.renderOptimizer = null;
   }
 
   // --- Cancha ---
@@ -58,6 +59,7 @@
 
   HUDSystem.prototype._drawPlayer = function (p, isControlled) {
     const ctx = this.ctx;
+    if (this.renderOptimizer && !this.renderOptimizer.shouldDrawWorld(p.x, p.y, C.PLAYER_R + 8)) return;
 
     // Sombra
     ctx.fillStyle = "rgba(0,0,0,0.18)";
@@ -84,6 +86,7 @@
 
   HUDSystem.prototype._drawBall = function (ball) {
     const ctx = this.ctx;
+    if (this.renderOptimizer && !this.renderOptimizer.shouldDrawWorld(ball.x, ball.y, C.BALL_R + 16)) return;
 
     ctx.fillStyle = "rgba(0,0,0,0.25)";
     var h = Math.min(ball.z || 0, 14);
@@ -170,9 +173,16 @@
 
     this._drawField();
 
-    // Dibujar IA primero, luego usuario encima
-    match.aiTeam.forEach((p) => this._drawPlayer(p, false));
-    match.userTeam.forEach((p) => this._drawPlayer(p, p === match.controlled));
+    // Dibujar IA primero, luego usuario encima. En low-end se agrupan circulos por equipo.
+    if (this.renderOptimizer) {
+      drawPlayerShadows(ctx, match.aiTeam, this.renderOptimizer);
+      drawPlayerShadows(ctx, match.userTeam, this.renderOptimizer);
+      this.renderOptimizer.drawSimplePlayers(ctx, match.aiTeam, null, C.PLAYER_R, [C.COLOR_USER_TEAM, C.COLOR_AI_TEAM]);
+      this.renderOptimizer.drawSimplePlayers(ctx, match.userTeam, match.controlled, C.PLAYER_R, [C.COLOR_USER_TEAM, C.COLOR_AI_TEAM]);
+    } else {
+      match.aiTeam.forEach((p) => this._drawPlayer(p, false));
+      match.userTeam.forEach((p) => this._drawPlayer(p, p === match.controlled));
+    }
 
     this._drawBall(ball.ball);
     this._drawScorebar(match);
@@ -181,6 +191,18 @@
     if (match.finished)         this._drawFinished(match);
     else if (match.paused)      this._drawPause();
   };
+
+  function drawPlayerShadows(ctx, players, renderOptimizer) {
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.beginPath();
+    for (var i = 0; i < players.length; i++) {
+      var p = players[i];
+      if (!renderOptimizer.shouldDrawWorld(p.x, p.y, C.PLAYER_R + 8)) continue;
+      ctx.moveTo(p.x + C.PLAYER_R * 0.9 + 2, p.y + C.PLAYER_R - 2);
+      ctx.ellipse(p.x + 2, p.y + C.PLAYER_R - 2, C.PLAYER_R * 0.9, C.PLAYER_R * 0.4, 0, 0, Math.PI * 2);
+    }
+    ctx.fill();
+  }
 
   window.FMG.Phase16.HUDSystem = HUDSystem;
 })();

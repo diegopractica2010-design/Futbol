@@ -72,6 +72,7 @@ window.FMG = {};
 
 [
   "src/utils.js",
+  "src/performance.js",
   "src/gameState.js",
   "src/squad.js",
   "src/phase16/constants.js",

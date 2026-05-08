@@ -16,10 +16,10 @@
   var Decision   = null;
   var ACTION     = null;
 
-  // Intervalo de decision por distancia al balon
-  var DECISION_NEAR = 6;   // ~100ms
-  var DECISION_MID  = 10;  // ~167ms
-  var DECISION_FAR  = 15;  // ~250ms
+  // Update throttling IA: cerca cada frame, media 100ms, lejos 300ms.
+  var DECISION_NEAR = 1;
+  var DECISION_MID  = 6;
+  var DECISION_FAR  = 18;
 
   function TeamBrain(teamIndex, attackingRight) {
     this.teamIndex      = teamIndex;      // 0=usuario, 1=IA
@@ -76,7 +76,7 @@
 
       // Intervalo de decision segun distancia
       var decInterval = ballDist < 150 ? DECISION_NEAR :
-                        ballDist < 300 ? DECISION_MID  : DECISION_FAR;
+                        ballDist < 320 ? DECISION_MID  : DECISION_FAR;
 
       var lastDec = self._decisions[player.id];
       var needsDecision = !lastDec || (tick - lastDec.tick) >= decInterval;
@@ -126,11 +126,16 @@
   // Encontrar al jugador mas cercano al balon (poseedor)
   TeamBrain.prototype._findPossessor = function (players, rivals, ball) {
     var best = null, bestD = Infinity;
-    var all  = players.concat(rivals);
-    all.forEach(function (p) {
+    for (var i = 0; i < players.length; i++) {
+      var p = players[i];
       var d = ball.distTo(p);
       if (d < bestD) { bestD = d; best = p; }
-    });
+    }
+    for (var j = 0; j < rivals.length; j++) {
+      var r = rivals[j];
+      var rd = ball.distTo(r);
+      if (rd < bestD) { bestD = rd; best = r; }
+    }
     // Solo es poseedor si esta muy cerca
     return (bestD < 22) ? best.id : null;
   };

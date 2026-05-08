@@ -41,16 +41,25 @@
 
   function saveSnapshot(state, slotId, overwrite = true) {
     const targetSlot = slotId || state.saveMeta?.activeSlotId || "slot-1";
-    const existing = localStorage.getItem(slotKey(targetSlot));
+    const key = slotKey(targetSlot);
+    const backupKey = `${key}.bak`;
+    const tempKey = `${key}.tmp`;
+    const existing = localStorage.getItem(key);
     if (existing && !overwrite) return { ok: false, message: "El slot ya existe. Confirma antes de sobrescribir." };
     const savedAt = new Date().toISOString();
     const snapshot = FMG.deepClone(state);
+    if (FMG.syncLegacyStateFacets) FMG.syncLegacyStateFacets(snapshot);
     snapshot.version = FMG.CURRENT_VERSION;
     snapshot.saveMeta = snapshot.saveMeta || {};
     snapshot.saveMeta.activeSlotId = targetSlot;
     snapshot.saveMeta.lastSavedAt = savedAt;
-    localStorage.setItem(slotKey(targetSlot), JSON.stringify(snapshot));
-    localStorage.setItem(FMG.STORAGE_KEY, JSON.stringify(snapshot));
+    snapshot.saveMeta.safeSave = { status: "committed", savedAt, slotId: targetSlot };
+    const payload = JSON.stringify(snapshot);
+    if (existing) localStorage.setItem(backupKey, existing);
+    localStorage.setItem(tempKey, payload);
+    localStorage.setItem(key, localStorage.getItem(tempKey));
+    localStorage.removeItem?.(tempKey);
+    localStorage.setItem(FMG.STORAGE_KEY, payload);
 
     const teamName = state.userClub?.name || "Sin club";
     const index = readIndex().filter((slot) => slot.slotId !== targetSlot);
@@ -112,9 +121,17 @@
 
   FMG.loadFromSlot = function (slotId) {
     try {
-      const raw = slotId === "legacy" ? localStorage.getItem(FMG.STORAGE_KEY) : localStorage.getItem(slotKey(slotId));
+      const key = slotKey(slotId);
+      const raw = slotId === "legacy" ? localStorage.getItem(FMG.STORAGE_KEY) : localStorage.getItem(key);
       if (!raw) return { ok: false, message: "No hay partida en ese slot." };
-      const parsed = JSON.parse(raw);
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (parseError) {
+        const backup = localStorage.getItem(`${key}.bak`);
+        if (!backup) throw parseError;
+        parsed = JSON.parse(backup);
+      }
       const migrated = FMG.migrateSaveState(parsed);
       migrated.saveMeta.activeSlotId = slotId === "legacy" ? "slot-1" : slotId;
       migrated.saveMeta.lastLoadedAt = new Date().toISOString();
