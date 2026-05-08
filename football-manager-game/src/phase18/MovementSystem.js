@@ -64,7 +64,9 @@
     if (dist < 4) return false;
 
     var mult  = (SPEED_MULT[decision.action] || 0.7) * decision.speed;
-    var speed = C.AI_SPEED * mult;
+    if (decision.action === ACTION.PRESS) mult *= player._aggressionModifier || 1;
+    if (decision.action === ACTION.SPACE) mult *= player._riskModifier ? Math.min(1.18, player._riskModifier) : 1;
+    var speed = C.AI_SPEED * mult * (player._speedModifier || 1);
 
     match.movePlayer(player, dx / dist, dy / dist, speed);
     return true;

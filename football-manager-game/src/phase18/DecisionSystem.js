@@ -111,7 +111,15 @@
 
     // Presionar si el rival tiene el balon y estamos cerca
     if (!ctx.teamHasBall && ctx.ballDist < role.pressRadius) {
-      return { action: ACTION.PRESS, targetX: ball.x, targetY: ball.y, speed: 1.0 };
+      return { action: ACTION.PRESS, targetX: ball.x, targetY: ball.y, speed: Math.min(1.25, 0.85 + role.aggression * 0.3) };
+    }
+
+    if (ctx.teamHasBall && shouldAttackSpace(ctx)) {
+      var runPos = this._findSpace(ctx);
+      var runDepth = (ctx.player._riskModifier || 1) * 34;
+      runPos.x += ctx.attackingRight ? runDepth : -runDepth;
+      runPos.x = Math.max(C.PLAYER_R, Math.min(C.FIELD_W - C.PLAYER_R, runPos.x));
+      return { action: ACTION.SPACE, targetX: runPos.x, targetY: runPos.y, speed: 0.95 };
     }
 
     // Marcar rival cercano si estamos defendiendo
@@ -129,6 +137,10 @@
     // Apoyar al poseedor (triangulo de apoyo)
     if (ctx.teamHasBall) {
       var supportPos = this._findSupportPosition(ctx);
+      if (ctx.player._instruction === "stayBack" || ctx.player._tacticRole === "defensive") {
+        supportPos.x = supportPos.x * 0.45 + ctx.basePos.x * 0.55;
+        supportPos.y = supportPos.y * 0.45 + ctx.basePos.y * 0.55;
+      }
       return { action: ACTION.SUPPORT, targetX: supportPos.x, targetY: supportPos.y, speed: 0.8 };
     }
 
@@ -159,7 +171,9 @@
       // Score: mas adelantado hacia el arco = mejor
       var advanceScore = ctx.attackingRight ? tm.x : C.FIELD_W - tm.x;
       var distScore    = -Math.hypot(tm.x - ball.x, tm.y - ball.y) * 0.01;
-      var score = advanceScore + distScore;
+      var controlScore = (tm._controlAccuracy || 0.7) * 60;
+      var risk = ctx.player._riskModifier || 1;
+      var score = advanceScore * risk + distScore + controlScore;
       if (score > bestScore) { bestScore = score; best = tm; }
     });
     return best;
@@ -222,6 +236,13 @@
     if (len2 === 0) return Math.hypot(px - ax, py - ay);
     var t = Math.max(0, Math.min(1, ((px - ax) * abx + (py - ay) * aby) / len2));
     return Math.hypot(px - (ax + t * abx), py - (ay + t * aby));
+  }
+
+  function shouldAttackSpace(ctx) {
+    if (ctx.player._instruction === "stayBack") return false;
+    if (ctx.player._instruction === "takeRisks") return true;
+    if (ctx.player._tacticRole === "attacking") return ctx.phase === "attacking" || ctx.ballDist < 260;
+    return ctx.phase === "attacking" && (ctx.player._riskModifier || 1) > 1.12;
   }
 
   DecisionSystem.ACTION = ACTION;

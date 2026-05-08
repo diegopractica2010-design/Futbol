@@ -123,6 +123,29 @@
     return Math.max(0.5, Math.min(2.0, base));
   };
 
+  AttributeModifier.prototype.getMarkRadiusModifier = function (player) {
+    if (!player) return 1.0;
+    var base = 1.0;
+    if (player._tacticRole === "defensive") base *= 1.16;
+    else if (player._tacticRole === "attacking") base *= 0.88;
+    if (player._instruction === "stayBack") base *= 1.12;
+    var defense = player.attributes ? player.attributes.defense || 70 : 70;
+    base *= 0.9 + defense / 700;
+    return Math.max(0.72, Math.min(1.35, base));
+  };
+
+  AttributeModifier.prototype.getShootDistanceModifier = function (player) {
+    if (!player) return 1.0;
+    var base = 1.0;
+    if (player._tacticRole === "attacking") base *= 1.14;
+    else if (player._tacticRole === "defensive") base *= 0.82;
+    if (player._instruction === "takeRisks") base *= 1.12;
+    if (player._instruction === "stayBack") base *= 0.78;
+    var shooting = player.attributes ? player.attributes.shooting || 70 : 70;
+    base *= 0.88 + shooting / 600;
+    return Math.max(0.65, Math.min(1.35, base));
+  };
+
   // Calcular radio de presión modificado
   AttributeModifier.prototype.getModifiedPressRadius = function (baseRadius, player, pressureModifier) {
     if (!player) return baseRadius;

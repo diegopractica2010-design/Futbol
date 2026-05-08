@@ -28,6 +28,7 @@
     this._formation     = null;
     this._decSys        = null;
     this._movSys        = null;
+    this.tacticsPlan    = null;
   }
 
   TeamBrain.prototype.init = function () {
@@ -40,6 +41,10 @@
     this._formation = new Formation();
     this._decSys    = new window.FMG.Phase18.DecisionSystem();
     this._movSys    = new window.FMG.Phase18.MovementSystem();
+  };
+
+  TeamBrain.prototype.setTacticsPlan = function (plan) {
+    this.tacticsPlan = plan || null;
   };
 
   // Tick principal del equipo
@@ -66,7 +71,7 @@
 
     players.forEach(function (player, idx) {
       var teamIndex = typeof player._teamIndex === "number" ? player._teamIndex : idx;
-      var role     = PlayerRole.get(teamIndex);
+      var role     = decorateRole(PlayerRole.get(teamIndex), player);
       var ballDist = ball.distTo(player);
 
       // Intervalo de decision segun distancia
@@ -77,7 +82,7 @@
       var needsDecision = !lastDec || (tick - lastDec.tick) >= decInterval;
 
       if (needsDecision) {
-        var basePos = self._formation.getBase(teamIndex, self.attackingRight, phase);
+        var basePos = self._formation.getBase(teamIndex, self.attackingRight, phase, self.tacticsPlan);
         var hasBall = possessorId === player.id;
 
         var ctx = {
@@ -93,7 +98,8 @@
           teammates:      players,
           attackingRight: self.attackingRight,
           phase:          phase,
-          teamHasBall:    teamHasBall
+          teamHasBall:    teamHasBall,
+          tacticsPlan:    self.tacticsPlan
         };
 
         var decision = self._decSys.decide(ctx);
@@ -133,30 +139,40 @@
   TeamBrain.prototype._executeShoot = function (player, decision, ball, ballSpeed) {
     // Solo tirar si el balon esta cerca y no tiene mucha velocidad
     if (ball.distTo(player) > 28 || ballSpeed > 4) return;
-    if (Math.random() > 0.06) return; // probabilidad por tick (~3.6 intentos/seg)
+    var accuracy = player._shootAccuracy || 0.65;
+    if (Math.random() > 0.035 + accuracy * 0.04) return;
 
     var dx  = decision.targetX - ball.ball.x;
     var dy  = decision.targetY - ball.ball.y;
     var len = Math.hypot(dx, dy) || 1;
-    // Agregar imprecision realista
-    var spread = (Math.random() - 0.5) * 0.3;
+    // Agregar imprecision realista desde atributos, moral y cansancio.
+    var spread = (Math.random() - 0.5) * (1.15 - accuracy) * 0.7;
     ball.applyImpulse(
       (dx / len + spread) * C.SHOOT_POWER * 0.88,
-      (dy / len + spread) * C.SHOOT_POWER * 0.88
+      (dy / len + spread) * C.SHOOT_POWER * 0.88,
+      { error: (1 - accuracy) * 0.55, lift: 1.6, spin: 1.2 }
     );
   };
 
   // Ejecutar pase de la IA
   TeamBrain.prototype._executePass = function (player, decision, ball, teammates) {
     if (ball.distTo(player) > 28) return;
-    if (Math.random() > 0.05) return; // ~3 intentos/seg
+    var accuracy = player._passAccuracy || 0.82;
+    if (Math.random() > 0.025 + accuracy * 0.04) return;
 
     var dx  = decision.targetX - ball.ball.x;
     var dy  = decision.targetY - ball.ball.y;
     var len = Math.hypot(dx, dy) || 1;
     ball.applyImpulse(
       (dx / len) * C.PASS_POWER * 0.9,
-      (dy / len) * C.PASS_POWER * 0.9
+      (dy / len) * C.PASS_POWER * 0.9,
+      {
+        targetX: decision.targetX,
+        targetY: decision.targetY,
+        assist: 0.006 + accuracy * 0.012,
+        error: (1 - accuracy) * 1.05,
+        spin: 0.5 + accuracy * 0.35
+      }
     );
   };
 
@@ -164,6 +180,15 @@
     this._decisions = {};
     if (this._movSys) this._movSys.reset();
   };
+
+  function decorateRole(baseRole, player) {
+    var role = Object.assign({}, baseRole);
+    if (player._pressRadiusModifier) role.pressRadius *= player._pressRadiusModifier;
+    if (player._markRadiusModifier) role.markRadius *= player._markRadiusModifier;
+    if (player._shootDistanceModifier) role.shootDist *= player._shootDistanceModifier;
+    if (player._roleAggression) role.aggression *= player._roleAggression;
+    return role;
+  }
 
   window.FMG.Phase18.TeamBrain = TeamBrain;
 })();

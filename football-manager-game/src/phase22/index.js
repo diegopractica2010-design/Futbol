@@ -125,6 +125,8 @@
     if (type === "pass") {
       var target = nearestTeammate(game.match, player);
       if (!target) return;
+      var passAccuracy = player._passAccuracy || 0.82;
+      var controlAccuracy = player._controlAccuracy || 0.7;
       var pdx = target.x - game.ball.ball.x;
       var pdy = target.y - game.ball.ball.y;
       var plen = Math.hypot(pdx, pdy) || 1;
@@ -133,20 +135,25 @@
       game.ball.applyImpulse((pdx / plen) * passPower, (pdy / plen) * passPower, {
         targetX: target.x,
         targetY: target.y,
-        assist: isLong ? 0.008 : 0.018,
+        assist: (isLong ? 0.006 : 0.014) + passAccuracy * 0.006,
         lift: isLong ? 5.2 : 0.8,
-        error: isLong ? 0.7 : 0.25,
-        spin: isLong ? 1.2 : 0.55
+        error: (isLong ? 1.1 : 0.42) * (1.15 - passAccuracy) * (1.05 - controlAccuracy * 0.25),
+        spin: (isLong ? 1.2 : 0.55) * (0.8 + controlAccuracy * 0.35)
       });
       notifyKick(game, player, "pass", passPower);
       hudData.pushLowerThird(isLong ? "PASE LARGO" : "PASE FILTRADO", playerLabel(player.id) + "  " + Math.round(power * 100) + "%", "#4a9eff", 120);
     }
 
     if (type === "shoot") {
+      var shootAccuracy = player._shootAccuracy || 0.65;
       var gx = C.FIELD_W - game.ball.ball.x;
       var gy = C.FIELD_H / 2 - game.ball.ball.y;
       var glen = Math.hypot(gx, gy) || 1;
-      game.ball.applyImpulse((gx / glen) * C.SHOOT_POWER * power, (gy / glen) * C.SHOOT_POWER * power, { lift: 2.4, error: 0.55, spin: 1.6 });
+      game.ball.applyImpulse((gx / glen) * C.SHOOT_POWER * power, (gy / glen) * C.SHOOT_POWER * power, {
+        lift: 2.4,
+        error: (1.08 - shootAccuracy) * 0.9,
+        spin: 1.2 + shootAccuracy * 0.6
+      });
       notifyKick(game, player, "shoot", C.SHOOT_POWER * power);
       hudData.stats.registerShot(0, Math.abs(game.ball.ball.y - C.FIELD_H / 2) < C.GOAL_H * 0.55);
       hudData.pushLowerThird("REMATE AZUL", playerLabel(player.id) + "  " + Math.round(power * 100) + "% de potencia", "#ff4a4a", 150);

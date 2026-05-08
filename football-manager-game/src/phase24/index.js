@@ -1,61 +1,37 @@
 (function () {
   "use strict";
 
-  // ============================================================
-  // FASE 24 — index.js
-  // Tácticas en Cancha: conecta manager con partido en vivo.
-  // Integra tácticas, atributos, fatiga, moral, lesiones.
-  // Base: Phase 23 (Audio) + Phase 22 (HUD) + Phase 18 (IA)
-  // ============================================================
-
   window.FMG = window.FMG || {};
   window.FMG.Phase24 = window.FMG.Phase24 || {};
 
-  var C = null;
-
   window.FMG.Phase24.createGame = function (canvas, gameState) {
-    C = window.FMG.Phase16.C;
-
-    // Crear juego base con audio (Phase 23)
     var game = window.FMG.Phase23.createGame(canvas);
-
-    // Crear sistemas de tácticas
     var tacticsApplier = new window.FMG.Phase24.TacticsApplier();
     var attributeModifier = new window.FMG.Phase24.AttributeModifier();
 
     game.tacticsApplier = tacticsApplier;
     game.attributeModifier = attributeModifier;
-
-    // Guardar gameState en el juego para acceso a tácticas
     game._gameState = gameState;
 
-    // ---- Parchar IA para usar TacticsApplier ----
+    applyBrainPlans(game, gameState);
 
     var origLogic = game._logicTick.bind(game);
     game._logicTick = function () {
       var match = game.match;
-      var tick = game._tick || 0;
+      var tick = match ? match.tickCount || 0 : 0;
 
-      // Inicializar tácticas en el primer tick
-      if (tick === 0) {
+      if (!tacticsApplier.matchStarted) {
         tacticsApplier.applyInitialTactics(match, gameState);
+        applyBrainPlans(game, gameState);
       }
 
-      // Aplicar tácticas antes de la lógica de IA
       tacticsApplier.tick(match, gameState, tick);
-
-      // Ejecutar lógica original (IA, física, etc.)
       origLogic();
-
-      game._tick = (tick + 1) % 3600;  // resetear cada minuto
     };
-
-    // ---- Parchar decisiones de IA para usar atributos ----
 
     if (game.matchAI && game.matchAI._userBrain) {
       var origUserTick = game.matchAI._userBrain.tick.bind(game.matchAI._userBrain);
       game.matchAI._userBrain.tick = function (players, rivals, ball, match, tick) {
-        // Aplicar modificadores de atributos antes de decisiones
         players.forEach(function (player) {
           applyAttributeModifiers(player, attributeModifier, match);
         });
@@ -71,16 +47,14 @@
       };
     }
 
-    // ---- Parchar reset ----
-
     var origReset = game.reset.bind(game);
     game.reset = function () {
       origReset();
       tacticsApplier = new window.FMG.Phase24.TacticsApplier();
+      game.tacticsApplier = tacticsApplier;
+      applyBrainPlans(game, gameState);
       if (gameState) tacticsApplier.applyInitialTactics(game.match, gameState);
     };
-
-    // ---- Parchar dispose ----
 
     var origDispose = game.dispose.bind(game);
     game.dispose = function () {
@@ -92,25 +66,59 @@
     return game;
   };
 
-  // Aplicar modificadores de atributo a un jugador
   function applyAttributeModifiers(player, attributeModifier, match) {
-    if (!attributeModifier) return;
+    if (!attributeModifier || !player) return;
+    var pressure = player.team === 0 ? match._userTacticsPressure : match._aiTacticsPressure;
 
-    // Guardar modificadores calculados
     player._passAccuracy = attributeModifier.getPassAccuracy(player);
     player._shootAccuracy = attributeModifier.getShootAccuracy(player);
     player._controlAccuracy = attributeModifier.getControlAccuracy(player);
     player._speedModifier = attributeModifier.getEffectiveSpeed(player);
     player._aggressionModifier = attributeModifier.getAggressionModifier(player, player._tacticRole);
-    player._pressRadiusModifier = attributeModifier.getModifiedPressRadius(1.0, player, match._tacticsPressure);
+    player._pressRadiusModifier = attributeModifier.getModifiedPressRadius(1.0, player, pressure);
+    player._markRadiusModifier = attributeModifier.getMarkRadiusModifier(player);
+    player._shootDistanceModifier = attributeModifier.getShootDistanceModifier(player);
     player._riskModifier = attributeModifier.getRiskTakingModifier(player);
 
-    // Aplicar modificador de velocidad al jugador
     if (player._speedModifier && player._baseSpeed) {
       player.speed = player._baseSpeed * player._speedModifier;
     }
   }
 
-  window.FMG.Phase24.AttributeModifier = window.FMG.Phase24.AttributeModifier || function () {};
-  window.FMG.Phase24.TacticsApplier = window.FMG.Phase24.TacticsApplier || function () {};
+  function applyBrainPlans(game, gameState) {
+    if (!game || !game.matchAI || !gameState) return;
+    var userPlan = getTeamPlan(gameState, gameState.userTeamId);
+    var aiPlan = getTeamPlan(gameState, getRivalTeamId(gameState));
+    if (game.matchAI._userBrain && game.matchAI._userBrain.setTacticsPlan) {
+      game.matchAI._userBrain.setTacticsPlan(userPlan);
+    }
+    if (game.matchAI._aiBrain && game.matchAI._aiBrain.setTacticsPlan) {
+      game.matchAI._aiBrain.setTacticsPlan(aiPlan);
+    }
+  }
+
+  function getTeamPlan(gameState, teamId) {
+    if (!gameState || !teamId) return null;
+    if (window.FMG.getTeamPlan) return window.FMG.getTeamPlan(gameState, teamId);
+    return gameState.tactics && gameState.tactics.teamSettings
+      ? gameState.tactics.teamSettings[teamId]
+      : null;
+  }
+
+  function getRivalTeamId(gameState) {
+    if (!gameState) return null;
+    var userTeamId = gameState.userTeamId;
+    var match = gameState.currentMatch || gameState.liveMatch;
+    if (match) {
+      if (match.homeTeamId === userTeamId) return match.awayTeamId;
+      if (match.awayTeamId === userTeamId) return match.homeTeamId;
+    }
+    var fixture = (gameState.fixtures || []).find(function (item) {
+      return item.week === gameState.currentWeek &&
+        (item.homeTeamId === userTeamId || item.awayTeamId === userTeamId);
+    });
+    if (fixture) return fixture.homeTeamId === userTeamId ? fixture.awayTeamId : fixture.homeTeamId;
+    var rival = (gameState.teams || []).find(function (team) { return team.id !== userTeamId; });
+    return rival ? rival.id : null;
+  }
 })();
