@@ -3,8 +3,8 @@
 
   // ============================================================
   // FASE 16 — HUDSystem
-  // Responsabilidad: TODO el render canvas 2D.
-  // Solo dibuja. No modifica estado de juego.
+  // Responsabilidad: Renderizar completamente el canvas 2D.
+  // Dibuja cancha, jugadores, balón, HUD. No modifica estado de juego.
   // ============================================================
 
   const C = window.FMG.Phase16.C;

@@ -1,6 +1,27 @@
 (function () {
   const FMG = (window.FMG = window.FMG || {});
 
+  // =============================================================================
+  // ARQUITECTURA CANÓNICA DE PARTIDOS
+  // =============================================================================
+  // FUENTE DE VERDAD ÚNICA:
+  // - FMG.simulateMatch() — Simulación offline de un partido completo
+  // - FMG.createLiveMatch() + FMG.advanceLiveMatch() — Partido interactivo del usuario
+  //
+  // AMBOS flujos escriben ÚNICAMENTE mediante:
+  // - FMG.finishLiveUserMatch() → FMG.updateStandings()
+  // - FMG.finishLiveUserMatch() → FMG.applyMatchSquadStats()
+  //
+  // PROHIBIDO:
+  // - Las fases experimentales (15-24) escriben en standings o seasonStats
+  // - Usar resultados de motores visuales como fuente de verdad
+  // - Simular partidos sin guardar el seed para reproducibilidad
+  //
+  // MOTORES VISUALES (Fases 15-24):
+  // - Prototipos, NO afectan la simulación de carrera
+  // - Sandbox exclusivamente para visualización 3D
+  // - Usar FMG.gameState como referencia, nunca como destino
+
   function ratingFromSquad(players) {
     const starters = [...players].sort((left, right) => right.overall - left.overall).slice(0, 11);
     const quality = FMG.average(starters.map((player) => player.overall));
@@ -99,7 +120,7 @@
     result.stats.home.possession = homePossession;
     result.stats.away.possession = 100 - homePossession;
 
-    const isHomeAttack = Math.random() * 100 < homePossession;
+    const isHomeAttack = FMG.rng() * 100 < homePossession;
     const attackTeam = isHomeAttack ? homeTeam : awayTeam;
     const defendTeam = isHomeAttack ? awayTeam : homeTeam;
     const attackSquad = isHomeAttack ? homePlayers : awayPlayers;
@@ -121,8 +142,8 @@
 
     if (!attacker || !defender) return;
 
-    if (Math.random() < FMG.clamp(0.052 + (defendProfile.fouls + defendProfile.risk * 0.18) / 360, 0.025, 0.1)) {
-      const cardRoll = Math.random();
+    if (FMG.rng() < FMG.clamp(0.052 + (defendProfile.fouls + defendProfile.risk * 0.18) / 360, 0.025, 0.1)) {
+      const cardRoll = FMG.rng();
       const color = cardRoll > 0.965 ? "red" : cardRoll > 0.74 ? "yellow" : null;
       defendStats.fouls += 1;
       if (color) {
@@ -141,19 +162,19 @@
       return;
     }
 
-    if (Math.random() < pressure) {
+    if (FMG.rng() < pressure) {
       const shotQuality = FMG.clamp(
         0.06 + (attacker.overall - 62) / 225 + (attacker.energy - 70) / 900 + (attackProfile.attack + defendProfile.risk - defendProfile.defense) / 560 + FMG.randomInt(0, 10) / 100,
         0.035,
         0.4
       );
       const onTargetChance = FMG.clamp(0.28 + attacker.overall / 270 + shotQuality * 0.4, 0.3, 0.76);
-      const isGoal = Math.random() < shotQuality;
-      const isOnTarget = isGoal || Math.random() < onTargetChance;
+      const isGoal = FMG.rng() < shotQuality;
+      const isOnTarget = isGoal || FMG.rng() < onTargetChance;
       attackStats.shots += 1;
       attackStats.xg += shotQuality;
       if (isOnTarget) attackStats.shotsOnTarget += 1;
-      if (Math.random() < 0.16) attackStats.corners += 1;
+      if (FMG.rng() < 0.16) attackStats.corners += 1;
 
       if (isGoal) {
         const goal = { minute, scorer: attacker.name, playerId: attacker.id, xg: shotQuality };
@@ -173,11 +194,11 @@
           { playerId: attacker.id, xg: shotQuality }
         );
       }
-    } else if (Math.random() < 0.16) {
+    } else if (FMG.rng() < 0.16) {
       addTimeline(result.timeline, minute, "chance", attackTeam.id, `${attackTeam.name} progresa pero no encuentra remate claro.`);
     }
 
-    if (Math.random() < 0.004) {
+    if (FMG.rng() < 0.004) {
       const injured = FMG.sample([...attackSquad, ...defendSquad]);
       if (injured) {
         const duration = FMG.randomInt(1, 4);
@@ -217,7 +238,7 @@
       const order = playerOrders && playerOrders[player.id];
       return order === "shoot" || order === "free" || order === "run";
     });
-    if (focused.length && Math.random() < 0.55) return FMG.sample(focused);
+    if (focused.length && FMG.rng() < 0.55) return FMG.sample(focused);
     return pickAttacker(players);
   }
 
@@ -259,7 +280,7 @@
     awayStats.possession = awayPossession;
 
     for (let minute = 2; minute <= 90; minute += FMG.randomInt(2, 4)) {
-      const isHomeAttack = Math.random() * 100 < homePossession;
+      const isHomeAttack = FMG.rng() * 100 < homePossession;
       const attackTeam = isHomeAttack ? homeTeam : awayTeam;
       const defendTeam = isHomeAttack ? awayTeam : homeTeam;
       const attackSquad = isHomeAttack ? homePlayers : awayPlayers;
@@ -280,8 +301,8 @@
 
       if (!attacker || !defender) continue;
 
-      if (Math.random() < FMG.clamp(0.18 + (defendProfile.fouls + defendProfile.risk * 0.18) / 100, 0.1, 0.3)) {
-        const cardRoll = Math.random();
+      if (FMG.rng() < FMG.clamp(0.18 + (defendProfile.fouls + defendProfile.risk * 0.18) / 100, 0.1, 0.3)) {
+        const cardRoll = FMG.rng();
         const color = cardRoll > 0.96 ? "red" : cardRoll > 0.72 ? "yellow" : null;
         const defendingStats = isHomeAttack ? awayStats : homeStats;
         defendingStats.fouls += 1;
@@ -296,19 +317,19 @@
         continue;
       }
 
-      if (Math.random() < pressure) {
+      if (FMG.rng() < pressure) {
         const shotQuality = FMG.clamp(
           0.07 + (attacker.overall - 62) / 210 + (attacker.energy - 70) / 800 + (attackProfile.attack + defendProfile.risk - defendProfile.defense) / 520 + FMG.randomInt(0, 10) / 100,
           0.04,
           0.42
         );
         const onTargetChance = FMG.clamp(0.28 + attacker.overall / 260 + shotQuality * 0.45, 0.32, 0.78);
-        const isGoal = Math.random() < shotQuality;
-        const isOnTarget = isGoal || Math.random() < onTargetChance;
+        const isGoal = FMG.rng() < shotQuality;
+        const isOnTarget = isGoal || FMG.rng() < onTargetChance;
         attackStats.shots += 1;
         attackStats.xg += shotQuality;
         if (isOnTarget) attackStats.shotsOnTarget += 1;
-        if (Math.random() < 0.16) attackStats.corners += 1;
+        if (FMG.rng() < 0.16) attackStats.corners += 1;
 
         if (isGoal) {
           const goal = { minute, scorer: attacker.name, playerId: attacker.id, xg: shotQuality };
@@ -324,11 +345,11 @@
             { playerId: attacker.id, xg: shotQuality }
           );
         }
-      } else if (Math.random() < 0.35) {
+      } else if (FMG.rng() < 0.35) {
         addTimeline(timeline, minute, "chance", attackTeam.id, `${attackTeam.name} progresa pero no encuentra remate claro.`);
       }
 
-      if (Math.random() < 0.012) {
+      if (FMG.rng() < 0.012) {
         const injured = FMG.sample([...attackSquad, ...defendSquad]);
         if (injured) {
           const duration = FMG.randomInt(1, 4);
@@ -369,7 +390,13 @@
     };
   };
 
-  FMG.createLiveMatch = function ({ homeTeam, awayTeam, state, week, otherMatches }) {
+  FMG.createLiveMatch = function ({ homeTeam, awayTeam, state, week, otherMatches, seed }) {
+    // Inicializar RNG con seed si existe, sino generar uno
+    if (seed === undefined) {
+      seed = Math.floor(Date.now() % 4294967296);
+    }
+    FMG.initRNG(seed);
+
     const homeSquad = FMG.getMatchSquad(state, homeTeam.id);
     const awaySquad = FMG.getMatchSquad(state, awayTeam.id);
     const homeBench = FMG.getAvailablePlayers(state.players, homeTeam.id).filter((player) => !homeSquad.some((starter) => starter.id === player.id));
@@ -381,6 +408,7 @@
       speed: 5,
       minute: 0,
       week,
+      seed: seed, // Guardar seed para reproducibilidad
       homeTeamId: homeTeam.id,
       awayTeamId: awayTeam.id,
       otherMatches: otherMatches || [],
@@ -398,6 +426,13 @@
       momentum: 50,
       result: createBlankResult(homeTeam, awayTeam)
     };
+  };
+
+  // Restaurar RNG desde un liveMatch (usado al cargar save)
+  FMG.restoreRNGFromLiveMatch = function (liveMatch) {
+    if (liveMatch && liveMatch.seed !== undefined) {
+      FMG.initRNG(liveMatch.seed);
+    }
   };
 
   FMG.advanceLiveMatch = function (state, minutes) {

@@ -136,6 +136,10 @@
       migrated.saveMeta.activeSlotId = slotId === "legacy" ? "slot-1" : slotId;
       migrated.saveMeta.lastLoadedAt = new Date().toISOString();
       FMG.replaceGameState(migrated);
+      // Restaurar RNG si hay un liveMatch activo
+      if (migrated.liveMatch) {
+        FMG.restoreRNGFromLiveMatch(migrated.liveMatch);
+      }
       return { ok: true, message: `Partida cargada desde ${slotId}.` };
     } catch (error) {
       FMG.pushSystemError(FMG.gameState, "No se pudo cargar la partida.", error.message);

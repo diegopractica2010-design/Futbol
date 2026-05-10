@@ -1,0 +1,42 @@
+{
+  "env": {
+    "browser": true,
+    "es2020": true,
+    "node": false
+  },
+  "globals": {
+    "FMG": "readonly"
+  },
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "sourceType": "script"
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-undef": "error",
+    "eqeqeq": "error",
+    "no-duplicate-keys": "error",
+    "no-constant-condition": "warn",
+    "no-empty": "warn",
+    "semi": ["error", "always"],
+    "quotes": ["error", "double"],
+    "no-var": "warn",
+    "prefer-const": "warn"
+  },
+  "overrides": [
+    {
+      "files": ["tests/**/*.js"],
+      "env": {
+        "node": true
+      },
+      "globals": {
+        "describe": "readonly",
+        "it": "readonly",
+        "before": "readonly",
+        "after": "readonly",
+        "beforeEach": "readonly",
+        "afterEach": "readonly"
+      }
+    }
+  ]
+}

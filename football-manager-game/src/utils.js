@@ -7,16 +7,46 @@
   FMG.SETTINGS_KEY = "football-manager-game-settings";
   FMG.CURRENT_VERSION = 13;
 
+  // =========================================================================
+  // RANDOM NUMBER GENERATOR SEEDABLE (Mulberry32)
+  // =========================================================================
+  FMG.mulberry32 = function (a) {
+    return function () {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  };
+
+  // RNG global del juego
+  FMG.rng = Math.random; // Por defecto, usar Math.random
+
+  // Inicializar RNG con seed
+  FMG.initRNG = function (seed) {
+    if (!seed) {
+      // Si no hay seed, generar uno basado en el timestamp
+      seed = Math.floor(Date.now() % 4294967296);
+    }
+    FMG._currentSeed = seed;
+    FMG.rng = FMG.mulberry32(seed);
+  };
+
+  // Obtener el seed actual
+  FMG.getCurrentSeed = function () {
+    return FMG._currentSeed;
+  };
+
   FMG.clamp = function (value, min, max) {
     return Math.max(min, Math.min(max, value));
   };
 
   FMG.randomInt = function (min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+    return Math.floor(FMG.rng() * (max - min + 1)) + min;
   };
 
   FMG.sample = function (list) {
-    return list[Math.floor(Math.random() * list.length)];
+    return list[Math.floor(FMG.rng() * list.length)];
   };
 
   FMG.currency = function (value) {
@@ -29,7 +59,7 @@
 
   FMG.uid = function (prefix) {
     const safePrefix = prefix || "id";
-    return `${safePrefix}-${Math.random().toString(36).slice(2, 10)}`;
+    return `${safePrefix}-${FMG.rng().toString(36).slice(2, 10)}`;
   };
 
   FMG.average = function (values) {

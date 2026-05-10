@@ -25,6 +25,7 @@
       this.lastFrameTime = performance.now();
       this.deltaTime = 0;
       this.animationFrameId = null;
+      this._activeRAFs = []; // Rastrear todos los RAF para cleanup
       this.isRunning = false;
       this.config = {
         fieldWidth: 105,
@@ -367,10 +368,14 @@
           pos.z = player.mesh.position.z;
         }
 
-        if (progress < 1) requestAnimationFrame(animate);
+        if (progress < 1) {
+          const rafId = requestAnimationFrame(animate);
+          this._activeRAFs.push(rafId);
+        }
       };
 
-      requestAnimationFrame(animate);
+      const rafId = requestAnimationFrame(animate);
+      this._activeRAFs.push(rafId);
     }
 
     animateBallMove(targetPos, duration = 1000, arcHeight = 2) {
@@ -394,11 +399,16 @@
           this.matchState.ballPos.y = this.ball.position.y;
           this.matchState.ballPos.z = this.ball.position.z;
 
-          if (progress < 1) requestAnimationFrame(animate);
-          else resolve();
+          if (progress < 1) {
+            const rafId = requestAnimationFrame(animate);
+            this._activeRAFs.push(rafId);
+          } else {
+            resolve();
+          }
         };
 
-        requestAnimationFrame(animate);
+        const rafId = requestAnimationFrame(animate);
+        this._activeRAFs.push(rafId);
       });
     }
 
@@ -422,10 +432,14 @@
         this.matchState.ballPos.y = this.ball.position.y;
         this.matchState.ballPos.z = this.ball.position.z;
 
-        if (progress < 1) requestAnimationFrame(animate);
+        if (progress < 1) {
+          const rafId = requestAnimationFrame(animate);
+          this._activeRAFs.push(rafId);
+        }
       };
 
-      requestAnimationFrame(animate);
+      const rafId = requestAnimationFrame(animate);
+      this._activeRAFs.push(rafId);
     }
 
     // =========================================================================
@@ -436,8 +450,6 @@
       this.isRunning = true;
       const render = () => {
         if (!this.isRunning) return;
-
-        this.animationFrameId = requestAnimationFrame(render);
 
         // Cálculo delta time para consistency
         const now = performance.now();
@@ -453,6 +465,9 @@
 
         // Draw HUD overlay
         this.renderHUDOverlay();
+
+        // Solicitar siguiente frame
+        this.animationFrameId = requestAnimationFrame(render);
       };
 
       this.animationFrameId = requestAnimationFrame(render);
@@ -467,7 +482,11 @@
       this.isRunning = false;
       if (this.animationFrameId) {
         cancelAnimationFrame(this.animationFrameId);
+        this.animationFrameId = null;
       }
+      // Cancelar todos los RAFs pendientes (animaciones de movimiento)
+      this._activeRAFs.forEach((rafId) => cancelAnimationFrame(rafId));
+      this._activeRAFs = [];
     }
 
     onWindowResize() {
@@ -486,7 +505,12 @@
     // =========================================================================
 
     dispose() {
+      // Cancelar render loop y todas las animaciones activas
       this.stopRendering();
+      // Asegurar que todos los RAFs estén cancelados
+      this._activeRAFs.forEach((rafId) => cancelAnimationFrame(rafId));
+      this._activeRAFs = [];
+      
       if (this._resizeHandler) {
         window.removeEventListener("resize", this._resizeHandler);
         this._resizeHandler = null;
