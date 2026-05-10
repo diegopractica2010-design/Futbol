@@ -170,6 +170,7 @@
     const achievement = { ...definition, seasonNumber: state.seasonNumber, week: state.currentWeek };
     state.career.achievements.unshift(achievement);
     adjustReputation(state, 2, `Logro desbloqueado: ${definition.title}`);
+    FMG.pushNotification?.(`LOGRO: ${achievement.title} - ${achievement.detail}`, "achievement");
     return achievement;
   };
 

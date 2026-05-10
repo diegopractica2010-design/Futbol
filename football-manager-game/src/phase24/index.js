@@ -121,4 +121,6 @@
     var rival = (gameState.teams || []).find(function (team) { return team.id !== userTeamId; });
     return rival ? rival.id : null;
   }
+  FMG._loadedPhases = FMG._loadedPhases || [];
+  FMG._loadedPhases.push(24);
 })();

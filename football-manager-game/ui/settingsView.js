@@ -42,7 +42,7 @@
             ${["slot-1", "slot-2", "slot-3", "autosave"].map((slotId) => `<button class="btn-secondary" data-action="save-slot" data-slot-id="${slotId}" data-confirm="Sobrescribir ${slotId}?">Guardar ${slotId}</button>`).join("")}
           </div>
           <div class="log-list" style="margin-top:16px;">
-            ${slots.length ? slots.map((slot) => `<div class="list-row compact"><div><strong>${FMG.escapeHtml(slot.label || slot.slotId)}</strong><p class="muted">${FMG.escapeHtml(slot.teamName)} | T${slot.seasonNumber} semana ${slot.week} | v${slot.version} | ${FMG.escapeHtml(slot.savedAt)}</p></div><button class="btn-primary" data-action="load-slot" data-slot-id="${slot.slotId}" data-confirm="Cargar ${FMG.escapeHtml(slot.label || slot.slotId)}? El progreso no guardado se perdera.">Cargar</button></div>`).join("") : `<div class="empty-state">Aun no hay slots guardados.</div>`}
+            ${slots.length ? slots.map((slot) => `<div class="list-row compact"><div><strong>${FMG.escapeHtml(slot.label || slot.slotId)}</strong><p class="muted">${FMG.escapeHtml(slot.teamName)} | T${slot.seasonNumber} semana ${slot.week} | v${slot.version} | ${FMG.escapeHtml(slot.savedAt)}</p><p class="chip">Balance y tabla visibles al cargar</p></div><button class="btn-primary" data-action="load-slot" data-slot-id="${slot.slotId}" data-confirm="Cargar ${FMG.escapeHtml(slot.label || slot.slotId)}? El progreso no guardado se perdera.">Cargar</button></div>`).join("") : `<div class="empty-state">Aun no hay slots guardados.</div>`}
           </div>
         </section>
         <section class="card">
@@ -70,6 +70,7 @@
         <section class="card">
           <div class="section-title"><h2>Exportar / importar</h2></div>
           <label class="muted" for="save-export">Exportacion de partida</label>
+          <div class="button-row"><button class="btn-primary export-big" data-action="export-save">Exportar como archivo</button></div>
           <textarea id="save-export" readonly>${exportText}</textarea>
           <label class="muted" for="save-import">Importar partida</label>
           <textarea id="save-import" data-role="import-payload" aria-label="Pega aqui una partida exportada"></textarea>

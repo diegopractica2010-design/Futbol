@@ -11,6 +11,22 @@
     `;
   }
 
+  const EVENT_LABELS = {
+    goal: "Gol",
+    shot: "Remate",
+    "shot-on-target": "Remate al arco",
+    "yellow-card": "Tarjeta amarilla",
+    "red-card": "Tarjeta roja",
+    foul: "Falta",
+    injury: "Lesion",
+    substitution: "Cambio",
+    save: "Atajada",
+    corner: "Corner",
+    offside: "Offside",
+    tactical: "Cambio tactico",
+    chance: "Avance"
+  };
+
   function renderLiveControls(liveMatch) {
     if (liveMatch.completed) {
       return `<div class="button-row"><button class="btn-primary" data-action="finish-live-match">Cerrar fecha</button></div>`;
@@ -38,19 +54,23 @@
     const benchIds = userSide === "home" ? liveMatch.homeBenchIds : liveMatch.awayBenchIds;
     const lineup = lineupIds.map((id) => state.players.find((player) => player.id === id)).filter(Boolean);
     const bench = benchIds.map((id) => state.players.find((player) => player.id === id)).filter(Boolean);
-    const tired = [...lineup].sort((left, right) => left.energy - right.energy).slice(0, 5);
+    const starters = [...lineup].sort((left, right) => left.energy - right.energy);
+    state.ui = state.ui || {};
+    const selectedOut = state.ui.selectedSubOutId || starters[0]?.id || null;
 
     return `
       <section class="card">
         <div class="section-title"><h2>Cambios</h2><span class="chip">${liveMatch.substitutions[userSide]}/5 usados</span></div>
         <div class="sub-grid">
           <div>
-            <strong>Titulares cansados</strong>
+            <strong>Titulares</strong>
             <div class="log-list" style="margin-top:12px;">
-              ${tired.map((player) => `
-                <div class="log-item">
+              ${starters.map((player) => `
+                <div class="log-item ${selectedOut === player.id ? "sub-selected" : ""}">
                   <strong>${FMG.escapeHtml(player.name)}</strong>
-                  <p class="muted">${FMG.escapeHtml(player.position)} | Energia ${player.energy}</p>
+                  <p class="muted">${FMG.escapeHtml(player.position)} | Energia ${player.energy} | OVR ${player.overall}</p>
+                  <div class="energy-bar" role="meter" aria-valuenow="${player.energy}" aria-valuemin="0" aria-valuemax="100" aria-label="Energia de ${FMG.escapeHtml(player.name)}"><span style="width:${player.energy}%"></span></div>
+                  <div class="button-row" style="margin-top:10px;"><button class="btn-ghost" data-action="select-sub-out" data-player-id="${player.id}">Sacar</button></div>
                 </div>`).join("")}
             </div>
           </div>
@@ -60,9 +80,10 @@
               ${bench.map((player) => `
                 <div class="log-item">
                   <strong>${FMG.escapeHtml(player.name)}</strong>
-                  <p class="muted">${FMG.escapeHtml(player.position)} | Energia ${player.energy}</p>
+                  <p class="muted">${FMG.escapeHtml(player.position)} | Energia ${player.energy} | OVR ${player.overall}</p>
+                  <div class="energy-bar" role="meter" aria-valuenow="${player.energy}" aria-valuemin="0" aria-valuemax="100" aria-label="Energia de ${FMG.escapeHtml(player.name)}"><span style="width:${player.energy}%"></span></div>
                   <div class="button-row" style="margin-top:10px;">
-                    ${tired.slice(0, 3).map((starter) => `<button class="btn-ghost" data-action="live-substitution" data-in-player-id="${player.id}" data-out-player-id="${starter.id}">Por ${FMG.escapeHtml(starter.name.split(" ")[0])}</button>`).join("")}
+                    ${selectedOut ? `<button class="btn-ghost" data-action="live-substitution" data-in-player-id="${player.id}" data-out-player-id="${selectedOut}">Entrar por el seleccionado</button>` : ""}
                   </div>
                 </div>`).join("") || `<div class="empty-state">Sin suplentes disponibles.</div>`}
             </div>
@@ -133,24 +154,30 @@
     const result = liveMatch.result;
     const stats = result.stats;
     const momentumHome = liveMatch.momentum;
+    const lastGoal = [...(result.timeline || [])].reverse().find((event) => event.type === "goal");
+    const userGoalFlash = lastGoal && lastGoal.teamId === state.userTeamId && liveMatch.minute - lastGoal.minute <= 2;
 
     return `
-      <section class="card live-match">
+      <section class="card live-match ${userGoalFlash ? "live-match--goal" : ""}">
         <div class="section-title">
           <h2>Partido en vivo</h2>
           <span class="chip">${liveMatch.completed ? "Final" : `${liveMatch.minute}'`}</span>
         </div>
-        <div id="match-visualizer-container" style="width:100%;height:500px;background:#1a1a1a;border-radius:8px;margin-bottom:16px;position:relative;overflow:hidden;"></div>
+        <div id="match-visualizer-container"></div>
         <div class="live-scoreboard">
           <div>${FMG.clubBadge(homeTeam, "md")}<strong>${FMG.escapeHtml(homeTeam.name)}</strong><p class="muted">${liveMatch.homeLineupIds.length} en cancha</p></div>
-          <div class="score">${result.homeGoals} - ${result.awayGoals}</div>
+          <div class="score ${userGoalFlash ? "score--gol" : ""}" role="status" aria-live="polite" aria-label="Marcador: ${result.homeGoals} a ${result.awayGoals}">${result.homeGoals} - ${result.awayGoals}</div>
           <div>${FMG.clubBadge(awayTeam, "md")}<strong>${FMG.escapeHtml(awayTeam.name)}</strong><p class="muted">${liveMatch.awayLineupIds.length} en cancha</p></div>
         </div>
-        <div class="momentum">
-          <span style="width:${momentumHome}%"></span>
+        <div class="momentum-wrap">
+          <span>${FMG.escapeHtml(homeTeam.name.slice(0, 3).toUpperCase())}</span>
+          <div class="momentum-bar" style="--home-pct:${momentumHome}%">
+            <div class="momentum-bar__home"></div><div class="momentum-bar__away"></div>
+          </div>
+          <span>${FMG.escapeHtml(awayTeam.name.slice(0, 3).toUpperCase())}</span>
         </div>
         <div class="match-stats">
-          ${renderStatLine("Posesion", `${stats.home.possession}%`, `${stats.away.possession}%`)}
+          ${renderStatLine("Posesión", `${stats.home.possession}%`, `${stats.away.possession}%`)}
           ${renderStatLine("Remates", stats.home.shots, stats.away.shots)}
           ${renderStatLine("Al arco", stats.home.shotsOnTarget, stats.away.shotsOnTarget)}
           ${renderStatLine("xG", stats.home.xg.toFixed(2), stats.away.xg.toFixed(2))}
@@ -164,8 +191,8 @@
           <div class="section-title"><h2>Relato en vivo</h2><span class="chip">${result.timeline.length} eventos</span></div>
           <div class="log-list">
             ${result.timeline.slice(-16).reverse().map((event) => `
-              <div class="log-item event-${FMG.escapeHtml(event.type)}">
-                <strong>${event.minute}' | ${FMG.escapeHtml(event.type)}</strong>
+              <div class="log-item event-${FMG.escapeHtml(event.type)} ${event.type === "goal" && event.teamId === state.userTeamId ? "event-goal--user" : ""}">
+                <strong>${event.minute}' | ${FMG.escapeHtml(EVENT_LABELS[event.type] || event.type)}</strong>
                 <p class="muted">${FMG.escapeHtml(event.text)}</p>
               </div>`).join("") || `<div class="empty-state">El partido espera el pitazo inicial.</div>`}
           </div>
@@ -178,7 +205,7 @@
 
   function renderTacticalPreview(state, upcomingMatches) {
     const userMatch = upcomingMatches ? upcomingMatches.find((match) => match.homeTeamId === state.userTeamId || match.awayTeamId === state.userTeamId) : null;
-    if (!userMatch) return `<div class="empty-state">Tu club descansa en la proxima fecha.</div>`;
+    if (!userMatch) return `<div class="empty-state">Tu club descansa en la próxima fecha.</div>`;
     const opponentId = userMatch.homeTeamId === state.userTeamId ? userMatch.awayTeamId : userMatch.homeTeamId;
     const opponent = state.teams.find((team) => team.id === opponentId);
     const userProfile = FMG.getTacticalMatchProfile(state, state.userTeamId);
@@ -186,15 +213,20 @@
     const userPlan = FMG.getTeamPlan(state, state.userTeamId);
     const rivalPlan = FMG.getTeamPlan(state, opponentId);
     const rows = [
-      ["Formacion", userPlan.formation, rivalPlan.formation],
-      ["Posesion", userProfile.possession.toFixed(1), rivalProfile.possession.toFixed(1)],
+      ["Formación", userPlan.formation, rivalPlan.formation],
+      ["Posesión", userProfile.possession.toFixed(1), rivalProfile.possession.toFixed(1)],
       ["Ataque", userProfile.attack.toFixed(1), rivalProfile.attack.toFixed(1)],
       ["Defensa", userProfile.defense.toFixed(1), rivalProfile.defense.toFixed(1)],
       ["Riesgo", userProfile.risk.toFixed(1), rivalProfile.risk.toFixed(1)],
       ["Desgaste", userProfile.fatigue.toFixed(1), rivalProfile.fatigue.toFixed(1)]
     ];
     return `
-      <div class="section-title"><h2>Previa tactica</h2><span class="chip">vs ${FMG.escapeHtml(opponent.name)}</span></div>
+      <div class="section-title"><h2>Previa táctica</h2><span class="chip">vs ${FMG.escapeHtml(opponent.name)}</span></div>
+      <div class="log-list" style="margin-bottom:14px;">
+        <div class="log-item"><strong>Análisis automático del rival</strong><p class="muted">${FMG.escapeHtml(opponent.name)} llega con defensa ${rivalProfile.defense.toFixed(1)} y ataque ${rivalProfile.attack.toFixed(1)}. Su estilo ${FMG.escapeHtml(opponent.style)} marca el ritmo de la previa.</p></div>
+        <div class="log-item"><strong>Recomendación táctica</strong><p class="muted">${userProfile.attack >= rivalProfile.defense ? "Tu plan ofensivo puede encontrar ventajas temprano." : "Conviene administrar riesgos y atacar con transiciones mas claras."}</p></div>
+        <div class="log-item"><strong>Historia reciente</strong><p class="muted">${FMG.escapeHtml((state.seasonLog || []).slice(0, 3).map((entry) => `Semana ${entry.week}: ${entry.result || "sin duelo directo"}`).join(" | ") || "Sin enfrentamientos recientes.")}</p></div>
+      </div>
       <div class="table tactical-table">
         <div class="table-row header"><span>Factor</span><span>${FMG.escapeHtml(state.userClub.name)}</span><span>${FMG.escapeHtml(opponent.name)}</span></div>
         ${rows.map(([label, userValue, rivalValue]) => `
@@ -274,7 +306,7 @@
               <div class="log-list">
                 ${currentMatch.timeline.slice(-14).map((event) => `
                   <div class="log-item">
-                    <strong>${event.minute}' | ${FMG.escapeHtml(event.type)}</strong>
+                    <strong>${event.minute}' | ${FMG.escapeHtml(EVENT_LABELS[event.type] || event.type)}</strong>
                     <p class="muted">${FMG.escapeHtml(event.text)}</p>
                   </div>`).join("")}
               </div>

@@ -3,12 +3,18 @@
 
   const identities = {
     "colo-colo": { primary: "#f4f1e8", secondary: "#111111", accent: "#d6a632", initials: "CC" },
-    "u-de-chile": { primary: "#143c8c", secondary: "#d8242f", accent: "#ffffff", initials: "UCH" },
+    "u-de-chile": { primary: "#143c8c", secondary: "#d8242f", accent: "#ffffff", initials: "U" },
     "u-catolica": { primary: "#1b57a6", secondary: "#ffffff", accent: "#d7b35a", initials: "UC" },
     cobreloa: { primary: "#f06a22", secondary: "#ffffff", accent: "#1f1f1f", initials: "COB" },
     huachipato: { primary: "#0b2b52", secondary: "#111111", accent: "#4fa3ff", initials: "HUA" },
     palestino: { primary: "#1d8a4d", secondary: "#d8272f", accent: "#111111", initials: "PAL" },
-    wanderers: { primary: "#177a68", secondary: "#ffffff", accent: "#d5372f", initials: "SW" }
+    wanderers: { primary: "#177a68", secondary: "#ffffff", accent: "#d5372f", initials: "SW" },
+    nublense: { primary: "#d71920", secondary: "#ffffff", accent: "#111111", initials: "N" },
+    "la-serena": { primary: "#b11226", secondary: "#ffffff", accent: "#111111", initials: "LS" },
+    cobresal: { primary: "#ff7f00", secondary: "#ffffff", accent: "#0084c7", initials: "CS" },
+    ohiggins: { primary: "#66b2ff", secondary: "#ffffff", accent: "#003f7f", initials: "OH" },
+    everton: { primary: "#003f87", secondary: "#ffd200", accent: "#003f87", initials: "EV" },
+    "deportes-antofagasta": { primary: "#00a3e0", secondary: "#ffffff", accent: "#00a3e0", initials: "DA" }
   };
 
   FMG.ensureUIState = function (state) {

@@ -1,12 +1,21 @@
 (function () {
   const FMG = (window.FMG = window.FMG || {});
   const app = document.querySelector("#app");
+  const isDevMode = new URLSearchParams(location.search).has("dev");
   let menuAudio = null;
 
   function ensureMenuAudio() {
     if (menuAudio || !FMG.Phase23?.StadiumAudio) return;
+    FMG.UIAudio?.init();
     menuAudio = new FMG.Phase23.StadiumAudio();
     menuAudio.startMenuMusic();
+  }
+
+  function clubDifficulty(team) {
+    const budgetRatio = team.budget / 145000000;
+    if (budgetRatio > 0.85) return { label: "Dificil", desc: "Alta exigencia del directorio", color: "danger" };
+    if (budgetRatio > 0.65) return { label: "Medio", desc: "Balance entre recursos y presion", color: "warning" };
+    return { label: "Accesible", desc: "Mas margen para errores", color: "success" };
   }
 
   async function loadSeedData() {
@@ -32,18 +41,22 @@
         <h1 class="hero-title">Elige tu club</h1>
         <p class="hero-copy">Cada institucion llega con presupuesto, hinchada y estilo propio. El arte del juego esta resuelto con CSS y SVG locales para mantener el proyecto portable y sin dependencias externas.</p>
         <div class="hero-actions">
-          <button class="btn-secondary" data-action="load-game">Cargar partida guardada</button>
+          <button class="btn-secondary" data-action="change-route" data-route="${FMG.ROUTES.settings}">Gestionar guardados</button>
         </div>
         <div class="selector-grid">
-          ${FMG.gameState.teams.map((team) => `
+          ${FMG.gameState.teams.map((team) => {
+            const difficulty = clubDifficulty(team);
+            return `
             <article class="selector-card club-card" style="--club-primary:${FMG.getClubIdentity(team.id).primary};--club-secondary:${FMG.getClubIdentity(team.id).secondary};--club-accent:${FMG.getClubIdentity(team.id).accent};">
               <div class="club-heading">${FMG.clubBadge(team, "md")}<h3>${FMG.escapeHtml(team.name)}</h3></div>
               <p class="muted">${FMG.escapeHtml(team.city)} | ${FMG.escapeHtml(team.stadium)}</p>
+              <span class="chip chip-${difficulty.color}" title="${FMG.escapeHtml(difficulty.desc)}">${difficulty.label}</span>
               <div class="meta">
                 <span>Presupuesto ${FMG.currency(team.budget)}</span><span>Hinchas ${team.fanBase.toLocaleString("es-CL")}</span><span>${FMG.escapeHtml(team.style)}</span>
               </div>
               <div class="button-row" style="margin-top:18px;"><button class="btn-primary" data-action="select-club" data-team-id="${team.id}" aria-label="Tomar mando de ${FMG.escapeHtml(team.name)}">Tomar mando</button></div>
-            </article>`).join("")}
+            </article>`;
+          }).join("")}
         </div>
       </section>
     `;
@@ -74,9 +87,12 @@
       [FMG.ROUTES.phase24, "Jugar v10", "Tácticas en Cancha Fase 24"]
     ];
 
+    const visibleItems = isDevMode ? items : items.filter(([route]) => !String(route).startsWith("phase"));
+
     return `
-      <nav class="nav">
-        ${items.map(([route, label, tooltip]) => `
+      <nav class="nav" role="navigation" aria-label="Menu principal">
+        <button class="btn-ghost nav-save" data-action="change-route" data-route="${FMG.ROUTES.settings}" aria-label="Gestionar guardados">💾</button>
+        ${visibleItems.map(([route, label, tooltip]) => `
           <button class="${FMG.gameState.route === route ? "active" : "btn-ghost"}" data-action="change-route" data-route="${route}" title="${FMG.escapeHtml(tooltip)}" aria-label="${FMG.escapeHtml(tooltip)}">${label}</button>`).join("")}
       </nav>
     `;
@@ -84,7 +100,7 @@
 
   function renderNotifications() {
     return FMG.gameState.notifications.map((notification, index) => `
-      <div class="toast" data-id="${notification.id}" style="bottom:${20 + index * 84}px;">
+      <div class="toast toast-${FMG.escapeHtml(notification.type || "info")}" data-id="${notification.id}" role="status" aria-live="polite" style="bottom:${20 + index * 84}px;">
         <strong>${FMG.escapeHtml(notification.message)}</strong>
         <div class="button-row" style="margin-top:10px;"><button class="btn-ghost" data-action="dismiss-toast" data-id="${notification.id}">Cerrar</button></div>
       </div>`).join("");
@@ -97,6 +113,8 @@
 
     const currentCanvas = FMG.matchVisualController.visualizer?.renderer?.domElement;
     if (!currentCanvas || !container.contains(currentCanvas)) {
+      if (FMG._visualizerInitialized) return;
+      FMG._visualizerInitialized = true;
       FMG.matchVisualController.initMatch(container, liveMatch, FMG.gameState);
     }
     if (FMG.matchVisualController.syncLiveMatch) FMG.matchVisualController.syncLiveMatch(liveMatch);
@@ -116,6 +134,8 @@
       case FMG.ROUTES.rival: return FMG.renderRivalClubView(FMG.gameState);
       case FMG.ROUTES.settings: return FMG.renderSettingsView(FMG.gameState);
       case FMG.ROUTES.table: return FMG.renderTableView(FMG.gameState);
+      case FMG.ROUTES.onboarding: return FMG.renderOnboardingView();
+      case FMG.ROUTES.credits: return FMG.renderCreditsView();
       case FMG.ROUTES.phase15: return FMG.renderPhase15View();
       case FMG.ROUTES.phase16: return FMG.renderPhase16View();
       case FMG.ROUTES.phase17: return FMG.renderPhase17View();
@@ -131,15 +151,32 @@
   }
 
   function render() {
-    app.innerHTML = FMG.gameState.selectionMode
+    app.innerHTML = FMG.gameState.route === FMG.ROUTES.onboarding
+      ? `${FMG.renderOnboardingView()}${renderNotifications()}`
+      : FMG.gameState.selectionMode
       ? `${renderSelection()}${renderNotifications()}`
       : `<div class="shell">${renderNavigation()}${renderRoute()}</div>${renderNotifications()}`;
   }
+  FMG.render = render;
+  FMG.syncLiveVisualizer = function () {
+    syncLiveVisualizer();
+  };
 
   function handleAction(action, target) {
     if (!action) return;
     if (target.dataset.confirm && !window.confirm(target.dataset.confirm)) return;
+    const activeAction = document.activeElement?.dataset?.action;
     if (action === "select-club") FMG.selectClub(target.dataset.teamId);
+    if (action === "finish-onboarding") {
+      localStorage.setItem("fmg-onboarding-done", "1");
+      FMG.gameState.route = FMG.ROUTES.dashboard;
+      FMG.gameState.selectionMode = true;
+    }
+    if (action === "import-save-start") {
+      localStorage.setItem("fmg-onboarding-done", "1");
+      FMG.gameState.route = FMG.ROUTES.settings;
+      FMG.gameState.selectionMode = false;
+    }
     if (action === "change-route") {
       if (FMG.gameState.route === FMG.ROUTES.phase15) FMG.unmountPhase15();
       if (FMG.gameState.route === FMG.ROUTES.phase16) FMG.unmountPhase16();
@@ -152,6 +189,7 @@
       if (FMG.gameState.route === FMG.ROUTES.phase23) FMG.unmountPhase23();
       if (FMG.gameState.route === FMG.ROUTES.phase24) FMG.unmountPhase24();
       FMG.gameState.route = target.dataset.route;
+      if (target.dataset.route === FMG.ROUTES.settings || target.dataset.route === FMG.ROUTES.credits) FMG.gameState.selectionMode = false;
     }
     if (action === "advance-week") {
       const result = FMG.advanceWeek();
@@ -159,17 +197,6 @@
     }
     if (action === "start-live-match") {
       FMG.pushNotification(FMG.startLiveUserMatch().message);
-      // Esperar a que el DOM se actualice antes de inicializar visualizador
-      setTimeout(() => {
-        const container = document.querySelector("#match-visualizer-container");
-        if (container && FMG.gameState.liveMatch) {
-          FMG.matchVisualController.initMatch(
-            container,
-            FMG.gameState.liveMatch,
-            FMG.gameState
-          );
-        }
-      }, 50);
     }
     if (action === "advance-live-match") {
       const result = FMG.advanceLiveUserMatch(FMG.gameState.liveMatch ? FMG.gameState.liveMatch.speed : 5);
@@ -177,9 +204,14 @@
     }
     if (action === "advance-live-half") {
       const liveMatch = FMG.gameState.liveMatch;
-      const target = liveMatch && liveMatch.minute < 45 ? 45 : 90;
-      const result = FMG.advanceLiveUserMatch(liveMatch ? target - liveMatch.minute : 45);
-      if (!result.ok) FMG.pushNotification(result.message);
+      if (liveMatch && !liveMatch.completed) {
+        const target = liveMatch.minute < 45 ? 45 : 90;
+        const steps = Math.max(0, target - liveMatch.minute);
+        if (steps > 0) {
+          const result = FMG.advanceLiveUserMatch(steps);
+          if (!result.ok) FMG.pushNotification(result.message);
+        }
+      }
     }
     if (action === "simulate-live-full") {
       const liveMatch = FMG.gameState.liveMatch;
@@ -190,6 +222,7 @@
       FMG.pushNotification(FMG.finishLiveUserMatch().message);
       // Destruir visualizador
       FMG.matchVisualController.dispose();
+      FMG._visualizerInitialized = false;
     }
     if (action === "set-live-speed") FMG.pushNotification(FMG.setLiveMatchSpeed(Number(target.dataset.speed)).message);
     if (action === "live-tactic") FMG.pushNotification(FMG.applyLiveTacticalShift(target.dataset.mode).message);
@@ -197,6 +230,10 @@
     if (action === "live-player-order") FMG.pushNotification(FMG.setLivePlayerOrder(target.dataset.playerId, target.dataset.order).message);
     if (action === "live-substitution") {
       FMG.pushNotification(FMG.makeLiveSubstitution(target.dataset.outPlayerId, target.dataset.inPlayerId).message);
+    }
+    if (action === "select-sub-out") {
+      FMG.gameState.ui = FMG.gameState.ui || {};
+      FMG.gameState.ui.selectedSubOutId = target.dataset.playerId;
     }
     if (action === "save-game") {
       const result = FMG.saveGame();
@@ -239,6 +276,16 @@
     if (action === "import-save") {
       const payload = document.querySelector("[data-role='import-payload']")?.value || "";
       FMG.pushNotification(FMG.importSave(payload, target.dataset.slotId).message);
+    }
+    if (action === "export-save") {
+      const blob = new Blob([FMG.exportSave(FMG.gameState)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `football-manager-chile-${Date.now()}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      FMG.pushNotification("Partida exportada como archivo.", "info");
     }
     if (action === "safe-reset") {
       FMG.initializeGame(FMG.gameState.teams, FMG.gameState.players);
@@ -308,12 +355,21 @@
     if (FMG.handlePhase23Action && FMG.handlePhase23Action(action)) return;
     if (FMG.handlePhase24Action && FMG.handlePhase24Action(action)) return;
     if (action === "dismiss-toast") FMG.dismissNotification(target.dataset.id);
+    if (["save-slot", "buy-player", "finish-live-match"].includes(action)) FMG.UIAudio?.confirm();
     render();
-    syncLiveVisualizer();
+    if (activeAction) {
+      const el = document.querySelector(`[data-action="${activeAction}"]`);
+      if (el) el.focus();
+    }
+    requestAnimationFrame(() => syncLiveVisualizer());
   }
 
+  let _lastAction = 0;
   document.addEventListener("click", (event) => {
     ensureMenuAudio();
+    const now = Date.now();
+    if (now - _lastAction < 300) return;
+    _lastAction = now;
     const target = event.target.closest("[data-action]");
     if (target) handleAction(target.dataset.action, target);
   });
@@ -322,13 +378,21 @@
     try {
       const seed = await loadSeedData();
       FMG.initializeGame(seed.teams, seed.players);
+      if (!localStorage.getItem("fmg-onboarding-done")) {
+        FMG.gameState.route = FMG.ROUTES.onboarding;
+      }
       render();
     } catch (error) {
       app.innerHTML = `
-        <section class="panel">
-          <h1>Error de carga</h1>
-          <p class="hero-copy">${FMG.escapeHtml(error.message)}</p>
-          <p class="hero-copy">Inicia un servidor local en la carpeta del juego y vuelve a abrir la pagina.</p>
+        <section class="panel error-screen">
+          <h1>No se pudieron cargar los datos del juego</h1>
+          <p class="hero-copy">Para jugar Football Manager Chile, el juego debe ejecutarse desde un servidor web, no directamente desde tu computador.</p>
+          <h2>Opciones rapidas:</h2>
+          <ol>
+            <li><strong>VS Code:</strong> instala Live Server y abre index.html con "Open with Live Server".</li>
+            <li><strong>Python:</strong> ejecuta <code>python -m http.server 8080</code> y abre <code>localhost:8080</code>.</li>
+            <li><strong>Node.js:</strong> ejecuta <code>npx serve .</code> en la carpeta del juego.</li>
+          </ol>
         </section>`;
       console.error(error);
     }

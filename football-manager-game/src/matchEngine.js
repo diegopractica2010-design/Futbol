@@ -1,6 +1,16 @@
 (function () {
   const FMG = (window.FMG = window.FMG || {});
 
+  const MATCH_CONSTANTS = {
+    pressureBase: 0.34,
+    foulBase: 0.052,
+    foulMax: 0.10,
+    injuryBase: 0.004,
+    possessionSwingFactor: 0.08
+  };
+
+  FMG.MATCH_CONSTANTS = MATCH_CONSTANTS;
+
   // =============================================================================
   // ARQUITECTURA CANÓNICA DE PARTIDOS
   // =============================================================================
@@ -134,15 +144,17 @@
     const defendProfile = isHomeAttack ? awayProfile : homeProfile;
     const attacker = pickLiveAttacker(attackSquad, liveMatch.playerOrders);
     const defender = pickDefender(defendSquad);
+    const boostKey = isHomeAttack ? "homeTurns" : "awayTurns";
+    const activeBoost = liveMatch.tacticBoost?.[boostKey] > 0 ? (liveMatch.tacticBoost[userSideFromAttack(liveMatch, isHomeAttack)] || 0) * 0.018 : 0;
     const pressure = FMG.clamp(
-      0.34 + (attackStrength - defendStrength) / 115 + (attackProfile.chance + attackProfile.attack - defendProfile.defense + defendProfile.risk * 0.25) / 135 + FMG.randomInt(-8, 8) / 100,
+      MATCH_CONSTANTS.pressureBase + activeBoost + (attackStrength - defendStrength) / 115 + (attackProfile.chance + attackProfile.attack - defendProfile.defense + defendProfile.risk * 0.25) / 135 + FMG.randomInt(-8, 8) / 100,
       0.1,
       0.76
     );
 
     if (!attacker || !defender) return;
 
-    if (FMG.rng() < FMG.clamp(0.052 + (defendProfile.fouls + defendProfile.risk * 0.18) / 360, 0.025, 0.1)) {
+    if (FMG.rng() < FMG.clamp(MATCH_CONSTANTS.foulBase + (defendProfile.fouls + defendProfile.risk * 0.18) / 360, 0.025, MATCH_CONSTANTS.foulMax)) {
       const cardRoll = FMG.rng();
       const color = cardRoll > 0.965 ? "red" : cardRoll > 0.74 ? "yellow" : null;
       defendStats.fouls += 1;
@@ -198,7 +210,7 @@
       addTimeline(result.timeline, minute, "chance", attackTeam.id, `${attackTeam.name} progresa pero no encuentra remate claro.`);
     }
 
-    if (FMG.rng() < 0.004) {
+    if (FMG.rng() < MATCH_CONSTANTS.injuryBase) {
       const injured = FMG.sample([...attackSquad, ...defendSquad]);
       if (injured) {
         const duration = FMG.randomInt(1, 4);
@@ -206,6 +218,10 @@
         addTimeline(result.timeline, minute, "injury", injured.teamId, `${injured.name} queda sentido y sera baja ${duration} semana(s).`, { playerId: injured.id });
       }
     }
+  }
+
+  function userSideFromAttack(liveMatch, isHomeAttack) {
+    return isHomeAttack ? "home" : "away";
   }
 
   function applyLiveOrders(orders, profile) {
@@ -249,8 +265,9 @@
     const profile = state ? FMG.getTacticalMatchProfile(state, team.id) : { attack: 0, defense: 0 };
     const availabilityPenalty = squad.length < 11 ? (11 - squad.length) * 4 : 0;
     const difficulty = state?.settings?.difficulty || "normal";
+    const modifier = FMG.DIFFICULTY_MODIFIERS?.[difficulty] || FMG.DIFFICULTY_MODIFIERS?.normal || { matchBonus: 0 };
     const userAdjustment = state && team.id === state.userTeamId
-      ? difficulty === "easy" ? 4 : difficulty === "hard" ? -3 : difficulty === "expert" ? -6 : 0
+      ? modifier.matchBonus
       : state && team.id !== state.userTeamId
         ? difficulty === "easy" ? -1 : difficulty === "hard" ? 2 : difficulty === "expert" ? 4 : 0
         : 0;
@@ -279,7 +296,10 @@
     homeStats.possession = homePossession;
     awayStats.possession = awayPossession;
 
-    for (let minute = 2; minute <= 90; minute += FMG.randomInt(2, 4)) {
+    for (let minute = 2; minute <= 90;) {
+      const step = FMG.randomInt(2, 4);
+      minute += step;
+      if (minute > 90) break;
       const isHomeAttack = FMG.rng() * 100 < homePossession;
       const attackTeam = isHomeAttack ? homeTeam : awayTeam;
       const defendTeam = isHomeAttack ? awayTeam : homeTeam;
@@ -294,14 +314,14 @@
       const attacker = pickAttacker(attackSquad);
       const defender = pickDefender(defendSquad);
       const pressure = FMG.clamp(
-        0.6 + (attackStrength - defendStrength) / 95 + (attackProfile.chance + attackProfile.attack - defendProfile.defense + defendProfile.risk * 0.25) / 120 + FMG.randomInt(-8, 8) / 100,
-        0.22,
-        0.9
+        (MATCH_CONSTANTS.pressureBase * step) + (attackStrength - defendStrength) / 115 + (attackProfile.chance + attackProfile.attack - defendProfile.defense + defendProfile.risk * 0.25) / 135 + FMG.randomInt(-8, 8) / 100,
+        0.1,
+        0.86
       );
 
       if (!attacker || !defender) continue;
 
-      if (FMG.rng() < FMG.clamp(0.18 + (defendProfile.fouls + defendProfile.risk * 0.18) / 100, 0.1, 0.3)) {
+      if (FMG.rng() < FMG.clamp((MATCH_CONSTANTS.foulBase * step) + (defendProfile.fouls + defendProfile.risk * 0.18) / 360, 0.025, MATCH_CONSTANTS.foulMax * step)) {
         const cardRoll = FMG.rng();
         const color = cardRoll > 0.96 ? "red" : cardRoll > 0.72 ? "yellow" : null;
         const defendingStats = isHomeAttack ? awayStats : homeStats;
@@ -349,7 +369,7 @@
         addTimeline(timeline, minute, "chance", attackTeam.id, `${attackTeam.name} progresa pero no encuentra remate claro.`);
       }
 
-      if (FMG.rng() < 0.012) {
+      if (FMG.rng() < MATCH_CONSTANTS.injuryBase * step) {
         const injured = FMG.sample([...attackSquad, ...defendSquad]);
         if (injured) {
           const duration = FMG.randomInt(1, 4);
@@ -417,6 +437,7 @@
       homeBenchIds: homeBench.slice(0, 7).map((player) => player.id),
       awayBenchIds: awayBench.slice(0, 7).map((player) => player.id),
       substitutions: { home: 0, away: 0 },
+      tacticBoost: { home: 0, away: 0, homeTurns: 0, awayTurns: 0 },
       tacticalBoost: { home: 0, away: 0 },
       liveOrders: {
         home: { mentality: "balanced", press: "normal", tempo: "normal", risk: "normal" },
@@ -443,6 +464,10 @@
 
     for (let minute = liveMatch.minute + 1; minute <= targetMinute; minute += 1) {
       liveMatch.minute = minute;
+      if (liveMatch.tacticBoost) {
+        liveMatch.tacticBoost.homeTurns = Math.max(0, (liveMatch.tacticBoost.homeTurns || 0) - 1);
+        liveMatch.tacticBoost.awayTurns = Math.max(0, (liveMatch.tacticBoost.awayTurns || 0) - 1);
+      }
       if (minute % 9 === 0) {
         const { homePlayers, awayPlayers } = getLiveSquads(liveMatch, state);
         const homeFatigue = Math.max(0, Math.round(FMG.getTacticalMatchProfile(state, liveMatch.homeTeamId).fatigue / 3));

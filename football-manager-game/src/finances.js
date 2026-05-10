@@ -70,8 +70,8 @@
   FMG.registerFinanceEntry = function (finances, type, label, amount, budgetKey) {
     const entry = { type, label, amount, budgetKey: budgetKey || null, date: new Date().toISOString() };
 
-    if (amount >= 0) finances.incomeHistory.unshift(entry);
-    else finances.expenseHistory.unshift(entry);
+    if (amount > 0) finances.incomeHistory.unshift(entry);
+    else if (amount < 0) finances.expenseHistory.unshift(entry);
 
     finances.weeklyReport.unshift(entry);
     finances.weeklyReport = finances.weeklyReport.slice(0, 10);
@@ -121,6 +121,32 @@
     FMG.registerFinanceEntry(finances, "income", "Prestamo bancario", value);
     FMG.updateBoardTrust(state, "Prestamo bancario", -4);
     return { ok: true, message: `Prestamo aprobado por ${FMG.currency(value)}.`, loan };
+  };
+
+  FMG.previewFinancialAction = function (state, actionType, params = {}) {
+    const finances = FMG.ensureAdvancedFinances(state);
+    if (actionType === "loan") {
+      const value = FMG.clamp(Number(params.amount) || 30000000, 5000000, 120000000);
+      const fee = Math.round(value * 0.05);
+      return {
+        title: `Prestamo de ${FMG.currency(value)}`,
+        currentBalance: finances.balance,
+        income: value,
+        fee,
+        finalBalance: finances.balance + value - fee,
+        weeklyPayment: Math.round(value / 40),
+        weeksRemaining: 40
+      };
+    }
+    return {
+      title: "Accion financiera",
+      currentBalance: finances.balance,
+      income: 0,
+      fee: 0,
+      finalBalance: finances.balance,
+      weeklyPayment: 0,
+      weeksRemaining: 0
+    };
   };
 
   FMG.negotiateSponsor = function (state) {

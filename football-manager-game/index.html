@@ -3,10 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta property="og:title" content="Football Manager Chile" />
+    <meta property="og:description" content="Gestiona tu club chileno. Tacticas, fichajes y partidos en vivo. Gratis en el navegador." />
+    <meta property="og:type" content="game" />
+    <meta property="og:image" content="./assets/og-preview.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="description" content="Football Manager Chile - el simulador de futbol chileno gratuito. Elige tu club, ficha jugadores y dirige tu equipo a la gloria." />
     <title>Football Manager Game Chile</title>
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
+    <div id="loading-screen" style="position:fixed;inset:0;display:grid;place-items:center;background:#eef2ea;z-index:999;">
+      <p style="color:#0f7a5a;font-weight:800;font-size:1.5rem;">Cargando Football Manager Chile...</p>
+    </div>
     <div id="app"></div>
     <canvas id="match-canvas" style="display:none;"></canvas>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -26,6 +35,7 @@
     <script src="./src/news.js"></script>
     <script src="./src/presentation.js"></script>
     <script src="./src/saveSystem.js"></script>
+    <script src="./src/uiAudio.js"></script>
     <script src="./src/gameEngine.js"></script>
     <script src="./src/matchVisualizer.js"></script>
     <script src="./src/matchVisualController.js"></script>
@@ -96,6 +106,8 @@
     <script src="./ui/calendarView.js"></script>
     <script src="./ui/settingsView.js"></script>
     <script src="./ui/tableView.js"></script>
+    <script src="./ui/onboardingView.js"></script>
+    <script src="./ui/creditsView.js"></script>
     <script src="./ui/phase15View.js"></script>
     <script src="./ui/phase16View.js"></script>
     <script src="./ui/phase17View.js"></script>
@@ -107,5 +119,6 @@
     <script src="./ui/phase23View.js"></script>
     <script src="./ui/phase24View.js"></script>
     <script src="./src/main.js"></script>
+    <script>window.addEventListener("DOMContentLoaded", () => document.getElementById("loading-screen")?.remove());</script>
   </body>
   </html>

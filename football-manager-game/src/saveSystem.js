@@ -39,6 +39,17 @@
     return merged;
   }
 
+  function validateImportedSave(data) {
+    if (!data || typeof data !== "object") throw new Error("Save vacio");
+    if (data.finances?.balance > 10000000000) throw new Error("Balance invalido");
+    (data.players || []).forEach((player) => {
+      if (player.overall < 40 || player.overall > 99) throw new Error(`Overall invalido para ${player.name}`);
+      player.energy = FMG.clamp(Number(player.energy) || 0, 0, 100);
+      player.morale = FMG.clamp(Number(player.morale) || 0, 0, 100);
+    });
+    return data;
+  }
+
   function saveSnapshot(state, slotId, overwrite = true) {
     const targetSlot = slotId || state.saveMeta?.activeSlotId || "slot-1";
     const key = slotKey(targetSlot);
@@ -165,7 +176,7 @@
   FMG.importSave = function (payload, targetSlotId = "slot-1") {
     try {
       const parsed = typeof payload === "string" ? JSON.parse(payload) : payload;
-      const rawState = parsed.game || parsed;
+      const rawState = validateImportedSave(parsed.game || parsed);
       const migrated = FMG.migrateSaveState(rawState);
       const result = FMG.saveToSlot(migrated, targetSlotId, { overwrite: true });
       if (!result.ok) return result;

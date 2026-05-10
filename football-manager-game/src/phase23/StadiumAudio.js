@@ -61,6 +61,23 @@
     this.menu = null;
   };
 
+  StadiumAudio.prototype.setCrowdIntensity = function (value) {
+    if (!this.enabled || !this.crowd) return;
+    this._ramp(this.crowd.gain, Math.max(0.03, Math.min(0.24, value * 0.24)), 0.35);
+  };
+
+  StadiumAudio.prototype.updateContext = function (matchContext) {
+    if (!matchContext) return;
+    var userIsHome = !!matchContext.userIsHome;
+    var homeGoals = matchContext.homeGoals || 0;
+    var awayGoals = matchContext.awayGoals || 0;
+    var minute = matchContext.minute || 0;
+    var isWinning = userIsHome ? homeGoals > awayGoals : awayGoals > homeGoals;
+    var isLosing = userIsHome ? homeGoals < awayGoals : awayGoals < homeGoals;
+    var isTense = Math.abs(homeGoals - awayGoals) <= 1 && minute > 75;
+    this.setCrowdIntensity(isWinning ? 0.9 : isLosing ? 0.45 : isTense ? 0.75 : 0.6);
+  };
+
   StadiumAudio.prototype.tick = function (match, ballSystem) {
     if (!this.enabled || !match || !ballSystem) return;
     var C = window.FMG.Phase16.C;

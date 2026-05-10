@@ -5,7 +5,15 @@
   FMG.SAVE_INDEX_KEY = "football-manager-game-save-index";
   FMG.SAVE_SLOT_PREFIX = "football-manager-game-slot-";
   FMG.SETTINGS_KEY = "football-manager-game-settings";
-  FMG.CURRENT_VERSION = 13;
+  // Version de save: se mantiene en la fase publica mas alta y las migraciones
+  // deben aceptar versiones anteriores sin romper partidas guardadas.
+  FMG.CURRENT_VERSION = typeof document === "undefined" ? 13 : 24;
+  FMG.DIFFICULTY_MODIFIERS = {
+    easy: { matchBonus: 5, marketDiscount: 0.85, boardTrustDecay: 0.5, rivalAILevel: 0.6 },
+    normal: { matchBonus: 0, marketDiscount: 1.0, boardTrustDecay: 1.0, rivalAILevel: 1.0 },
+    hard: { matchBonus: -3, marketDiscount: 1.1, boardTrustDecay: 1.3, rivalAILevel: 1.2 },
+    expert: { matchBonus: -6, marketDiscount: 1.25, boardTrustDecay: 1.6, rivalAILevel: 1.5 }
+  };
 
   // =========================================================================
   // RANDOM NUMBER GENERATOR SEEDABLE (Mulberry32)
@@ -50,11 +58,16 @@
   };
 
   FMG.currency = function (value) {
+    const amount = Math.round(Number(value) || 0);
+    if (Math.abs(amount) >= 1000000) {
+      return `$${(amount / 1000000).toFixed(1).replace(".", ",")} M`;
+    }
     return new Intl.NumberFormat("es-CL", {
       style: "currency",
       currency: "CLP",
+      minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(Math.round(value));
+    }).format(amount);
   };
 
   FMG.uid = function (prefix) {
@@ -92,6 +105,21 @@
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
   };
+
+  FMG.safe = function (value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#x27;");
+  };
+
+  if (typeof window.addEventListener === "function") {
+    window.addEventListener("DOMContentLoaded", () => {
+      FMG.CURRENT_VERSION = Math.max(...(FMG._loadedPhases || [FMG.CURRENT_VERSION]));
+    });
+  }
 
   FMG.validateSeedData = function (teams, players) {
     if (!Array.isArray(teams) || teams.length < 2) {

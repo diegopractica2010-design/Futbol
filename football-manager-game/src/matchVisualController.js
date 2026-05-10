@@ -71,16 +71,21 @@
     getTeamColor(team) {
       if (!team) return 0x333333;
       const colorMap = {
-        "colo-colo": 0xffffff,
-        "universidad-de-chile": 0x003366,
-        "universidad-catolica": 0x0066cc,
-        coquimbo: 0x2e5c8a,
-        "magallanes": 0x1e3a8a,
-        "iquique": 0xff6600,
-        "antofagasta": 0xffcc00,
-        "union-la-calera": 0xff0000
+        "colo-colo": { home: 0xffffff, away: 0x000000, accent: 0xffffff },
+        "u-de-chile": { home: 0x003087, away: 0xffffff, accent: 0xff0000 },
+        "u-catolica": { home: 0x7b1c2a, away: 0xffffff, accent: 0xd4af37 },
+        "cobreloa": { home: 0xff6600, away: 0x000000, accent: 0xff6600 },
+        "huachipato": { home: 0x005bac, away: 0xffffff, accent: 0x005bac },
+        "palestino": { home: 0x006233, away: 0xffffff, accent: 0xce1126 },
+        "wanderers": { home: 0x006400, away: 0xffffff, accent: 0x006400 },
+        "nublense": { home: 0xd71920, away: 0xffffff, accent: 0xd71920 },
+        "la-serena": { home: 0xb11226, away: 0xffffff, accent: 0x111111 },
+        "cobresal": { home: 0xff7f00, away: 0xffffff, accent: 0x0084c7 },
+        "ohiggins": { home: 0x66b2ff, away: 0xffffff, accent: 0x003f7f },
+        "everton": { home: 0x003f87, away: 0xffd200, accent: 0x003f87 },
+        "deportes-antofagasta": { home: 0x00a3e0, away: 0xffffff, accent: 0x00a3e0 }
       };
-      return colorMap[team.id.toLowerCase()] || 0x333333;
+      return (colorMap[team.id.toLowerCase()] || { home: 0x333333 }).home;
     }
 
     // Posicionar jugadores en formación inicial
@@ -97,6 +102,12 @@
 
       const form = formations[formation] || formations["4-3-3"];
       const startZ = isHome ? -fieldHeight / 2 + 10 : fieldHeight / 2 - 10;
+      const direction = isHome ? 1 : -1;
+      const defZ = startZ;
+      const midZ = startZ + 15 * direction;
+      const extZ = startZ + 22 * direction;
+      const fwdZ = startZ + 30 * direction;
+      const clampZ = (value) => FMG.clamp(value, -fieldHeight / 2 + 2, fieldHeight / 2 - 2);
 
       // Orden esperado: POR (1), DEF (4), MED (3-5), DEL (2-3)
       let defIndex = 0,
@@ -114,19 +125,24 @@
           x = -fieldWidth / 2 + spacing * (defIndex + 1);
           z = startZ;
           defIndex++;
-        } else if (["MED"].includes(player.position) && midIndex < form.midfielders) {
+        } else if (["MED", "EXT"].includes(player.position) && midIndex < form.midfielders) {
           const spacing = fieldWidth / (form.midfielders + 1);
           x = -fieldWidth / 2 + spacing * (midIndex + 1);
-          z = startZ + 15;
+          z = player.position === "EXT" ? extZ : midZ;
           midIndex++;
-        } else {
+        } else if (["DEL"].includes(player.position) && fwdIndex < form.forwards) {
           const spacing = fieldWidth / (form.forwards + 1);
           x = -fieldWidth / 2 + spacing * (fwdIndex + 1);
-          z = startZ + 30;
+          z = fwdZ;
+          fwdIndex++;
+        } else {
+          const spacing = fieldWidth / (form.forwards + 1);
+          x = -fieldWidth / 2 + spacing * (Math.min(fwdIndex, form.forwards - 1) + 1);
+          z = fwdZ;
           fwdIndex++;
         }
 
-        this.visualizer.addPlayer(player.id, { x, y: 0, z }, isHome);
+        this.visualizer.addPlayer(player.id, { x, y: 0, z: clampZ(z) }, isHome);
       });
     }
 
@@ -224,6 +240,10 @@
 
       const fromPos = from.mesh.position;
       const toPos = to.mesh.position;
+      if (this.visualizer.ball) {
+        this.visualizer.ball.position.copy(fromPos);
+        this.visualizer.ball.position.y = fromPos.y + 0.5;
+      }
 
       // Balón viaja del jugador A al jugador B
       this.visualizer.animateBallMove(

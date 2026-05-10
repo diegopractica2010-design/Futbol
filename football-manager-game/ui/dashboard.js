@@ -4,7 +4,11 @@
   FMG.renderDashboard = function (state, helpers) {
     const squad = state.players.filter((player) => player.teamId === state.userTeamId);
     const avgOverall = squad.length ? Math.round(squad.reduce((sum, player) => sum + player.overall, 0) / squad.length) : 0;
-    const topScorer = state.currentMatch ? [...state.currentMatch.homeEvents, ...state.currentMatch.awayEvents][0]?.scorer || "Sin registros" : "Sin registros";
+    const avgEnergy = squad.length ? Math.round(squad.reduce((sum, player) => sum + (player.energy || 100), 0) / squad.length) : 0;
+    const avgMorale = squad.length ? Math.round(squad.reduce((sum, player) => sum + (player.morale || 70), 0) / squad.length) : 0;
+    const userSide = state.currentMatch?.homeTeamId === state.userTeamId ? "home" : "away";
+    const userEvents = state.currentMatch?.[userSide === "home" ? "homeEvents" : "awayEvents"] || [];
+    const topScorer = state.currentMatch ? userEvents[0]?.scorer || "Sin registros de tu equipo" : "Sin registros";
     const nextOpponent = helpers.nextOpponent;
     const position = state.standings.findIndex((entry) => entry.teamId === state.userTeamId) + 1;
     const progress = state.totalWeeks ? (state.completedWeeks / state.totalWeeks) * 100 : 0;
@@ -22,21 +26,23 @@
             <span class="chip">Estilo ${FMG.escapeHtml(state.userClub.style)}</span>
           </div>
           <div class="hero-actions">
-            <button class="btn-primary" data-action="advance-week">Simular semana</button>
+            ${avgEnergy < 60 || avgMorale < 45 ? `<div class="empty-state alert-state">Plantel en zona de riesgo: energia ${avgEnergy}/100, moral ${avgMorale}/100.</div>` : ""}
+            <button class="btn-primary" data-action="advance-week" aria-label="Simular semana completa">Simular semana</button>
             ${state.seasonComplete ? `<button class="btn-primary" data-action="new-season" data-confirm="Iniciar temporada ${state.seasonNumber + 1}?">Nueva temporada</button>` : ""}
-            <button class="btn-secondary" data-action="save-game">Guardar partida</button>
-            <button class="btn-ghost" data-action="load-game">Cargar partida</button>
+            <button class="btn-secondary" data-action="change-route" data-route="${FMG.ROUTES.settings}">Gestionar guardados</button>
           </div>
           <div class="stats-grid">
             <article class="stat-card"><div class="muted">Saldo disponible</div><div class="stat-value">${FMG.currency(state.finances.balance)}</div></article>
-            <article class="stat-card"><div class="muted">Posicion actual</div><div class="stat-value">${position || "-"}</div></article>
+            <article class="stat-card"><div class="muted">Posición actual</div><div class="stat-value">${position || "-"}</div></article>
             <article class="stat-card"><div class="muted">Media de plantilla</div><div class="stat-value">${avgOverall}</div></article>
             <article class="stat-card"><div class="muted">Sistema</div><div class="stat-value">${FMG.escapeHtml(plan.formation)}</div></article>
+            <article class="stat-card"><div class="muted">Energía ${avgEnergy < 60 ? "!" : ""}</div><div class="stat-value">${avgEnergy}</div></article>
+            <article class="stat-card"><div class="muted">Moral ${avgMorale < 45 ? "!" : ""}</div><div class="stat-value">${avgMorale}</div></article>
           </div>
         </div>
         <div class="side-stack">
           <section class="panel">
-            <div class="section-title"><h2>Proxima fecha</h2><span class="chip">Semana ${state.currentWeek}</span></div>
+            <div class="section-title"><h2>Próxima fecha</h2><span class="chip">Semana ${state.currentWeek}</span></div>
             ${
               state.seasonComplete
                 ? `<p><strong>Campeon: ${FMG.escapeHtml(state.champion ? state.champion.name : "Por definir")}</strong></p>
@@ -46,15 +52,15 @@
                   ? `<p><strong>${FMG.escapeHtml(state.userClub.name)}</strong> vs <strong>${FMG.escapeHtml(nextOpponent.name)}</strong></p>
                      <p class="muted">Semana ${nextOpponent.week} | ${FMG.escapeHtml(nextOpponent.city)} | Forma ${nextOpponent.form}/20</p>
                      <div class="progress"><span style="width:${progress}%"></span></div>`
-                  : `<div class="empty-state">Tu club descansa en la proxima fecha.</div>`
+                  : `<div class="empty-state">Tu club descansa en la próxima fecha.</div>`
             }
           </section>
           <section class="panel">
-            <div class="section-title"><h2>Radar rapido</h2></div>
+            <div class="section-title"><h2>Radar rápido</h2></div>
             <div class="log-list">
-              <div class="log-item"><strong>Ultimo protagonista</strong><p class="muted">${FMG.escapeHtml(topScorer)}</p></div>
+              <div class="log-item"><strong>Último protagonista</strong><p class="muted">${FMG.escapeHtml(topScorer)}</p></div>
               <div class="log-item"><strong>Mercado</strong><p class="muted">${state.market.windowOpen ? "Ventana abierta" : "Ventana cerrada"}</p></div>
-              <div class="log-item"><strong>Aficion</strong><p class="muted">${state.userClub.fanBase.toLocaleString("es-CL")} hinchas base</p></div>
+              <div class="log-item"><strong>Afición</strong><p class="muted">${state.userClub.fanBase.toLocaleString("es-CL")} hinchas base</p></div>
               <div class="log-item"><strong>Patrocinio</strong><p class="muted">${FMG.currency(state.userClub.sponsor)}</p></div>
             </div>
           </section>
@@ -72,7 +78,7 @@
                       <p class="muted">${FMG.escapeHtml(entry.headline)}</p>
                       <p class="muted">${FMG.escapeHtml(entry.event ? entry.event.detail : "Sin evento extraordinario.")}</p>
                     </div>`).join("")
-                : `<div class="empty-state">La temporada aun no registra actividad.</div>`
+              : `<div class="empty-state">Aún no hay actividad. Pulsa <strong>Simular semana</strong> para arrancar la temporada.</div>`
             }
           </div>
         </section>
@@ -97,7 +103,7 @@
                   <strong>Temporada ${entry.seasonNumber}: ${FMG.escapeHtml(entry.championName)}</strong>
                   <p class="muted">${FMG.escapeHtml(entry.userTeamName)} termino ${entry.userPosition || "-"} con ${entry.userPoints} pts.</p>
                 </div>`).join("")
-              : `<div class="empty-state">Todavia no hay temporadas cerradas.</div>`
+              : `<div class="empty-state">Aquí aparecerán tus temporadas cerradas. Completa la actual primero.</div>`
           }
         </div>
       </section>
@@ -112,9 +118,20 @@
                   <p class="muted">Semana ${entry.week}</p>
                   <p class="muted">${FMG.escapeHtml(entry.detail)}</p>
                 </div>`).join("")
-              : `<div class="empty-state">Los clubes rivales aun no registran movimientos.</div>`
+              : `<div class="empty-state">Los rivales comenzarán a moverse a partir de la semana 2.</div>`
           }
         </div>
+      </section>
+      <section class="card">
+        <details>
+          <summary><strong>Centro de notificaciones</strong></summary>
+          <div class="log-list" style="margin-top:12px;">
+            ${(state.notificationLog || []).slice(0, 12).map((entry) => {
+              const icons = { achievement: "LOGRO", injury: "LESION", transfer: "FICHAJE", warning: "ALERTA", info: "INFO" };
+              return `<div class="log-item"><strong>${icons[entry.type] || "INFO"}</strong><p class="muted">${FMG.escapeHtml(entry.message)}</p></div>`;
+            }).join("") || `<div class="empty-state">Aún no hay notificaciones registradas.</div>`}
+          </div>
+        </details>
       </section>
     `;
   };

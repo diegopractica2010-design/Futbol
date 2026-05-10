@@ -27,10 +27,11 @@
   function createListing(player, state) {
     const value = FMG.calculatePlayerValue(player);
     const freeAgent = isFreeAgent(player);
+    const marketFactor = FMG.DIFFICULTY_MODIFIERS?.[state.settings?.difficulty || "normal"]?.marketDiscount || 1;
     return {
       listingId: FMG.uid("listing"),
       playerId: player.id,
-      askingPrice: freeAgent ? 0 : FMG.clamp(Math.round(value * (1.02 + FMG.randomInt(0, 18) / 100)), 1000000, 999999999),
+      askingPrice: freeAgent ? 0 : FMG.clamp(Math.round(value * (1.02 + FMG.randomInt(0, 18) / 100) * marketFactor), 1000000, 999999999),
       sellerTeamId: freeAgent ? null : player.teamId,
       sellerTeamName: freeAgent ? "Libre" : teamName(state, player.teamId),
       loanAvailable: !freeAgent && player.age <= 24 && player.overall < 72,

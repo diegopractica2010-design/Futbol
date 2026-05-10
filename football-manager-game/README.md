@@ -1,63 +1,55 @@
-# Football Manager Game Chile
+# Football Manager Chile
 
-Simulador web de gestion futbolistica inspirado en el rol de manager de un club chileno. El proyecto funciona como SPA sin frameworks, con estado centralizado, simulacion semanal de temporada, mercado de fichajes, finanzas, eventos aleatorios y persistencia en `localStorage`.
+Simulador web de gestion futbolistica chilena en vanilla JavaScript con Three.js. Funciona como SPA desplegable en GitHub Pages o Netlify, carga datos locales desde `data/`, guarda progreso en `localStorage` y permite exportar/importar partidas.
 
-Estado actual: Fase 13 implementada. Esta base ya permite jugar el partido del usuario minuto a minuto, configurar tacticas profundas, gestionar jugadores en profundidad, negociar contratos/mercado con ofertas reales, ver clubes rivales actuar con IA propia, competir en un ecosistema con liga/copa/supercopa/internacional, administrar finanzas institucionales avanzadas, construir una carrera de manager entre clubes, seguir un mundo narrativo con noticias contextuales, usar una interfaz final con identidad visual por club y sostener sesiones largas con guardado robusto.
+Estado actual: fase publica 24 en navegador. La suite historica de tests conserva compatibilidad con fase 13 en Node.
 
 ## Caracteristicas
 
-- Seleccion de club entre siete equipos chilenos.
-- Temporada todos contra todos con tabla de posiciones.
-- Simulacion de partidos basada en nivel, moral y energia.
-- Mercado de compra y venta con presupuesto y plantillas.
-- Finanzas semanales con ingresos, gastos y eventos.
-- Guardado y carga de progreso en el navegador con manejo de partidas corruptas.
-- Datos cargados desde `data/teams.json` y `data/players.json`.
-- Pruebas automatizadas basicas para temporada, economia, mercado y guardado.
-- Historial de temporadas, campeon y reinicio de temporada.
-- Formaciones, once titular automatico, entrenamiento semanal, contratos, lesiones y sanciones.
-- Ventanas de mercado al inicio y cierre de temporada.
-- Simulador de partido por eventos con posesion, remates, xG, faltas, tarjetas, lesiones y relato minuto a minuto.
-- Partido en vivo con avance por minutos, velocidades, cambios, ajustes tacticos basicos, momentum y cierre de fecha.
-- Tacticas avanzadas con mentalidad, presion, ritmo, pase, anchura, linea defensiva, roles por posicion e instrucciones individuales.
-- Previa tactica del siguiente rival con comparacion de perfiles.
-- Ficha individual de jugador con atributos detallados, rol de plantilla, liderazgo, felicidad, minutos, historial medico y moral.
-- Progresion de jovenes, declive/retiro de veteranos y filtros/ordenamiento de plantilla.
-- Mercado con valor dinamico, negociaciones, contraofertas, agentes libres, cesiones, renovaciones, ofertas recibidas e historial de transferencias.
-- IA de clubes rivales con presupuestos, necesidades de plantilla, rotacion, ajustes tacticos, renovaciones y movimientos de mercado.
-- Competencias completas con Copa Chile, Supercopa, copa internacional simplificada, premios, clasificaciones, rankings y ascenso/descenso sintetico.
-- Finanzas avanzadas con presupuestos separados, deuda, prestamos, sponsors, TV, infraestructura, staff, fair play financiero, crisis y confianza del directorio.
-- Carrera de manager con perfil, reputacion, historial, objetivos del directorio, despidos, ofertas de otros clubes, cambio de club, logros, trofeos, estilo de manager, relaciones con hinchas/jugadores/prensa y decisiones narrativas con consecuencias.
-- Centro de noticias con rumores de mercado, previas, cronicas post partido, reacciones de hinchas, declaraciones, preguntas de prensa, rivalidades, clasicos, crisis de vestuario, rachas e historias emergentes basadas en datos reales del estado.
-- UI final con emblemas y colores por club, navegacion principal mejorada, vista de jugador, informe de club rival, calendario, tabla ordenable, confirmaciones, tooltips, foco accesible, mejor respuesta movil, estados vacios cuidados y feedback visual.
-- Guardado robusto con multiples slots, autosave configurable, exportacion/importacion, migracion entre versiones, confirmacion de sobrescritura, dificultad, velocidad de simulacion, opciones de temporada, reinicio seguro y errores visibles.
+- Seleccion de club chileno con dificultad visible.
+- Liga ampliada en navegador, Copa Chile, supercopa e internacional simplificada.
+- Partido en vivo con visualizador 3D, momentum, relato, tacticas, cambios y eventos traducidos.
+- Simulacion de partidos con constantes unificadas entre modo texto y modo vivo.
+- Planteles con profundidad, agentes libres, lesiones, sanciones, moral y energia.
+- Mercado, cesiones, renovaciones, ofertas recibidas e IA rival.
+- Finanzas con presupuestos, prestamos, sponsors, TV, infraestructura, staff y fair play.
+- Carrera de manager con reputacion, objetivos, logros, noticias y decisiones narrativas.
+- Guardado por slots, autosave, historial de notificaciones y export/import validado.
+- Onboarding, creditos/version, meta tags sociales y error de servidor local comprensible.
 
 ## Estructura
 
-- `index.html`: punto de entrada y contenedor principal.
-- `css/`: estilos de la interfaz.
-- `src/`: estado global, motores del juego y utilidades.
-- `ui/`: vistas modulares que renderizan cada pantalla.
-- `data/`: equipos y jugadores en JSON.
-- `assets/icons.svg`: sprite SVG local para iconografia.
-- `tests/`: pruebas de estabilidad de la fase actual.
+- `index.html`: punto de entrada.
+- `css/styles.css`: interfaz, accesibilidad visual y visualizador.
+- `src/`: motores, estado, guardado, simulacion y fases 3D.
+- `ui/`: vistas renderizadas por ruta.
+- `data/`: seed base de equipos y jugadores.
+- `tests/`: regresion automatizada.
 
-## Ejecucion
+## Ejecucion Local
 
-Como el proyecto carga JSON locales, conviene abrirlo desde un servidor estatico.
-
-1. Con VS Code y Live Server, abrir `football-manager-game/index.html`.
-2. Con Python:
+El juego debe abrirse desde un servidor web, no con doble clic sobre `index.html`.
 
 ```bash
 cd football-manager-game
 python -m http.server 8080
 ```
 
-Luego visitar `http://localhost:8080`.
+Luego abre `http://localhost:8080`.
+
+Alternativas:
+
+- VS Code: extension Live Server, clic derecho en `index.html`, "Open with Live Server".
+- Node.js: `npx serve .`.
 
 ## Pruebas
 
 ```bash
 npm test
+```
+
+Tambien se puede verificar sintaxis de todos los scripts con:
+
+```bash
+Get-ChildItem -Recurse -Filter *.js | ForEach-Object { node --check $_.FullName }
 ```

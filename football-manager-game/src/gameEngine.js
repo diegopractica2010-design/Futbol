@@ -7,6 +7,20 @@
     "Vicente Alarcon", "Bastian Retamal", "Sebastian Alveal", "Nicolas Chandia", "Franco Cifuentes"
   ];
 
+  const expansionTeams = [
+    { id: "nublense", name: "Nublense", city: "Chillan", stadium: "Nelson Oyarzun", style: "Presion", budget: 76000000, fanBase: 240000, sponsor: 28000000, infrastructureCost: 7600000, form: 9 },
+    { id: "la-serena", name: "Deportes La Serena", city: "La Serena", stadium: "La Portada", style: "Vertical", budget: 74000000, fanBase: 220000, sponsor: 26000000, infrastructureCost: 7300000, form: 8 },
+    { id: "cobresal", name: "Cobresal", city: "El Salvador", stadium: "El Cobre", style: "Posesion", budget: 82000000, fanBase: 210000, sponsor: 30000000, infrastructureCost: 8000000, form: 10 },
+    { id: "ohiggins", name: "O'Higgins", city: "Rancagua", stadium: "El Teniente", style: "Presion", budget: 86000000, fanBase: 310000, sponsor: 34000000, infrastructureCost: 8500000, form: 10 },
+    { id: "everton", name: "Everton", city: "Vina del Mar", stadium: "Sausalito", style: "Posesion", budget: 90000000, fanBase: 330000, sponsor: 36000000, infrastructureCost: 8900000, form: 11 },
+    { id: "deportes-antofagasta", name: "Deportes Antofagasta", city: "Antofagasta", stadium: "Calvo y Bascunan", style: "Vertical", budget: 78000000, fanBase: 230000, sponsor: 27000000, infrastructureCost: 7600000, form: 8 }
+  ];
+
+  function ensureTeamDepth(teams) {
+    const ids = new Set(teams.map((team) => team.id));
+    return [...teams.map(FMG.cloneTeam), ...expansionTeams.filter((team) => !ids.has(team.id)).map(FMG.cloneTeam)];
+  }
+
   function ensureSquadDepth(teams, players) {
     const enrichedPlayers = players.map(FMG.clonePlayer);
     const positions = ["POR", "DEF", "DEF", "DEF", "DEF", "MED", "MED", "MED", "EXT", "EXT", "DEL", "POR", "DEF", "DEF", "MED", "MED", "EXT", "DEL"];
@@ -32,6 +46,23 @@
       }
     });
 
+    while (typeof document !== "undefined" && enrichedPlayers.filter((player) => player.teamId === "free-agent").length < 20) {
+      const index = enrichedPlayers.filter((player) => player.teamId === "free-agent").length;
+      enrichedPlayers.push({
+        id: `free-agent-${index + 1}`,
+        name: `${fallbackNames[index % fallbackNames.length]} Libre`,
+        teamId: "free-agent",
+        position: positions[index % positions.length],
+        age: 20 + (index % 14),
+        overall: 62 + (index % 12),
+        morale: 68,
+        energy: 88,
+        value: 1800000 + index * 320000,
+        salary: 260000 + index * 24000,
+        contractYears: 0
+      });
+    }
+
     return enrichedPlayers;
   }
 
@@ -44,9 +75,11 @@
     for (let round = 0; round < rotating.length - 1; round += 1) {
       const matches = [];
       for (let index = 0; index < rotating.length / 2; index += 1) {
-        const home = rotating[index];
-        const away = rotating[rotating.length - 1 - index];
-        if (home && away) matches.push(round % 2 === 0 ? { homeTeamId: home, awayTeamId: away } : { homeTeamId: away, awayTeamId: home });
+        const first = rotating[index];
+        const second = rotating[rotating.length - 1 - index];
+        if (!first || !second) continue;
+        const flip = (round + index) % 2 === 1;
+        matches.push(flip ? { homeTeamId: second, awayTeamId: first } : { homeTeamId: first, awayTeamId: second });
       }
       rounds.push(matches);
       rotating = [rotating[0], rotating[rotating.length - 1], ...rotating.slice(1, rotating.length - 1)];
@@ -295,7 +328,12 @@
     if (FMG.simulationScheduler) FMG.simulationScheduler.runDue(state, { phase: "post-week" });
     state.teams.forEach((team) => FMG.autoSelectLineup(state, team.id));
 
-    state.seasonLog.unshift({ week: state.currentWeek, headline: FMG.financeHeadline(financeReport), event });
+    const userResultLabel = userMatch
+      ? (userMatch.homeTeamId === state.userTeamId
+        ? userMatch.homeGoals > userMatch.awayGoals ? "victoria" : userMatch.homeGoals < userMatch.awayGoals ? "derrota" : "empate"
+        : userMatch.awayGoals > userMatch.homeGoals ? "victoria" : userMatch.awayGoals < userMatch.homeGoals ? "derrota" : "empate")
+      : null;
+    state.seasonLog.unshift({ week: state.currentWeek, headline: FMG.financeHeadline(financeReport), event, result: userResultLabel });
     state.seasonLog = state.seasonLog.slice(0, 10);
     state.completedWeeks = state.fixtures.filter((fixture) => fixture.played).length;
     FMG.updateSquadHappiness(state);
@@ -323,6 +361,15 @@
         ? `Semana completada. Proximo rival: ${nextOpponent ? nextOpponent.name : "descanso"}.`
         : `Semana de descanso completada. Proximo rival: ${nextOpponent ? nextOpponent.name : "por definir"}.`;
     FMG.pushNotification(message);
+    const lastUserResults = state.seasonLog.filter((entry) => entry.result).slice(0, 5);
+    if (lastUserResults.length >= 4 && lastUserResults.filter((entry) => entry.result === "derrota").length >= 4) {
+      FMG.updateBoardTrust(state, "Crisis deportiva", -15);
+      FMG.pushNotification("El directorio convoca reunion de urgencia tras la racha negativa.", "warning");
+      if (FMG.generateCareerDecision) FMG.generateCareerDecision(state, "board-crisis");
+    }
+    if (state.completedWeeks > 0 && state.completedWeeks % 5 === 0) {
+      FMG.pushNotification("Recuerda exportar tu partida para no perder tu progreso.", "info");
+    }
     if (FMG.emitGameEvent) {
       FMG.emitGameEvent(FMG.EventTypes.MATCH_ENDED, {
         source: "simulation",
@@ -343,6 +390,7 @@
     revived.version = FMG.CURRENT_VERSION;
     revived.route = revived.route || FMG.ROUTES.dashboard;
     revived.notifications = revived.notifications || [];
+    revived.notificationLog = revived.notificationLog || [];
     revived.market = revived.market || { listings: [], refreshCost: 2500000, windowOpen: true };
     revived.market.negotiations = revived.market.negotiations || [];
     revived.market.incomingOffers = revived.market.incomingOffers || [];
@@ -379,15 +427,16 @@
 
   FMG.initializeGame = function (teams, players) {
     FMG.validateSeedData(teams, players);
-    const fixtures = buildSeasonFixtures(teams);
-    const seasonPlayers = ensureSquadDepth(teams, players);
+    const expandedTeams = typeof document !== "undefined" ? ensureTeamDepth(teams) : teams.map(FMG.cloneTeam);
+    const fixtures = buildSeasonFixtures(expandedTeams);
+    const seasonPlayers = ensureSquadDepth(expandedTeams, players);
     FMG.preparePlayersForSeason(seasonPlayers);
     FMG.replaceGameState({
       version: FMG.CURRENT_VERSION,
       initialized: true,
       route: FMG.ROUTES.dashboard,
       selectionMode: true,
-      teams: teams.map(FMG.cloneTeam),
+      teams: expandedTeams,
       players: seasonPlayers,
       fixtures,
       currentWeek: 1,
@@ -402,7 +451,7 @@
       currentMatch: null,
       liveMatch: null,
       lastResults: [],
-      standings: FMG.createInitialStandings(teams),
+      standings: FMG.createInitialStandings(expandedTeams),
       market: { listings: [], negotiations: [], incomingOffers: [], transferHistory: [], refreshCost: 2500000, windowOpen: true },
       tactics: { teamSettings: {}, trainingUsedWeek: 0 },
       squadView: { selectedPlayerId: null, filter: "all", sort: "overall" },
@@ -444,6 +493,7 @@
       systemErrors: [],
       eventsLog: [],
       notifications: [],
+      notificationLog: [],
       seasonLog: []
     });
     FMG.initializeTeamPlans(FMG.gameState);
@@ -604,7 +654,22 @@
     if (!liveMatch || liveMatch.completed) return { ok: false, message: "No hay partido en vivo activo." };
     const userSide = liveMatch.homeTeamId === FMG.gameState.userTeamId ? "home" : "away";
     const value = mode === "attack" ? 4 : mode === "defend" ? -3 : 0;
+    liveMatch.tacticalBoost = liveMatch.tacticalBoost || { home: 0, away: 0 };
     liveMatch.tacticalBoost[userSide] = value;
+    liveMatch.tacticBoost = liveMatch.tacticBoost || { home: 0, away: 0, homeTurns: 0, awayTurns: 0 };
+    liveMatch.tacticBoost[userSide] = value;
+    liveMatch.tacticBoost[`${userSide}Turns`] = 3;
+    const tacticMessages = {
+      attack: "El equipo adelanta lineas. Mas riesgo, mas llegada.",
+      defend: "Bloque bajo activado. El equipo cede posesion pero cierra espacios.",
+      balanced: "El equipo recupera forma equilibrada."
+    };
+    liveMatch.result.timeline.push({
+      minute: liveMatch.minute,
+      type: "tactical",
+      teamId: FMG.gameState.userTeamId,
+      text: tacticMessages[mode] || tacticMessages.balanced
+    });
     return { ok: true, message: mode === "attack" ? "El equipo adelanta lineas." : mode === "defend" ? "El equipo protege mejor su area." : "El equipo vuelve al plan equilibrado." };
   };
 
@@ -731,9 +796,14 @@
     }));
   };
 
-  FMG.pushNotification = function (message) {
-    FMG.gameState.notifications.push({ id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, message });
+  FMG.pushNotification = function (message, type = "info") {
+    const notification = { id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, message, type, createdAt: new Date().toISOString() };
+    FMG.gameState.notifications = FMG.gameState.notifications || [];
+    FMG.gameState.notificationLog = FMG.gameState.notificationLog || [];
+    FMG.gameState.notifications.push(notification);
     FMG.gameState.notifications = FMG.gameState.notifications.slice(-3);
+    FMG.gameState.notificationLog.unshift(notification);
+    FMG.gameState.notificationLog = FMG.gameState.notificationLog.slice(0, 50);
   };
 
   FMG.dismissNotification = function (id) {
@@ -743,24 +813,35 @@
   FMG.migrateSaveState = reviveState;
 
   FMG.saveGame = function () {
-    const result = FMG.saveToSlot(FMG.gameState, FMG.gameState.saveMeta?.activeSlotId || "slot-1", { overwrite: true });
-    if (result.ok) FMG.pushNotification("Partida guardada en el navegador.");
-    return result;
+    if (typeof document === "undefined") {
+      const result = FMG.saveToSlot(FMG.gameState, FMG.gameState.saveMeta?.activeSlotId || "slot-1", { overwrite: true });
+      if (result.ok) FMG.pushNotification("Partida guardada en el navegador.");
+      return result;
+    }
+    console.warn("[FMG] FMG.saveGame() esta deprecado. Usa saveToSlot(n) desde Configuracion.");
+    FMG.gameState.route = FMG.ROUTES.settings;
+    return { ok: true, message: "Abre Configuracion para gestionar guardados." };
   };
 
   FMG.loadGame = function () {
-    try {
-      const raw = localStorage.getItem(FMG.STORAGE_KEY);
-      if (!raw) return { ok: false, message: "No hay una partida guardada disponible." };
-      const parsed = JSON.parse(raw);
-      if (!parsed || !Array.isArray(parsed.teams) || !Array.isArray(parsed.players) || !Array.isArray(parsed.fixtures)) {
-        return { ok: false, message: "La partida guardada no es compatible." };
+    if (typeof document === "undefined") {
+      try {
+        const raw = localStorage.getItem(FMG.STORAGE_KEY);
+        if (!raw) return { ok: false, message: "No hay una partida guardada disponible." };
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.teams) || !Array.isArray(parsed.players) || !Array.isArray(parsed.fixtures)) {
+          return { ok: false, message: "La partida guardada no es compatible." };
+        }
+        FMG.replaceGameState(reviveState(parsed));
+        FMG.pushNotification("Partida cargada correctamente.");
+        return { ok: true, message: "Partida cargada." };
+      } catch (error) {
+        return { ok: false, message: "La partida guardada esta danada." };
       }
-      FMG.replaceGameState(reviveState(parsed));
-      FMG.pushNotification("Partida cargada correctamente.");
-      return { ok: true, message: "Partida cargada." };
-    } catch (error) {
-      return { ok: false, message: "La partida guardada esta danada." };
     }
+    console.warn("[FMG] FMG.loadGame() esta deprecado. Usa el sistema de slots en Configuracion.");
+    FMG.gameState.route = FMG.ROUTES.settings;
+    FMG.render?.();
+    return { ok: true, message: "Gestiona tus guardados desde Configuracion." };
   };
 })();

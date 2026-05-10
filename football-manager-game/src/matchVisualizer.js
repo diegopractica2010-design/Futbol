@@ -96,7 +96,18 @@
 
       // Event listeners
       this._resizeHandler = () => this.onWindowResize();
+      this._visibilityHandler = () => {
+        if (document.hidden) {
+          if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+          }
+        } else if (!this.animationFrameId && this.isRunning) {
+          this.startRendering();
+        }
+      };
       window.addEventListener("resize", this._resizeHandler);
+      document.addEventListener("visibilitychange", this._visibilityHandler);
 
       // Iniciar renderizado
       this.startRendering();
@@ -442,11 +453,35 @@
       this._activeRAFs.push(rafId);
     }
 
+    animatePass(fromPlayerId, toPlayerId) {
+      const passer = this.players[fromPlayerId]?.mesh;
+      const receiver = this.players[toPlayerId]?.mesh;
+      if (!passer || !receiver || !this.ball) return;
+      const startPos = passer.position.clone();
+      startPos.y += 0.5;
+      const endPos = receiver.position.clone();
+      endPos.y += 0.5;
+      const duration = 0.55;
+      let elapsed = 0;
+      const animate = (delta) => {
+        elapsed += delta;
+        const t = Math.min(elapsed / duration, 1);
+        this.ball.position.lerpVectors(startPos, endPos, t);
+        if (t < 1) {
+          const rafId = requestAnimationFrame(() => animate(1 / 60));
+          this._activeRAFs.push(rafId);
+        }
+      };
+      const rafId = requestAnimationFrame(() => animate(1 / 60));
+      this._activeRAFs.push(rafId);
+    }
+
     // =========================================================================
     // RENDERIZADO Y FPS
     // =========================================================================
 
     startRendering() {
+      if (this.animationFrameId) return;
       this.isRunning = true;
       const render = () => {
         if (!this.isRunning) return;
@@ -514,6 +549,10 @@
       if (this._resizeHandler) {
         window.removeEventListener("resize", this._resizeHandler);
         this._resizeHandler = null;
+      }
+      if (this._visibilityHandler) {
+        document.removeEventListener("visibilitychange", this._visibilityHandler);
+        this._visibilityHandler = null;
       }
 
       // Limpiar geometrías y materiales
