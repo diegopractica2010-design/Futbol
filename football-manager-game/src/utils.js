@@ -45,6 +45,25 @@
     return FMG._currentSeed;
   };
 
+  // =========================================================================
+  // BRIDGE TO FMG.Core RNG (after Core loads)
+  // =========================================================================
+  FMG.createCoreRNG = function (seed) {
+    if (!FMG.Core || !FMG.Core.Utils || !FMG.Core.Utils.RNG) {
+      console.warn("FMG.Core.Utils.RNG not loaded yet");
+      return null;
+    }
+    return new FMG.Core.Utils.RNG(seed);
+  };
+
+  FMG.deriveSeed = function (baseSeed, index, salt) {
+    if (!FMG.Core || !FMG.Core.Utils || !FMG.Core.Utils.deriveSeed) {
+      console.warn("FMG.Core.Utils not ready");
+      return baseSeed ^ index ^ (salt || 0);
+    }
+    return FMG.Core.Utils.deriveSeed(baseSeed, index, salt);
+  };
+
   FMG.clamp = function (value, min, max) {
     return Math.max(min, Math.min(max, value));
   };

@@ -118,6 +118,16 @@
     <script src="./ui/phase22View.js"></script>
     <script src="./ui/phase23View.js"></script>
     <script src="./ui/phase24View.js"></script>
+    <!-- FMG.Core: New scalable architecture -->
+    <script src="./src/FMG.Core/Utils/RNG.js"></script>
+    <script src="./src/FMG.Core/Events/EventBus.js"></script>
+    <script src="./src/FMG.Core/Engine/StateBuilder.js"></script>
+    <script src="./src/FMG.Core/Domain/Aggregates.js"></script>
+    <script src="./src/FMG.Core/Services/MatchSimulator.js"></script>
+    <script src="./src/FMG.Core/Engine/SimulationEngine.js"></script>
+    <script src="./src/FMG.Core/Adapters/LegacyGameStateAdapter.js"></script>
+    <script src="./src/FMG.Core/index.js"></script>
+    <!-- End FMG.Core -->
     <script src="./src/main.js"></script>
     <script>window.addEventListener("DOMContentLoaded", () => document.getElementById("loading-screen")?.remove());</script>
   </body>

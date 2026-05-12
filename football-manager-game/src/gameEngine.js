@@ -549,6 +549,26 @@
     if (state.seasonComplete) return { ok: false, message: "La temporada ya termino." };
     if (state.liveMatch && !state.liveMatch.completed) return { ok: false, message: "Hay un partido en vivo pendiente." };
 
+    // MIGRATION: Route through FMG.Core if initialized
+    if (FMG.Core && FMG.Core.isInitialized && FMG.Core.isInitialized()) {
+      console.log("[advanceWeek] Routing through FMG.Core");
+      try {
+        const weekSeed = FMG.deriveSeed(
+          state._startSeed || FMG.gameState.season?.startSeed || 12345,
+          state.currentWeek,
+          Math.floor(Math.random() * 1000)
+        );
+        const coreResult = FMG.Core.advanceWeekFromLegacy(weekSeed);
+        console.log("[advanceWeek] Core execution: " + coreResult.executionMs + "ms");
+        FMG.autosaveIfNeeded(FMG.gameState, "advance-week");
+        return { ok: true, message: "Semana completada.", coreResult };
+      } catch (err) {
+        console.error("[advanceWeek] Core error, falling back to legacy:", err);
+        // Fall through to legacy code below
+      }
+    }
+
+    // LEGACY FALLBACK: Use old implementation if Core not available
     const currentFixture = getCurrentFixture(state);
     if (!currentFixture) {
       state.seasonComplete = true;
