@@ -1,9 +1,11 @@
+import { immutableClone, deepFreeze } from '../../Utils/immutableClone';
+
 export const ManagerAggregate = (initialState = {}) => {
-  let state = Object.freeze(initialState);
+  let state = immutableClone(initialState);
 
   const applyEvent = (event) => {
     // In a real scenario, this would apply event to state
-    state = Object.freeze({ ...state, ...event });
+    state = deepFreeze({ ...state, ...event });
   };
 
   const getState = () => state;

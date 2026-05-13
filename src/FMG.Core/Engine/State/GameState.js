@@ -1,4 +1,6 @@
-import { StateBuilder } from '../StateBuilder';
+import { StateBuilder } from './StateBuilder';
+import { immutableClone } from '../../Utils/immutableClone';
+import { RNG } from '../Simulation/RNG';
 import { ClubAggregate } from '../../Domain/Club/ClubAggregate';
 import { SeasonAggregate } from '../../Domain/Season/SeasonAggregate';
 import { ManagerAggregate } from '../../Domain/Manager/ManagerAggregate';
@@ -10,11 +12,11 @@ export const createGameState = (initialState = {}) => {
     season: {},
     managers: {},
     worldMetadata: {},
-    simulationSeed: Math.random(),
+    simulationSeed: (new RNG(Date.now())).next(), // Use deterministic RNG
     ...initialState,
   };
 
-  let stateBuilder = new StateBuilder(defaultState);
+  let stateBuilder = new StateBuilder(immutableClone(defaultState));
 
   const getState = () => stateBuilder.getState();
 
