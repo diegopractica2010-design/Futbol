@@ -1,0 +1,39 @@
+<!--
+  FMG.Core Script Loading Order
+  
+  CRITICAL: Scripts must be loaded in this exact order
+  Otherwise, namespace dependencies will fail at runtime
+-->
+
+<!-- 1. FOUNDATION UTILITIES -->
+<script src="src/FMG.Core/Utils/RNG.js"></script>
+
+<!-- 2. EVENT SYSTEM -->
+<script src="src/FMG.Core/Events/EventBus.js"></script>
+
+<!-- 3. DOMAIN AGGREGATES (extracted) -->
+<script src="src/FMG.Core/Domain/Club/ClubAggregate.js"></script>
+<script src="src/FMG.Core/Domain/Season/SeasonAggregate.js"></script>
+<script src="src/FMG.Core/Domain/Manager/ManagerAggregate.js"></script>
+<script src="src/FMG.Core/Domain/Match/MatchRecord.js"></script>
+<script src="src/FMG.Core/Domain/Player/PlayerEntity.js"></script>
+<script src="src/FMG.Core/Domain/Market/MarketAggregate.js"></script>
+<script src="src/FMG.Core/Domain/Aggregates.js"></script>
+
+<!-- 4. ENGINE (Core simulation) -->
+<script src="src/FMG.Core/Engine/StateBuilder.js"></script>
+<script src="src/FMG.Core/Engine/SimulationEngine.js"></script>
+
+<!-- 5. SERVICES (Match simulation) -->
+<script src="src/FMG.Core/Services/MatchSimulator.js"></script>
+
+<!-- 6. PERSISTENCE (Repository layer) -->
+<script src="src/FMG.Core/Repository/GameStateRepository.js"></script>
+<script src="src/FMG.Core/Repository/SeasonRepository.js"></script>
+<script src="src/FMG.Core/Repository/ClubRepository.js"></script>
+
+<!-- 7. ADAPTERS (Legacy compatibility) -->
+<script src="src/FMG.Core/Adapters/LegacyGameStateAdapter.js"></script>
+
+<!-- 8. INITIALIZATION -->
+<script src="src/FMG.Core/index.js"></script>

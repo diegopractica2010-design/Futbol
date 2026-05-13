@@ -6,6 +6,12 @@
 
   /**
    * FMG.Core initialization and public API
+   * 
+   * Initializes immutable GameState architecture:
+   * - Pure reducers for deterministic transitions
+   * - Transactional updates with rollback
+   * - Snapshot system for persistence
+   * - Replay engine for validation
    */
   FMG.Core.initialize = function (config) {
     config = config || {};
@@ -15,9 +21,24 @@
     if (!FMG.Core.Utils || !FMG.Core.Utils.RNG) missing.push("FMG.Core.Utils.RNG");
     if (!FMG.Core.Events || !FMG.Core.Events.EventBus) missing.push("FMG.Core.Events.EventBus");
     if (!FMG.Core.Engine || !FMG.Core.Engine.GameState) missing.push("FMG.Core.Engine.GameState");
-    if (!FMG.Core.Domain || !FMG.Core.Domain.Club) missing.push("FMG.Core.Domain.Club");
+    if (!FMG.Core.Engine || !FMG.Core.Engine.Reducers) missing.push("FMG.Core.Engine.Reducers");
+    if (!FMG.Core.Engine || !FMG.Core.Engine.StateTransaction) missing.push("FMG.Core.Engine.StateTransaction");
+    if (!FMG.Core.Engine || !FMG.Core.Engine.StateSnapshot) missing.push("FMG.Core.Engine.StateSnapshot");
+    
+    // Domain aggregates (extracted into subdirectories)
+    if (!FMG.Core.Domain || !FMG.Core.Domain.Club || !FMG.Core.Domain.Club.ClubAggregate) {
+      missing.push("FMG.Core.Domain.Club.ClubAggregate");
+    }
+    if (!FMG.Core.Domain || !FMG.Core.Domain.Season || !FMG.Core.Domain.Season.SeasonAggregate) {
+      missing.push("FMG.Core.Domain.Season.SeasonAggregate");
+    }
+    if (!FMG.Core.Domain || !FMG.Core.Domain.Manager || !FMG.Core.Domain.Manager.ManagerAggregate) {
+      missing.push("FMG.Core.Domain.Manager.ManagerAggregate");
+    }
+    
     if (!FMG.Core.Services || !FMG.Core.Services.MatchSimulator) missing.push("FMG.Core.Services.MatchSimulator");
     if (!FMG.Core.Adapters || !FMG.Core.Adapters.LegacyGameStateAdapter) missing.push("FMG.Core.Adapters.LegacyGameStateAdapter");
+    if (!FMG.Core.Repository || !FMG.Core.Repository.GameStateRepository) missing.push("FMG.Core.Repository.GameStateRepository");
 
     if (missing.length > 0) {
       throw new Error("FMG.Core missing dependencies: " + missing.join(", "));
