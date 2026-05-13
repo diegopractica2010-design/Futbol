@@ -6,43 +6,136 @@
   FMG.Core.Engine = FMG.Core.Engine || {};
 
   /**
-   * SimulationEngine: Orchestrates deterministic week simulation
-   * Owns: command execution, state transitions, event emission
-   * All mutations go through here and return new GameState instances
+   * SimulationEngine — Immutable, reducer-based simulation
+   * Features:
+   * - Atomic transactional state updates
+   * - Full audit trail via transition log
+   * - Deterministic (same seed = same output)
+   * - Replayable (store actions, replay anytime)
+   * - Multiplayer-ready (state versioning)
    */
   function SimulationEngine(config) {
     config = config || {};
 
     this.eventBus = config.eventBus || (FMG.Core.Events && new FMG.Core.Events.EventBus());
     this.matchSimulator = config.matchSimulator || (FMG.Core.Services && new FMG.Core.Services.MatchSimulator());
-    this.stateValidator = config.stateValidator || (FMG.Core.Engine && new FMG.Core.Engine.StateValidator());
+    this.stateValidator = config.stateValidator || new FMG.Core.Engine.StateValidator();
 
+    // Immutable state management
+    this.pipeline = null;
+    this.snapshotStore = new FMG.Core.Engine.SnapshotStore();
+    this.replayEngine = new FMG.Core.Engine.ReplayEngine(this.snapshotStore);
+
+    // Execution log
     this._executionLog = [];
   }
 
   /**
-   * Execute AdvanceWeekCommand: single week simulation
-   * Returns: {gameState: GameState, events: DomainEvent[]}
+   * Initialize simulation with initial GameState
+   */
+  SimulationEngine.prototype.initialize = function (gameState) {
+    if (!gameState) {
+      throw new Error("GameState required");
+    }
+
+    // Create transition pipeline
+    this.pipeline = new FMG.Core.Engine.TransitionPipeline(gameState);
+
+    // Setup hooks for logging
+    this._setupHooks();
+
+    // Store initial snapshot
+    this.snapshotStore.save(gameState, "initial");
+
+    console.log("✓ SimulationEngine initialized with state generation", gameState.generation);
+
+    return gameState;
+  };
+
+  /**
+   * Setup transition pipeline hooks
+   */
+  SimulationEngine.prototype._setupHooks = function () {
+    const self = this;
+
+    // Before hook: validate state
+    this.pipeline.before(function (context) {
+      const validation = context.currentState.validate();
+      if (!validation.valid) {
+        throw new Error("Invalid state before transition: " + validation.errors.join("; "));
+      }
+    });
+
+    // After hook: emit event and log
+    this.pipeline.after(function (context) {
+      self._logTransition(context);
+
+      // Emit typed event
+      self.eventBus.emit("STATE_TRANSITION", {
+        action: context.action.type,
+        description: context.description,
+        fromGeneration: context.previousState.generation,
+        toGeneration: context.newState.generation,
+        timestamp: context.transaction.timestamp
+      });
+    });
+
+    // Error hook: log error
+    this.pipeline.onError(function (context) {
+      console.error("State transition error:", context.error);
+      self.eventBus.emit("STATE_TRANSITION_ERROR", {
+        error: context.error.message,
+        action: context.action.type,
+        timestamp: new Date().toISOString()
+      });
+    });
+  };
+
+  /**
+   * Log transition for audit trail
+   */
+  SimulationEngine.prototype._logTransition = function (context) {
+    this._executionLog.push({
+      action: context.action.type,
+      description: context.description,
+      timestamp: context.transaction.timestamp,
+      fromGeneration: context.previousState.generation,
+      toGeneration: context.newState.generation,
+      stateId: context.newState.stateId
+    });
+  };
+
+  /**
+   * Execute AdvanceWeekCommand with transactional safety
+   * Returns new state and audit trail
    */
   SimulationEngine.prototype.advanceWeek = function (gameState, command) {
     if (!gameState) {
       throw new Error("GameState required");
     }
 
+    // Initialize pipeline if needed
+    if (!this.pipeline) {
+      this.initialize(gameState);
+    } else {
+      // Update pipeline state
+      this.pipeline.gameState = gameState;
+    }
+
     const commandId = Math.random().toString(36).slice(2, 8);
     const startTime = Date.now();
 
     try {
-      // 1. VALIDATE
-      const errors = this.stateValidator.validate(gameState);
-      if (errors.length > 0) {
-        throw new Error("Invalid GameState: " + errors.join("; "));
+      // 1. VALIDATE current state
+      const validation = gameState.validate();
+      if (!validation.valid) {
+        throw new Error("Invalid initial state: " + validation.errors.join("; "));
       }
 
-      // 2. PREPARE: Auto-select lineups for all clubs
-      let clubs = gameState.clubs.map((club) => this._autoSelectLineup(club));
+      // 2. PREPARE lineups
+      const clubsWithLineups = gameState.clubs.map((club) => this._autoSelectLineup(club));
 
-      // 3. SIMULATE: Run all matches for current week fixture
+      // 3. SIMULATE matches deterministically
       const currentFixture = gameState.season.currentFixture();
       if (!currentFixture) {
         throw new Error("No fixture for current week");
@@ -52,6 +145,8 @@
       const matchResults = [];
       const weekSeed = command.weekSeed || FMG.Core.Utils.deriveSeed(gameState.season.startSeed, gameState.season.week);
 
+      let clubs = clubsWithLineups;
+
       for (let i = 0; i < currentFixture.matches.length; i++) {
         const match = currentFixture.matches[i];
         const homeClub = clubs.find((c) => c.teamId === match.homeTeamId);
@@ -59,220 +154,217 @@
 
         if (!homeClub || !awayClub) continue;
 
-        const homeTeam = FMG.gameState.teams.find((t) => t.id === match.homeTeamId);
-        const awayTeam = FMG.gameState.teams.find((t) => t.id === match.awayTeamId);
+        const homeTeam = FMG.gameState.teams.find((t) => t.id === match.homeTeamId) || { id: match.homeTeamId, form: 10 };
+        const awayTeam = FMG.gameState.teams.find((t) => t.id === match.awayTeamId) || { id: match.awayTeamId, form: 10 };
 
         const matchSeed = FMG.Core.Utils.deriveSeed(weekSeed, i, FMG.Core.Utils.hashSeed(match.homeTeamId + match.awayTeamId));
 
-        const result = this.matchSimulator.run(
-          homeTeam || { id: match.homeTeamId, form: 10 },
-          awayTeam || { id: match.awayTeamId, form: 10 },
-          homeClub.squad,
-          awayClub.squad,
-          matchSeed
-        );
+        // Run match simulation
+        const result = this.matchSimulator.run(homeTeam, awayTeam, homeClub.squad, awayClub.squad, matchSeed);
 
         matchResults.push(result);
 
-        // Update squad stats
-        homeClub = this._applyMatchStats(homeClub, result, true);
-        awayClub = this._applyMatchStats(awayClub, result, false);
+        // Update clubs with match stats (immutably)
+        clubs = clubs.map((c) => {
+          if (c.teamId === result.homeTeamId) {
+            return this._applyMatchStats(c, result, true);
+          } else if (c.teamId === result.awayTeamId) {
+            return this._applyMatchStats(c, result, false);
+          }
+          return c;
+        });
 
         // Update standings
         season = this._updateStandings(season, result);
 
+        // Emit match completed event
         this.eventBus.emit(FMG.Core.Events.EventTypes.MATCH_COMPLETED, {
           matchResult: result,
           week: gameState.season.week
         });
       }
 
-      // Update clubs in state
-      clubs = clubs.map((c) => {
-        const updated = matchResults.reduce((club, result) => {
-          if (club.teamId === result.homeTeamId) {
-            return this._applyMatchStats(club, result, true);
-          } else if (club.teamId === result.awayTeamId) {
-            return this._applyMatchStats(club, result, false);
-          }
-          return club;
-        }, c);
-        return updated;
-      });
+      // 4. CREATE UPDATE TRANSACTION
+      let state = gameState;
 
-      // 4. APPLY WEEKLY EFFECTS
-      clubs = clubs.map((c) => this._applyWeeklyEffects(c));
+      // Update clubs
+      state = this.pipeline.transition(
+        {
+          type: "UPDATE_CLUBS",
+          payload: { clubs: clubs }
+        },
+        "Update clubs after match simulations"
+      ).gameState;
 
-      // 5. APPLY WEEKLY FINANCIALS
-      clubs = clubs.map((c) => this._applyWeeklyFinances(c));
+      // Update season
+      state = this.pipeline.transition(
+        {
+          type: "UPDATE_SEASON",
+          payload: { season: season }
+        },
+        "Update season standings"
+      ).gameState;
 
-      // 6. ADVANCE WEEK
-      season = season.nextWeek();
+      // Apply weekly effects
+      state = this.pipeline.transition(
+        {
+          type: "APPLY_WEEKLY_EFFECTS",
+          payload: { effects: {} }
+        },
+        "Apply weekly morale/form effects"
+      ).gameState;
 
-      // 7. BUILD NEW STATE
-      const gameState_ = gameState.with({
-        season,
-        clubs,
-        timestamp: new Date().toISOString()
-      });
+      // Advance week
+      state = this.pipeline.transition(
+        {
+          type: "ADVANCE_WEEK",
+          payload: {}
+        },
+        "Advance to next week"
+      ).gameState;
 
-      // 8. EMIT FINAL EVENT
-      this.eventBus.emit(FMG.Core.Events.EventTypes.WEEK_ADVANCED, {
-        gameState: gameState_,
-        week: gameState.season.week,
-        matchResults,
-        weekSeed
-      });
+      // 5. SAVE SNAPSHOT
+      this.snapshotStore.save(state, "week_" + gameState.season.week);
 
-      return {
-        gameState: gameState_,
+      // 6. BUILD RESPONSE
+      const response = {
+        gameState: state,
         events: this.eventBus.history(),
+        matchResults: matchResults,
         executionMs: Date.now() - startTime,
-        commandId
+        commandId: commandId,
+        transitionLog: this.pipeline.getTransitionLog(),
+        auditTrail: this._executionLog.slice()
       };
+
+      return response;
     } catch (err) {
       console.error(`SimulationEngine error (${commandId}):`, err);
+      this.eventBus.emit("SIMULATION_ERROR", {
+        commandId: commandId,
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
       throw err;
     }
   };
 
+  /**
+   * Get current state from pipeline
+   */
+  SimulationEngine.prototype.getState = function () {
+    if (!this.pipeline) {
+      return null;
+    }
+    return this.pipeline.getState();
+  };
+
+  /**
+   * Load snapshot and restore state
+   */
+  SimulationEngine.prototype.loadSnapshot = function (snapshotId) {
+    const state = this.snapshotStore.load(snapshotId);
+    this.pipeline = new FMG.Core.Engine.TransitionPipeline(state);
+    this._setupHooks();
+    return state;
+  };
+
+  /**
+   * Get execution log
+   */
+  SimulationEngine.prototype.getExecutionLog = function () {
+    return this._executionLog.slice();
+  };
+
+  /**
+   * Get snapshot store
+   */
+  SimulationEngine.prototype.getSnapshotStore = function () {
+    return this.snapshotStore;
+  };
+
+  /**
+   * Auto-select lineup from available players
+   */
   SimulationEngine.prototype._autoSelectLineup = function (club) {
     if (!club.squad || club.squad.length < 11) {
       return club;
     }
 
-    const lineup = club.squad
-      .filter((p) => !p.injuredWeeks || p.injuredWeeks <= 0)
-      .slice(0, 11);
+    const availablePlayers = club.squad.filter((p) => !p.isInjured && p.suspensionWeeks === 0);
+    const lineup = availablePlayers.slice(0, 11);
 
-    return club.withSquad(Object.freeze(lineup));
+    return club.withSquad ? club.withSquad(Object.freeze(lineup)) : club;
   };
 
-  SimulationEngine.prototype._applyMatchStats = function (club, matchResult, isHome) {
-    if (!club.squad) return club;
-
-    const startingXI = club.getStartingXI();
-    const updatedSquad = club.squad.map((player) => {
-      if (!startingXI.find((p) => p.id === player.id)) {
-        return player;
-      }
-
-      // Update player stats
-      const energy = Math.max(0, (player.energy || 80) - 12);
-      const morale = Math.max(0, Math.min(100, (player.morale || 70) + (isHome ? 3 : -2)));
-      const seasonStats = player.seasonStats || { appearances: 0, goals: 0, assists: 0 };
-      seasonStats.appearances = (seasonStats.appearances || 0) + 1;
-      seasonStats.minutes = (seasonStats.minutes || 0) + 90;
-
-      return Object.freeze({
-        ...player,
-        energy,
-        morale,
-        seasonStats: Object.freeze(seasonStats)
-      });
-    });
-
-    return club.withSquad(updatedSquad);
-  };
-
-  SimulationEngine.prototype._updateStandings = function (season, matchResult) {
-    if (!season.standings) {
-      season = season.withStandings([]);
+  /**
+   * Apply match stats to club (immutably)
+   */
+  SimulationEngine.prototype._applyMatchStats = function (club, result, isHome) {
+    if (!club.withFinances) {
+      return club;
     }
 
-    let standings = season.standings.slice();
+    const goals = isHome ? result.homeGoals : result.awayGoals;
+    const goalsAgainst = isHome ? result.awayGoals : result.homeGoals;
+    const points = isHome ? this._getPoints(result.homeGoals, result.awayGoals) : this._getPoints(result.awayGoals, result.homeGoals);
 
-    const updateTeam = (teamId, homeGoals, awayGoals, isHome) => {
-      let entry = standings.find((s) => s.teamId === teamId);
-      if (!entry) {
-        entry = { teamId, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, points: 0 };
-      } else {
-        entry = { ...entry };
-      }
+    // Update form based on result
+    const formChange = points === 3 ? 2 : points === 1 ? 0 : -1;
+    const newForm = Math.max(0, Math.min(20, (club.form || 10) + formChange));
 
-      entry.played++;
-
-      if (isHome) {
-        entry.goalsFor += homeGoals;
-        entry.goalsAgainst += awayGoals;
-        if (homeGoals > awayGoals) {
-          entry.wins++;
-          entry.points += 3;
-        } else if (homeGoals === awayGoals) {
-          entry.draws++;
-          entry.points += 1;
-        } else {
-          entry.losses++;
-        }
-      } else {
-        entry.goalsFor += awayGoals;
-        entry.goalsAgainst += homeGoals;
-        if (awayGoals > homeGoals) {
-          entry.wins++;
-          entry.points += 3;
-        } else if (awayGoals === homeGoals) {
-          entry.draws++;
-          entry.points += 1;
-        } else {
-          entry.losses++;
-        }
-      }
-
-      const idx = standings.findIndex((s) => s.teamId === teamId);
-      if (idx >= 0) {
-        standings[idx] = entry;
-      } else {
-        standings.push(entry);
-      }
-    };
-
-    updateTeam(matchResult.homeTeamId, matchResult.homeGoals, matchResult.awayGoals, true);
-    updateTeam(matchResult.awayTeamId, matchResult.homeGoals, matchResult.awayGoals, false);
-
-    // Sort by points, then goal difference
-    standings.sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      return (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst);
+    return club.withFinances({
+      balance: club.finances.balance + goals * 50000 - goalsAgainst * 25000
     });
-
-    return season.withStandings(standings);
   };
 
-  SimulationEngine.prototype._applyWeeklyEffects = function (club) {
-    if (!club.squad) return club;
-
-    // Random events: injuries, morale changes
-    const squad = club.squad.map((player) => {
-      let updatedPlayer = { ...player };
-
-      // Injury chance
-      if (Math.random() < 0.02) {
-        updatedPlayer.injuredWeeks = Math.ceil(Math.random() * 4);
-      }
-
-      // Energy recovery
-      updatedPlayer.energy = Math.min(100, (updatedPlayer.energy || 50) + 8);
-
-      return Object.freeze(updatedPlayer);
-    });
-
-    return club.withSquad(squad);
+  /**
+   * Get points from goals
+   */
+  SimulationEngine.prototype._getPoints = function (goalsFor, goalsAgainst) {
+    if (goalsFor > goalsAgainst) return 3;
+    if (goalsFor === goalsAgainst) return 1;
+    return 0;
   };
 
-  SimulationEngine.prototype._applyWeeklyFinances = function (club) {
-    if (!club.finances) return club;
+  /**
+   * Update season standings (immutably)
+   */
+  SimulationEngine.prototype._updateStandings = function (season, result) {
+    if (!season.standings) {
+      return season;
+    }
 
-    const finances = { ...club.finances };
+    const newStandings = season.standings.map((standing) => {
+      if (standing.teamId === result.homeTeamId) {
+        return {
+          ...standing,
+          played: standing.played + 1,
+          wins: standing.wins + (result.homeGoals > result.awayGoals ? 1 : 0),
+          draws: standing.draws + (result.homeGoals === result.awayGoals ? 1 : 0),
+          losses: standing.losses + (result.homeGoals < result.awayGoals ? 1 : 0),
+          goalsFor: standing.goalsFor + result.homeGoals,
+          goalsAgainst: standing.goalsAgainst + result.awayGoals,
+          goalDifference: standing.goalDifference + result.homeGoals - result.awayGoals,
+          points: standing.points + this._getPoints(result.homeGoals, result.awayGoals)
+        };
+      } else if (standing.teamId === result.awayTeamId) {
+        return {
+          ...standing,
+          played: standing.played + 1,
+          wins: standing.wins + (result.awayGoals > result.homeGoals ? 1 : 0),
+          draws: standing.draws + (result.awayGoals === result.homeGoals ? 1 : 0),
+          losses: standing.losses + (result.awayGoals < result.homeGoals ? 1 : 0),
+          goalsFor: standing.goalsFor + result.awayGoals,
+          goalsAgainst: standing.goalsAgainst + result.homeGoals,
+          goalDifference: standing.goalDifference + result.awayGoals - result.homeGoals,
+          points: standing.points + this._getPoints(result.awayGoals, result.homeGoals)
+        };
+      }
+      return standing;
+    });
 
-    // Weekly wage expense
-    const totalWages = (club.squad || []).reduce((sum, p) => sum + (p.salary || 0), 0);
-    finances.balance = (finances.balance || 0) - totalWages;
-
-    // Weekly income (sponsor, TV rights)
-    const weeklyIncome = Math.round((club.budget * 0.15) / 38);
-    finances.balance += weeklyIncome;
-
-    return club.withFinances(finances);
+    return season.withStandings(newStandings);
   };
 
   FMG.Core.Engine.SimulationEngine = SimulationEngine;
