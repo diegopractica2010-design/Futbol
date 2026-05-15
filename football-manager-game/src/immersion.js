@@ -177,7 +177,7 @@
   /**
    * Generate manager press question based on context
    */
-  function generatePressQuestion(state, context = "general") {
+  function generatePressQuestion(state, context = "general", rng = null) {
     const templates = {
       general: [
         "¿Qué análisis hace de estos primeros pasos en {club}?",
@@ -207,7 +207,7 @@
     };
 
     const questions = templates[context] || templates.general;
-    const baseQuestion = FMG.sample(questions);
+    const baseQuestion = rng ? rng.choice(questions) : FMG.sample(questions);
 
     // Substitute placeholders
     let question = baseQuestion.replace("{club}", state.userClub?.name || "su equipo");
@@ -225,16 +225,16 @@
   /**
    * Generate dynamic rumor about player movement
    */
-  function generatePlayerRumor(state) {
+  function generatePlayerRumor(state, rng = null) {
     if (!state.players || !state.teams) return null;
 
     const activePlayers = state.players.filter((p) => !p.retired && p.overall >= 70).slice(0, 20);
     if (!activePlayers.length) return null;
 
-    const player = FMG.sample(activePlayers);
+    const player = rng ? rng.choice(activePlayers) : FMG.sample(activePlayers);
     const currentTeam = state.teams.find((t) => t.id === player.teamId);
     const targetTeams = state.teams.filter((t) => t.id !== player.teamId && t.budget > 80000000).slice(0, 5);
-    const targetTeam = FMG.sample(targetTeams);
+    const targetTeam = rng ? rng.choice(targetTeams) : FMG.sample(targetTeams);
 
     if (!currentTeam || !targetTeam) return null;
 
@@ -252,8 +252,8 @@
       fromTeamName: currentTeam.name,
       toTeamId: targetTeam.id,
       toTeamName: targetTeam.name,
-      content: FMG.sample(rumors),
-      probability: Math.random() * 0.4 + 0.3, // 30-70% chance
+      content: rng ? rng.choice(rumors) : FMG.sample(rumors),
+      probability: rng ? rng.nextFloat(0.3, 0.7) : Math.random() * 0.4 + 0.3, // 30-70% chance
       week: state.currentWeek
     };
   }
@@ -261,13 +261,13 @@
   /**
    * Generate dramatic player declaration
    */
-  function generatePlayerDeclaration(state) {
+  function generatePlayerDeclaration(state, rng = null) {
     if (!state.players) return null;
 
     const userTeamPlayers = state.players.filter((p) => p.teamId === state.userTeamId && !p.retired && (p.morale || 70) >= 75);
     if (!userTeamPlayers.length) return null;
 
-    const player = FMG.sample(userTeamPlayers);
+    const player = rng ? rng.choice(userTeamPlayers) : FMG.sample(userTeamPlayers);
     const declarations = [
       `"Este equipo tiene potencial para ganar el título. Creemos en el proyecto."`,
       `"El grupo está unido; hay buena energía en el vestuario."`,
@@ -281,7 +281,7 @@
       playerId: player.id,
       playerName: player.name,
       playerPosition: player.position,
-      content: FMG.sample(declarations),
+      content: rng ? rng.choice(declarations) : FMG.sample(declarations),
       importance: 58
     };
   }
@@ -348,13 +348,14 @@
   /**
    * Process weekly immersion updates
    */
-  function processWeeklyImmersion(state) {
+  function processWeeklyImmersion(state, rng = null) {
     ensureImmersionState(state);
     const results = { milestones: 0, questions: 0, rumors: 0, declarations: 0 };
+    const randomValue = () => (rng ? rng.next() : Math.random());
 
     // Generate press questions
-    if (Math.random() < 0.6) {
-      const question = generatePressQuestion(state, "general");
+    if (randomValue() < 0.6) {
+      const question = generatePressQuestion(state, "general", rng);
       state.immersion.pressQuestions.push({
         week: state.currentWeek,
         question,
@@ -365,8 +366,8 @@
     }
 
     // Generate rumors
-    if (Math.random() < 0.4) {
-      const rumor = generatePlayerRumor(state);
+    if (randomValue() < 0.4) {
+      const rumor = generatePlayerRumor(state, rng);
       if (rumor) {
         state.immersion.rumors.push(rumor);
         state.immersion.rumors = state.immersion.rumors.slice(-12);
@@ -375,8 +376,8 @@
     }
 
     // Generate declarations
-    if (Math.random() < 0.3) {
-      const decl = generatePlayerDeclaration(state);
+    if (randomValue() < 0.3) {
+      const decl = generatePlayerDeclaration(state, rng);
       if (decl) {
         state.immersion.declarations.push(decl);
         state.immersion.declarations = state.immersion.declarations.slice(-10);

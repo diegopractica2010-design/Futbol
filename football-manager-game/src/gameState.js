@@ -14,6 +14,7 @@
   FMG.gameState = {
     version: 13, initialized: false, route: FMG.ROUTES.dashboard, selectionMode: true,
     teams: [], players: [], fixtures: [], currentWeek: 1, totalWeeks: 0,
+    seed: Math.floor(Math.random() * 0xffffffff), // Add seed for determinism
     completedWeeks: 0, seasonComplete: false, champion: null, seasonNumber: 1,
     seasonHistory: [], userTeamId: null, userClub: null, currentMatch: null,
     liveMatch: null, lastResults: [], standings: [],

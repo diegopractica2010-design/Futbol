@@ -22,8 +22,12 @@
       budgetMs: 3,
       run(state) {
         if (!FMG.Immersion) return { status: "error" };
+        
+        // Create deterministic RNG for this week's processing
+        const seed = FMG.Core.Utils.deriveSeed(state.seed || 0, state.currentWeek || 1, 1001);
+        const rng = FMG.Core.Utils.createRNG(seed);
 
-        const result = FMG.Immersion.processWeeklyImmersion(state);
+        const result = FMG.Immersion.processWeeklyImmersion(state, rng);
         return {
           pressQuestions: result.questions,
           rumors: result.rumors,
