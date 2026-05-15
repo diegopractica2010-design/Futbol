@@ -14,12 +14,15 @@
   }
 
   function renderRoleButtons(plan, position) {
+    const roles = FMG.getCompatibleRoles ? FMG.getCompatibleRoles(position) : Object.keys(FMG.TACTIC_OPTIONS.role);
     return `
       <div class="tactic-control compact-control">
         <strong>${position}</strong>
         <div class="button-row">
-          ${Object.entries(FMG.TACTIC_OPTIONS.role).map(([role, config]) => `
-            <button class="${plan.playerRoles[position] === role ? "active" : "btn-ghost"}" data-action="set-position-role" data-position="${position}" data-role="${role}">${FMG.escapeHtml(config.label)}</button>`).join("")}
+          ${roles.map((role) => {
+            const config = FMG.TACTIC_OPTIONS.role[role];
+            return `<button class="${plan.playerRoles[position] === role ? "active" : "btn-ghost"}" data-action="set-position-role" data-position="${position}" data-role="${role}">${FMG.escapeHtml(config.label)}</button>`;
+          }).join("")}
         </div>
       </div>
     `;

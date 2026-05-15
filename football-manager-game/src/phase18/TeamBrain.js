@@ -192,6 +192,13 @@
     if (player._markRadiusModifier) role.markRadius *= player._markRadiusModifier;
     if (player._shootDistanceModifier) role.shootDist *= player._shootDistanceModifier;
     if (player._roleAggression) role.aggression *= player._roleAggression;
+    if (player._roleBehavior) {
+      if (Number.isFinite(player._roleBehavior.press)) role.pressRadius *= 1 + player._roleBehavior.press * 0.12;
+      if (Number.isFinite(player._roleBehavior.mark)) role.markRadius *= 1 + player._roleBehavior.mark * 0.10;
+      if (Number.isFinite(player._roleBehavior.shoot)) role.shootDist *= 1 + player._roleBehavior.shoot * 0.10;
+      if (Number.isFinite(player._roleBehavior.screen)) role.stayBack = true;
+      if (Number.isFinite(player._roleBehavior.roam) && player._roleBehavior.roam > 0.5) role.stayBack = false;
+    }
     return role;
   }
 

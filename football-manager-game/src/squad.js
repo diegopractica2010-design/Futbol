@@ -49,7 +49,21 @@
       balanced: { label: "Equilibrado", attack: 0, defense: 0, risk: 0, fatigue: 0 },
       attacking: { label: "Ataque", attack: 1.4, defense: -0.7, risk: 0.8, fatigue: 0.5 },
       defensive: { label: "Defensa", attack: -0.8, defense: 1.3, risk: -0.8, fatigue: 0.2 },
-      support: { label: "Apoyo", possession: 0.9, attack: 0.4, defense: 0.4, risk: -0.2, fatigue: 0.3 }
+      support: { label: "Apoyo", possession: 0.9, attack: 0.4, defense: 0.4, risk: -0.2, fatigue: 0.3 },
+      sweeperKeeper: { label: "Arquero libero", positions: ["POR"], possession: 0.5, attack: 0.2, defense: -0.2, risk: 0.5, fatigue: 0.1, behavior: { buildUp: 1, sweep: 1, directness: -0.3 } },
+      ballPlayingDefender: { label: "Defensa salida", positions: ["DEF"], possession: 0.9, attack: 0.3, defense: 0.4, risk: 0.3, fatigue: 0.2, behavior: { buildUp: 1, lineBreak: 0.6, mark: 0.4 } },
+      noNonsenseDefender: { label: "Defensa cierre", positions: ["DEF"], possession: -0.5, attack: -0.4, defense: 1.6, risk: -1.0, fatigue: 0.1, fouls: 0.2, behavior: { clear: 1, mark: 1, carry: -0.6 } },
+      wingBack: { label: "Carrilero", positions: ["DEF", "EXT"], possession: 0.2, attack: 1.0, defense: 0.2, risk: 0.4, fatigue: 0.8, chance: 0.4, behavior: { overlap: 1, cross: 0.8, recover: 0.4 } },
+      invertedFullback: { label: "Lateral interior", positions: ["DEF"], possession: 1.0, attack: 0.2, defense: 0.7, risk: -0.2, fatigue: 0.4, behavior: { invert: 1, buildUp: 0.8, width: -0.5 } },
+      holdingMidfielder: { label: "Pivote", positions: ["MED"], possession: 0.8, attack: -0.3, defense: 1.1, risk: -0.8, fatigue: 0.2, behavior: { screen: 1, recycle: 1, mark: 0.7 } },
+      deepLyingPlaymaker: { label: "Organizador bajo", positions: ["MED"], possession: 1.5, attack: 0.4, defense: 0.1, risk: -0.1, fatigue: 0.2, chance: 0.3, behavior: { buildUp: 1, lineBreak: 0.8, tempo: -0.3 } },
+      boxToBox: { label: "Mixto", positions: ["MED"], possession: 0.3, attack: 0.7, defense: 0.7, risk: 0.2, fatigue: 0.9, behavior: { carry: 0.8, press: 0.8, supportRuns: 0.8 } },
+      advancedPlaymaker: { label: "Enganche", positions: ["MED", "EXT"], possession: 1.0, attack: 1.0, defense: -0.6, risk: 0.5, fatigue: 0.3, chance: 0.9, behavior: { create: 1, lineBreak: 1, roam: 0.7 } },
+      insideForward: { label: "Extremo interior", positions: ["EXT", "DEL"], possession: -0.2, attack: 1.4, defense: -0.5, risk: 0.9, fatigue: 0.6, chance: 0.8, behavior: { cutInside: 1, shoot: 0.9, press: 0.4 } },
+      wideWinger: { label: "Extremo abierto", positions: ["EXT"], possession: 0.3, attack: 1.0, defense: -0.2, risk: 0.4, fatigue: 0.6, chance: 0.7, behavior: { width: 1, cross: 1, carry: 0.7 } },
+      falseNine: { label: "Falso nueve", positions: ["DEL"], possession: 1.0, attack: 0.8, defense: -0.4, risk: 0.4, fatigue: 0.5, chance: 0.8, behavior: { drop: 1, create: 0.9, shoot: 0.4 } },
+      pressingForward: { label: "Delantero presionante", positions: ["DEL"], possession: -0.2, attack: 0.8, defense: 0.5, risk: 0.7, fatigue: 1.0, fouls: 0.4, chance: 0.4, behavior: { press: 1, disrupt: 0.9, shoot: 0.6 } },
+      targetForward: { label: "Referencia", positions: ["DEL"], possession: 0.2, attack: 1.1, defense: 0.1, risk: 0.1, fatigue: 0.4, chance: 0.5, behavior: { holdUp: 1, aerial: 1, layoff: 0.7 } }
     }
   };
 
@@ -57,7 +71,20 @@
     none: { label: "Normal", attack: 0, defense: 0, risk: 0, fatigue: 0 },
     pressMore: { label: "Presionar", attack: 0.4, defense: 0.2, risk: 0.6, fatigue: 0.7, fouls: 0.5 },
     stayBack: { label: "Guardar posicion", attack: -0.5, defense: 0.8, risk: -0.6, fatigue: -0.2 },
-    takeRisks: { label: "Arriesgar", possession: -0.4, attack: 0.9, risk: 0.8, fatigue: 0.3 }
+    takeRisks: { label: "Arriesgar", possession: -0.4, attack: 0.9, risk: 0.8, fatigue: 0.3 },
+    holdShape: { label: "Mantener bloque", possession: 0.2, attack: -0.4, defense: 0.7, risk: -0.7, fatigue: -0.1, behavior: { roam: -0.7, recover: 0.7 } },
+    roamFromPosition: { label: "Libertad tactica", possession: 0.4, attack: 0.7, defense: -0.5, risk: 0.6, fatigue: 0.4, behavior: { roam: 1, create: 0.6 } },
+    makeRuns: { label: "Atacar espacios", possession: -0.3, attack: 0.8, defense: -0.2, risk: 0.5, fatigue: 0.5, chance: 0.5, behavior: { supportRuns: 1, runBehind: 0.8 } },
+    recyclePossession: { label: "Reciclar posesion", possession: 0.9, attack: -0.2, defense: 0.2, risk: -0.8, fatigue: -0.1, behavior: { recycle: 1, directness: -0.6 } },
+    crossEarly: { label: "Centrar temprano", possession: -0.3, attack: 0.5, risk: 0.5, fatigue: 0.2, chance: 0.4, behavior: { cross: 1, directness: 0.5 } }
+  };
+
+  FMG.ROLE_COMPATIBILITY = {
+    POR: ["balanced", "defensive", "support", "sweeperKeeper"],
+    DEF: ["balanced", "defensive", "support", "attacking", "ballPlayingDefender", "noNonsenseDefender", "wingBack", "invertedFullback"],
+    MED: ["balanced", "defensive", "support", "attacking", "holdingMidfielder", "deepLyingPlaymaker", "boxToBox", "advancedPlaymaker"],
+    EXT: ["balanced", "support", "attacking", "wingBack", "advancedPlaymaker", "insideForward", "wideWinger"],
+    DEL: ["balanced", "support", "attacking", "insideForward", "falseNine", "pressingForward", "targetForward"]
   };
 
   FMG.SQUAD_ROLES = {
@@ -119,6 +146,29 @@
     return { POR: "balanced", DEF: "defensive", MED: "support", EXT: "attacking", DEL: "attacking" };
   }
 
+  function isRoleCompatible(position, role) {
+    const allowed = FMG.ROLE_COMPATIBILITY[position] || [];
+    const config = FMG.TACTIC_OPTIONS.role[role];
+    if (!config) return false;
+    return allowed.includes(role) || !config.positions || config.positions.includes(position);
+  }
+
+  function compatibleRole(position, role) {
+    if (isRoleCompatible(position, role)) return role;
+    return defaultPlayerRoles()[position] || "balanced";
+  }
+
+  FMG.isRoleCompatible = isRoleCompatible;
+  FMG.getCompatibleRoles = function (position) {
+    return (FMG.ROLE_COMPATIBILITY[position] || ["balanced"])
+      .filter((role) => Boolean(FMG.TACTIC_OPTIONS.role[role]));
+  };
+  FMG.getRoleBehavior = function (role, instruction) {
+    const roleConfig = FMG.TACTIC_OPTIONS.role[role] || FMG.TACTIC_OPTIONS.role.balanced;
+    const instructionConfig = FMG.INDIVIDUAL_INSTRUCTIONS[instruction] || FMG.INDIVIDUAL_INSTRUCTIONS.none;
+    return { ...(roleConfig.behavior || {}), ...(instructionConfig.behavior || {}) };
+  };
+
   function createDefaultTeamPlan(formation) {
     return {
       formation,
@@ -138,6 +188,9 @@
   function normalizeTeamPlan(plan, formation) {
     const normalized = { ...createDefaultTeamPlan(formation), ...(plan || {}) };
     normalized.playerRoles = { ...defaultPlayerRoles(), ...(normalized.playerRoles || {}) };
+    Object.keys(normalized.playerRoles).forEach((position) => {
+      normalized.playerRoles[position] = compatibleRole(position, normalized.playerRoles[position]);
+    });
     normalized.instructions = normalized.instructions || {};
     return normalized;
   }
@@ -267,6 +320,9 @@
   FMG.setPositionRole = function (state, position, role) {
     if (!["POR", "DEF", "MED", "EXT", "DEL"].includes(position) || !FMG.TACTIC_OPTIONS.role[role]) {
       return { ok: false, message: "Rol no disponible." };
+    }
+    if (!isRoleCompatible(position, role)) {
+      return { ok: false, message: "Rol incompatible con la posicion." };
     }
     const plan = FMG.getTeamPlan(state, state.userTeamId);
     plan.playerRoles[position] = role;
@@ -400,13 +456,15 @@
       profile.description.push(option.label);
     });
     squad.forEach((player) => {
-      const role = FMG.TACTIC_OPTIONS.role[plan.playerRoles[player.position] || "balanced"];
+      const roleName = compatibleRole(player.position, plan.playerRoles[player.position] || "balanced");
+      const role = FMG.TACTIC_OPTIONS.role[roleName];
       const instruction = FMG.INDIVIDUAL_INSTRUCTIONS[plan.instructions[player.id] || "none"];
       [role, instruction].forEach((source) => {
         Object.keys(profile).forEach((metric) => {
           if (Number.isFinite(source[metric])) profile[metric] += source[metric] / 11;
         });
       });
+      profile.description.push(role.label);
     });
     profile.possession = FMG.clamp(profile.possession, -12, 12);
     profile.attack = FMG.clamp(profile.attack, -12, 12);

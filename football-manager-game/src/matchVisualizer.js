@@ -1,40 +1,346 @@
 (function () {
+  "use strict";
+
   const FMG = (window.FMG = window.FMG || {});
 
-  // =============================================================================
-  // MATCH VISUALIZER - MOTOR VISUAL 3D OPTIMIZADO PARA 60 FPS
-  // =============================================================================
-  // Arquitectura:
-  // - Cancha 3D procedural simple
-  // - Jugadores como cápsulas estilizadas con colores de equipo
-  // - Balón visible
-  // - Cámara broadcast lateral
-  // - Animación fluida de movimiento y acciones
-  // - Culling y LOD para optimizar
+  const FIELD_WIDTH = 105;
+  const FIELD_HEIGHT = 68;
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function colorToCss(color, fallback) {
+    if (typeof color === "number") {
+      return `#${color.toString(16).padStart(6, "0")}`;
+    }
+    return color || fallback;
+  }
+
+  function makePosition(x = 0, y = 0, z = 0) {
+    return {
+      x,
+      y,
+      z,
+      set(nextX, nextY, nextZ) {
+        this.x = Number(nextX) || 0;
+        this.y = Number(nextY) || 0;
+        this.z = Number(nextZ) || 0;
+        return this;
+      },
+      copy(source) {
+        this.x = Number(source?.x) || 0;
+        this.y = Number(source?.y) || 0;
+        this.z = Number(source?.z) || 0;
+        return this;
+      }
+    };
+  }
+
+  class TacticalPitchRenderer {
+    constructor(options = {}) {
+      this.options = {
+        lineColor: "rgba(242, 247, 239, 0.9)",
+        pitchColor: "#14583a",
+        pitchAltColor: "#176541",
+        borderColor: "#0a2b1d",
+        ...options
+      };
+      this._pitch = null;
+      this._signature = "";
+    }
+
+    draw(ctx, bounds) {
+      const signature = `${Math.round(bounds.x)},${Math.round(bounds.y)},${Math.round(bounds.width)},${Math.round(bounds.height)}`;
+      if (!this._pitch || this._signature !== signature) {
+        this._pitch = this._createPitchBitmap(bounds);
+        this._signature = signature;
+      }
+      ctx.drawImage(this._pitch, bounds.x, bounds.y, bounds.width, bounds.height);
+    }
+
+    toScreen(point, bounds) {
+      const nx = clamp(((Number(point?.x) || 0) + FIELD_WIDTH / 2) / FIELD_WIDTH, 0, 1);
+      const ny = clamp(((Number(point?.z) || 0) + FIELD_HEIGHT / 2) / FIELD_HEIGHT, 0, 1);
+      return {
+        x: bounds.x + nx * bounds.width,
+        y: bounds.y + ny * bounds.height
+      };
+    }
+
+    fromScreen(point, bounds) {
+      const nx = clamp((point.x - bounds.x) / bounds.width, 0, 1);
+      const ny = clamp((point.y - bounds.y) / bounds.height, 0, 1);
+      return {
+        x: nx * FIELD_WIDTH - FIELD_WIDTH / 2,
+        y: 0,
+        z: ny * FIELD_HEIGHT - FIELD_HEIGHT / 2
+      };
+    }
+
+    _createPitchBitmap(bounds) {
+      const canvas = document.createElement("canvas");
+      const scale = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      canvas.width = Math.max(1, Math.round(bounds.width * scale));
+      canvas.height = Math.max(1, Math.round(bounds.height * scale));
+
+      const ctx = canvas.getContext("2d");
+      ctx.scale(scale, scale);
+      this._drawPitch(ctx, bounds.width, bounds.height);
+      return canvas;
+    }
+
+    _drawPitch(ctx, width, height) {
+      const line = this.options.lineColor;
+      const meterX = width / FIELD_WIDTH;
+      const meterY = height / FIELD_HEIGHT;
+      const map = (x, z) => ({
+        x: (x + FIELD_WIDTH / 2) * meterX,
+        y: (z + FIELD_HEIGHT / 2) * meterY
+      });
+
+      ctx.fillStyle = this.options.borderColor;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.save();
+      ctx.beginPath();
+      this._roundRect(ctx, 0, 0, width, height, 12);
+      ctx.clip();
+
+      ctx.fillStyle = this.options.pitchColor;
+      ctx.fillRect(0, 0, width, height);
+      for (let index = 0; index < 12; index += 1) {
+        ctx.fillStyle = index % 2 === 0 ? this.options.pitchAltColor : "rgba(255,255,255,0.018)";
+        ctx.fillRect(index * width / 12, 0, width / 12, height);
+      }
+
+      ctx.strokeStyle = "rgba(255,255,255,0.08)";
+      ctx.lineWidth = 1;
+      for (let index = 1; index < 12; index += 1) {
+        const x = index * width / 12;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = line;
+      ctx.lineWidth = Math.max(2, Math.min(width, height) * 0.006);
+      ctx.lineJoin = "round";
+      ctx.strokeRect(1.5, 1.5, width - 3, height - 3);
+
+      const mid = map(0, 0);
+      ctx.beginPath();
+      ctx.moveTo(mid.x, 0);
+      ctx.lineTo(mid.x, height);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(mid.x, mid.y, 9.15 * meterX, 0, Math.PI * 2);
+      ctx.stroke();
+      this._spot(ctx, mid.x, mid.y, width);
+
+      this._drawPenaltyArea(ctx, map, meterX, meterY, -FIELD_WIDTH / 2, 1);
+      this._drawPenaltyArea(ctx, map, meterX, meterY, FIELD_WIDTH / 2, -1);
+      this._drawGoals(ctx, map, meterX, meterY);
+      this._drawCornerArcs(ctx, width, height, 1.5 * Math.min(meterX, meterY));
+
+      ctx.restore();
+    }
+
+    _drawPenaltyArea(ctx, map, meterX, meterY, goalX, direction) {
+      const areaDepth = 16.5;
+      const areaWidth = 40.32;
+      const sixDepth = 5.5;
+      const sixWidth = 18.32;
+      const areaLeft = goalX;
+      const areaRight = goalX + direction * areaDepth;
+      const boxTop = -areaWidth / 2;
+      const boxBottom = areaWidth / 2;
+      const sixRight = goalX + direction * sixDepth;
+      const sixTop = -sixWidth / 2;
+      const sixBottom = sixWidth / 2;
+
+      this._strokeFieldRect(ctx, map, areaLeft, boxTop, areaRight, boxBottom);
+      this._strokeFieldRect(ctx, map, areaLeft, sixTop, sixRight, sixBottom);
+
+      const penalty = map(goalX + direction * 11, 0);
+      this._spot(ctx, penalty.x, penalty.y, meterX * FIELD_WIDTH);
+
+      ctx.beginPath();
+      if (direction > 0) {
+        ctx.arc(penalty.x, penalty.y, 9.15 * meterX, -Math.PI * 0.36, Math.PI * 0.36);
+      } else {
+        ctx.arc(penalty.x, penalty.y, 9.15 * meterX, Math.PI * 0.64, Math.PI * 1.36);
+      }
+      ctx.stroke();
+    }
+
+    _drawGoals(ctx, map, meterX) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(245,248,242,0.92)";
+      ctx.lineWidth = Math.max(2, meterX * 0.8);
+      const leftTop = map(-FIELD_WIDTH / 2, -3.66);
+      const leftBottom = map(-FIELD_WIDTH / 2, 3.66);
+      const rightTop = map(FIELD_WIDTH / 2, -3.66);
+      const rightBottom = map(FIELD_WIDTH / 2, 3.66);
+
+      ctx.beginPath();
+      ctx.moveTo(leftTop.x, leftTop.y);
+      ctx.lineTo(leftTop.x - 8 * meterX, leftTop.y);
+      ctx.lineTo(leftBottom.x - 8 * meterX, leftBottom.y);
+      ctx.lineTo(leftBottom.x, leftBottom.y);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(rightTop.x, rightTop.y);
+      ctx.lineTo(rightTop.x + 8 * meterX, rightTop.y);
+      ctx.lineTo(rightBottom.x + 8 * meterX, rightBottom.y);
+      ctx.lineTo(rightBottom.x, rightBottom.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    _drawCornerArcs(ctx, width, height, radius) {
+      const corners = [
+        [0, 0, 0, Math.PI * 0.5],
+        [width, 0, Math.PI * 0.5, Math.PI],
+        [width, height, Math.PI, Math.PI * 1.5],
+        [0, height, Math.PI * 1.5, Math.PI * 2]
+      ];
+      corners.forEach(([x, y, start, end]) => {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, start, end);
+        ctx.stroke();
+      });
+    }
+
+    _strokeFieldRect(ctx, map, x1, z1, x2, z2) {
+      const a = map(Math.min(x1, x2), Math.min(z1, z2));
+      const b = map(Math.max(x1, x2), Math.max(z1, z2));
+      ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
+    }
+
+    _spot(ctx, x, y, width) {
+      ctx.save();
+      ctx.fillStyle = this.options.lineColor;
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(2.2, width * 0.004), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    _roundRect(ctx, x, y, width, height, radius) {
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + width, y, x + width, y + height, radius);
+      ctx.arcTo(x + width, y + height, x, y + height, radius);
+      ctx.arcTo(x, y + height, x, y, radius);
+      ctx.arcTo(x, y, x + width, y, radius);
+      ctx.closePath();
+    }
+  }
+
+  class TacticalAnimationSystem {
+    constructor(options = {}) {
+      this.defaultDuration = Math.max(1, Number(options.defaultDuration) || 600);
+      this.animations = [];
+      this.sequence = 0;
+    }
+
+    movePosition(position, targetPos, duration = this.defaultDuration, options = {}) {
+      if (!position) return null;
+      const animation = {
+        id: this.sequence += 1,
+        position,
+        start: {
+          x: Number(position.x) || 0,
+          y: Number(position.y) || 0,
+          z: Number(position.z) || 0
+        },
+        target: {
+          x: Number(targetPos?.x) || 0,
+          y: Number(targetPos?.y) || 0,
+          z: Number(targetPos?.z) || 0
+        },
+        duration: Math.max(1, Number(duration) || this.defaultDuration),
+        elapsed: 0,
+        easing: options.easing || "smooth",
+        onComplete: options.onComplete || null
+      };
+      this.animations = this.animations.filter((item) => item.position !== position);
+      this.animations.push(animation);
+      return animation.id;
+    }
+
+    update(deltaMs) {
+      const delta = Math.max(0, Number(deltaMs) || 0);
+      if (!this.animations.length || delta === 0) return;
+      const completed = [];
+      this.animations = this.animations.filter((animation) => {
+        animation.elapsed = Math.min(animation.duration, animation.elapsed + delta);
+        const progress = clamp(animation.elapsed / animation.duration, 0, 1);
+        const eased = this._ease(progress, animation.easing);
+        animation.position.x = animation.start.x + (animation.target.x - animation.start.x) * eased;
+        animation.position.y = animation.start.y + (animation.target.y - animation.start.y) * eased;
+        animation.position.z = animation.start.z + (animation.target.z - animation.start.z) * eased;
+        if (progress >= 1) {
+          animation.position.x = animation.target.x;
+          animation.position.y = animation.target.y;
+          animation.position.z = animation.target.z;
+          completed.push(animation);
+          return false;
+        }
+        return true;
+      });
+      completed.forEach((animation) => {
+        if (typeof animation.onComplete === "function") animation.onComplete(animation);
+      });
+    }
+
+    snapshot() {
+      return {
+        sequence: this.sequence,
+        animations: this.animations.map((animation) => ({
+          id: animation.id,
+          start: { ...animation.start },
+          target: { ...animation.target },
+          duration: animation.duration,
+          elapsed: animation.elapsed,
+          easing: animation.easing
+        }))
+      };
+    }
+
+    clear() {
+      this.animations = [];
+    }
+
+    _ease(progress, easing) {
+      if (easing === "linear") return progress;
+      if (easing === "quick") return 1 - Math.pow(1 - progress, 2);
+      return progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+    }
+  }
 
   class MatchVisualizer {
     constructor(containerElement) {
       this.container = containerElement;
-      this.scene = null;
-      this.camera = null;
+      this.canvas = null;
+      this.context = null;
       this.renderer = null;
-      this.field = null;
-      this.players = {}; // playerInstanceId -> { mesh, visualId }
+      this.pitchRenderer = new TacticalPitchRenderer();
+      this.players = {};
       this.ball = null;
-      this.hud = null;
-      this.lastFrameTime = performance.now();
-      this.deltaTime = 0;
       this.animationFrameId = null;
-      this._activeRAFs = []; // Rastrear todos los RAF para cleanup
       this.isRunning = false;
+      this.bounds = { x: 0, y: 0, width: 0, height: 0 };
+      this.animationSystem = new TacticalAnimationSystem({ defaultDuration: 600 });
       this.config = {
-        fieldWidth: 105,
-        fieldHeight: 68,
-        playerHeight: 1.8,
-        playerRadius: 0.25,
-        ballRadius: 0.22,
-        targetFPS: 60,
-        targetFrameTime: 1000 / 60 // ~16.67ms
+        fieldWidth: FIELD_WIDTH,
+        fieldHeight: FIELD_HEIGHT,
+        targetFrameTime: 1000 / 60
       };
       this.matchState = {
         homeTeamId: null,
@@ -43,232 +349,65 @@
         awayGoals: 0,
         minute: 0,
         possession: 50,
-        ballPos: { x: 0, y: 0.22, z: 0 },
-        playerPositions: {} // playerId -> { x, y, z, teamId, isHome }
+        playerPositions: {}
+      };
+      this.teamColors = {
+        home: "#f6f6f1",
+        away: "#1763a6"
       };
     }
 
-    // =========================================================================
-    // INICIALIZACIÓN
-    // =========================================================================
-
     init() {
-      if (this.scene) return; // Ya inicializado
-
-      // Scene setup
-      this.scene = new THREE.Scene();
-      this.scene.background = new THREE.Color(0x1a3a1a); // Verde oscuro de noche
-
-      // Camera: broadcast lateral, altura ojo
-      this.camera = new THREE.PerspectiveCamera(
-        55,
-        this.container.clientWidth / this.container.clientHeight,
-        0.1,
-        500
-      );
-      this.camera.position.set(0, 24, 60); // Lado derecho, altura moderada
-      this.camera.lookAt(0, 8, 0); // Mira hacia el centro de la cancha
-
-      // Renderer: compatible, sin Forward+ pesado
-      this.renderer = new THREE.WebGLRenderer({
-        antialias: false,
-        logarithmicDepthBuffer: false,
-        powerPreference: "high-performance"
-      });
-      this.renderer.setSize(
-        this.container.clientWidth,
-        this.container.clientHeight
-      );
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Limitar ratio para FPS
-      this.renderer.shadowMap.enabled = false; // Sin sombras para performance
-      this.renderer.shadowMap.type = THREE.BasicShadowMap;
-      this.container.appendChild(this.renderer.domElement);
-
-      // Iluminación simple
-      this.setupLighting();
-
-      // Geometría
-      this.createField();
-      this.createSkybox();
-
-      // HUD
-      this.createHUD();
-
-      // Event listeners
-      this._resizeHandler = () => this.onWindowResize();
-      this._visibilityHandler = () => {
-        if (document.hidden) {
-          if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-          }
-        } else if (!this.animationFrameId && this.isRunning) {
-          this.startRendering();
-        }
+      if (this.canvas) return;
+      this.canvas = document.createElement("canvas");
+      this.canvas.className = "match-tactical-canvas";
+      this.canvas.style.display = "block";
+      this.canvas.style.width = "100%";
+      this.canvas.style.height = "100%";
+      this.context = this.canvas.getContext("2d");
+      this.renderer = {
+        domElement: this.canvas,
+        setSize: (width, height) => this._resizeCanvas(width, height),
+        render: () => this.render()
       };
+      this.container.appendChild(this.canvas);
+      this._resizeHandler = () => this.onWindowResize();
       window.addEventListener("resize", this._resizeHandler);
-      document.addEventListener("visibilitychange", this._visibilityHandler);
-
-      // Iniciar renderizado
+      this.onWindowResize();
       this.startRendering();
     }
 
-    setupLighting() {
-      // Luz ambiental
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-      this.scene.add(ambientLight);
-
-      // Luz direccional (sol/estadio)
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
-      directionalLight.position.set(60, 80, 40);
-      directionalLight.castShadow = false;
-      this.scene.add(directionalLight);
-
-      // Luz de relleno suave
-      const fillLight = new THREE.DirectionalLight(0x4488ff, 0.3);
-      fillLight.position.set(-60, 30, -40);
-      this.scene.add(fillLight);
+    setTeamInfo(homeTeamId, homeTeamColor, awayTeamId, awayTeamColor) {
+      this.matchState.homeTeamId = homeTeamId;
+      this.matchState.awayTeamId = awayTeamId;
+      this.teamColors.home = colorToCss(homeTeamColor, "#f6f6f1");
+      this.teamColors.away = colorToCss(awayTeamColor, "#1763a6");
     }
 
-    createField() {
-      const { fieldWidth, fieldHeight } = this.config;
-
-      // Pasto
-      const grassGeometry = new THREE.PlaneGeometry(fieldWidth, fieldHeight);
-      const grassMaterial = new THREE.MeshLambertMaterial({
-        color: 0x2f6f42
-      });
-      const grassMesh = new THREE.Mesh(grassGeometry, grassMaterial);
-      grassMesh.rotation.x = -Math.PI / 2;
-      grassMesh.receiveShadow = false;
-      this.scene.add(grassMesh);
-
-      // Franjas sutiles para evitar look plastico plano.
-      const stripeWidth = fieldWidth / 10;
-      for (let i = 0; i < 10; i += 1) {
-        const stripeGeometry = new THREE.PlaneGeometry(stripeWidth, fieldHeight);
-        const stripeMaterial = new THREE.MeshBasicMaterial({
-          color: i % 2 === 0 ? 0x255f38 : 0x347a48,
-          transparent: true,
-          opacity: 0.34,
-          depthWrite: false
-        });
-        const stripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
-        stripe.rotation.x = -Math.PI / 2;
-        stripe.position.set(-fieldWidth / 2 + stripeWidth * i + stripeWidth / 2, 0.012, 0);
-        this.scene.add(stripe);
-      }
-
-      // Líneas de cancha
-      this.drawFieldLines();
-
-      // Bordes
-      this.drawFieldBorders();
-
-      this.field = grassMesh;
-    }
-
-    drawFieldLines() {
-      const { fieldWidth, fieldHeight } = this.config;
-      const lineMaterial = new THREE.LineBasicMaterial({
-        color: 0xffffff,
-        linewidth: 2
-      });
-
-      // Linea media: divide ambos campos por la mitad en el eje X.
-      const midGeometry = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(0, 0.01, -fieldHeight / 2),
-        new THREE.Vector3(0, 0.01, fieldHeight / 2)
-      ]);
-      this.scene.add(new THREE.Line(midGeometry, lineMaterial));
-
-      // Líneas de meta
-      const topGoalGeometry = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-fieldWidth / 2, 0.01, fieldHeight / 2),
-        new THREE.Vector3(fieldWidth / 2, 0.01, fieldHeight / 2)
-      ]);
-      const bottomGoalGeometry = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-fieldWidth / 2, 0.01, -fieldHeight / 2),
-        new THREE.Vector3(fieldWidth / 2, 0.01, -fieldHeight / 2)
-      ]);
-      this.scene.add(new THREE.Line(topGoalGeometry, lineMaterial));
-      this.scene.add(new THREE.Line(bottomGoalGeometry, lineMaterial));
-
-      // Área de gol simplificada (rectángulos)
-      const penaltyWidth = 40;
-      const penaltyDepth = 16.5;
-      this.drawPenaltyBox(penaltyWidth, penaltyDepth, fieldHeight, lineMaterial);
-    }
-
-    drawPenaltyBox(width, depth, fieldHeight, lineMaterial) {
-      const halfWidth = width / 2;
-      const y = fieldHeight / 2;
-
-      // Área superior
-      const topBoxPoints = [
-        new THREE.Vector3(-halfWidth, 0.01, y),
-        new THREE.Vector3(halfWidth, 0.01, y),
-        new THREE.Vector3(halfWidth, 0.01, y - depth),
-        new THREE.Vector3(-halfWidth, 0.01, y - depth),
-        new THREE.Vector3(-halfWidth, 0.01, y)
-      ];
-      const topBoxGeometry = new THREE.BufferGeometry().setFromPoints(
-        topBoxPoints
-      );
-      this.scene.add(new THREE.Line(topBoxGeometry, lineMaterial));
-
-      // Área inferior
-      const bottomBoxPoints = [
-        new THREE.Vector3(-halfWidth, 0.01, -y),
-        new THREE.Vector3(halfWidth, 0.01, -y),
-        new THREE.Vector3(halfWidth, 0.01, -y + depth),
-        new THREE.Vector3(-halfWidth, 0.01, -y + depth),
-        new THREE.Vector3(-halfWidth, 0.01, -y)
-      ];
-      const bottomBoxGeometry = new THREE.BufferGeometry().setFromPoints(
-        bottomBoxPoints
-      );
-      this.scene.add(new THREE.Line(bottomBoxGeometry, lineMaterial));
-    }
-
-    drawFieldBorders() {
-      const { fieldWidth, fieldHeight } = this.config;
-      const borderMaterial = new THREE.LineBasicMaterial({
-        color: 0xcccccc,
-        linewidth: 1
-      });
-
-      const borderGeometry = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-fieldWidth / 2, 0.01, fieldHeight / 2),
-        new THREE.Vector3(fieldWidth / 2, 0.01, fieldHeight / 2),
-        new THREE.Vector3(fieldWidth / 2, 0.01, -fieldHeight / 2),
-        new THREE.Vector3(-fieldWidth / 2, 0.01, -fieldHeight / 2),
-        new THREE.Vector3(-fieldWidth / 2, 0.01, fieldHeight / 2)
-      ]);
-      this.scene.add(new THREE.Line(borderGeometry, borderMaterial));
-    }
-
-    createSkybox() {
-      const skyGeometry = new THREE.SphereGeometry(300, 6, 6);
-      const skyMaterial = new THREE.MeshBasicMaterial({
-        color: 0x87ceeb,
-        side: THREE.BackSide
-      });
-      this.scene.add(new THREE.Mesh(skyGeometry, skyMaterial));
-    }
-
-    createHUD() {
-      // Se renderiza sobre canvas con 2D context
-      this.hud = {
-        time: 0,
-        fps: 60,
-        stats: {}
+    addPlayer(playerId, startPos, isHome) {
+      const position = makePosition(startPos?.x, startPos?.y, startPos?.z);
+      this.players[playerId] = {
+        id: playerId,
+        isHome,
+        mesh: { position },
+        position,
+        targetPosition: makePosition(position.x, position.y, position.z)
+      };
+      this.matchState.playerPositions[playerId] = {
+        x: position.x,
+        y: position.y,
+        z: position.z,
+        isHome
       };
     }
 
-    // =========================================================================
-    // ACTUALIZACIÓN DE ESTADO Y ANIMACIÓN
-    // =========================================================================
+    createBall() {
+      const position = makePosition(0, 0.22, 0);
+      this.ball = {
+        position,
+        targetPosition: makePosition(0, 0.22, 0)
+      };
+    }
 
     updateMatchState(minute, homeGoals, awayGoals, possession = 50) {
       this.matchState.minute = minute;
@@ -277,240 +416,42 @@
       this.matchState.possession = possession;
     }
 
-    setTeamInfo(homeTeamId, homeTeamColor, awayTeamId, awayTeamColor) {
-      this.matchState.homeTeamId = homeTeamId;
-      this.matchState.homeTeamColor = homeTeamColor || 0xff0000;
-      this.matchState.awayTeamId = awayTeamId;
-      this.matchState.awayTeamColor = awayTeamColor || 0x0000ff;
-    }
-
-    addPlayer(playerId, startPos, isHome) {
-      if (this.players[playerId]) return; // Ya existe
-
-      const capsuleGeometry = new THREE.CapsuleGeometry(
-        this.config.playerRadius,
-        this.config.playerHeight - this.config.playerRadius * 2,
-        4,
-        4
-      );
-      const color = isHome
-        ? this.matchState.homeTeamColor
-        : this.matchState.awayTeamColor;
-      const playerMaterial = new THREE.MeshPhongMaterial({ color });
-      const playerMesh = new THREE.Mesh(capsuleGeometry, playerMaterial);
-
-      playerMesh.position.set(startPos.x, startPos.y, startPos.z);
-      playerMesh.castShadow = false;
-      playerMesh.receiveShadow = false;
-
-      // Número visual (pequeño sprite)
-      const numberMesh = this.createPlayerNumber(isHome);
-      playerMesh.add(numberMesh);
-
-      this.scene.add(playerMesh);
-      this.players[playerId] = {
-        mesh: playerMesh,
-        visualId: playerId,
-        isHome
-      };
-
-      this.matchState.playerPositions[playerId] = {
-        x: startPos.x,
-        y: startPos.y,
-        z: startPos.z,
-        teamId: isHome ? this.matchState.homeTeamId : this.matchState.awayTeamId,
-        isHome
-      };
-    }
-
-    createPlayerNumber(isHome) {
-      const numberGeometry = new THREE.SphereGeometry(0.08, 4, 4);
-      const numberMaterial = new THREE.MeshBasicMaterial({
-        color: isHome ? 0xffffff : 0x000000
-      });
-      const numberMesh = new THREE.Mesh(numberGeometry, numberMaterial);
-      numberMesh.position.y = this.config.playerHeight / 2;
-      return numberMesh;
-    }
-
-    createBall() {
-      const ballGeometry = new THREE.SphereGeometry(
-        this.config.ballRadius,
-        8,
-        8
-      );
-      const ballMaterial = new THREE.MeshPhongMaterial({
-        color: 0xffffff,
-        shininess: 100
-      });
-      this.ball = new THREE.Mesh(ballGeometry, ballMaterial);
-      this.ball.position.copy(
-        new THREE.Vector3(
-          this.matchState.ballPos.x,
-          this.matchState.ballPos.y,
-          this.matchState.ballPos.z
-        )
-      );
-      this.scene.add(this.ball);
-    }
-
     animatePlayerMove(playerId, targetPos, duration = 1000) {
       const player = this.players[playerId];
       if (!player) return;
-
-      const startX = player.mesh.position.x;
-      const startY = player.mesh.position.y;
-      const startZ = player.mesh.position.z;
-      const startTime = performance.now();
-      const _target = new THREE.Vector3(targetPos.x, targetPos.y, targetPos.z);
-
-      const animate = (currentTime) => {
-        const progress = Math.min((currentTime - startTime) / duration, 1);
-        const t = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
-
-        player.mesh.position.x = startX + (targetPos.x - startX) * t;
-        player.mesh.position.y = startY + (targetPos.y - startY) * t;
-        player.mesh.position.z = startZ + (targetPos.z - startZ) * t;
-
-        const pos = this.matchState.playerPositions[playerId];
-        if (pos) {
-          pos.x = player.mesh.position.x;
-          pos.y = player.mesh.position.y;
-          pos.z = player.mesh.position.z;
-        }
-
-        if (progress < 1) {
-          const rafId = requestAnimationFrame(animate);
-          this._activeRAFs.push(rafId);
-        }
-      };
-
-      const rafId = requestAnimationFrame(animate);
-      this._activeRAFs.push(rafId);
+      player.targetPosition.copy(targetPos);
+      this.animationSystem.movePosition(player.mesh.position, targetPos, duration);
     }
 
-    animateBallMove(targetPos, duration = 1000, arcHeight = 2) {
-      if (!this.ball) return Promise.resolve();
-
-      return new Promise((resolve) => {
-        const startX = this.ball.position.x;
-        const startY = this.ball.position.y;
-        const startZ = this.ball.position.z;
-        const startTime = performance.now();
-
-        const animate = (currentTime) => {
-          const progress = Math.min((currentTime - startTime) / duration, 1);
-          const t = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
-
-          this.ball.position.x = startX + (targetPos.x - startX) * t;
-          this.ball.position.y = startY + (targetPos.y - startY) * t + arcHeight * Math.sin(progress * Math.PI);
-          this.ball.position.z = startZ + (targetPos.z - startZ) * t;
-
-          this.matchState.ballPos.x = this.ball.position.x;
-          this.matchState.ballPos.y = this.ball.position.y;
-          this.matchState.ballPos.z = this.ball.position.z;
-
-          if (progress < 1) {
-            const rafId = requestAnimationFrame(animate);
-            this._activeRAFs.push(rafId);
-          } else {
-            resolve();
-          }
-        };
-
-        const rafId = requestAnimationFrame(animate);
-        this._activeRAFs.push(rafId);
-      });
+    animateBallMove(targetPos, duration = 1000) {
+      if (!this.ball) this.createBall();
+      this.ball.targetPosition.copy(targetPos);
+      this.animationSystem.movePosition(this.ball.position, targetPos, duration, { easing: "quick" });
     }
 
     animateShot(targetPos, duration = 400) {
-      if (!this.ball) return;
-
-      const startX = this.ball.position.x;
-      const startY = this.ball.position.y;
-      const startZ = this.ball.position.z;
-      const startTime = performance.now();
-
-      const animate = (currentTime) => {
-        const progress = Math.min((currentTime - startTime) / duration, 1);
-        const t = progress * progress;
-
-        this.ball.position.x = startX + (targetPos.x - startX) * t;
-        this.ball.position.y = startY + (targetPos.y - startY) * t;
-        this.ball.position.z = startZ + (targetPos.z - startZ) * t;
-
-        this.matchState.ballPos.x = this.ball.position.x;
-        this.matchState.ballPos.y = this.ball.position.y;
-        this.matchState.ballPos.z = this.ball.position.z;
-
-        if (progress < 1) {
-          const rafId = requestAnimationFrame(animate);
-          this._activeRAFs.push(rafId);
-        }
-      };
-
-      const rafId = requestAnimationFrame(animate);
-      this._activeRAFs.push(rafId);
+      this.animateBallMove(targetPos, duration);
     }
 
     animatePass(fromPlayerId, toPlayerId) {
-      const passer = this.players[fromPlayerId]?.mesh;
-      const receiver = this.players[toPlayerId]?.mesh;
-      if (!passer || !receiver || !this.ball) return;
-      const startPos = passer.position.clone();
-      startPos.y += 0.5;
-      const endPos = receiver.position.clone();
-      endPos.y += 0.5;
-      const duration = 0.55;
-      let elapsed = 0;
-      const animate = (delta) => {
-        elapsed += delta;
-        const t = Math.min(elapsed / duration, 1);
-        this.ball.position.lerpVectors(startPos, endPos, t);
-        if (t < 1) {
-          const rafId = requestAnimationFrame(() => animate(1 / 60));
-          this._activeRAFs.push(rafId);
-        }
-      };
-      const rafId = requestAnimationFrame(() => animate(1 / 60));
-      this._activeRAFs.push(rafId);
+      const from = this.players[fromPlayerId];
+      const to = this.players[toPlayerId];
+      if (!from || !to) return;
+      if (!this.ball) this.createBall();
+      this.ball.position.copy(from.mesh.position);
+      this.animateBallMove(to.mesh.position, 480);
     }
-
-    // =========================================================================
-    // RENDERIZADO Y FPS
-    // =========================================================================
 
     startRendering() {
-      if (this.animationFrameId) return;
+      if (this.isRunning) return;
       this.isRunning = true;
-      const render = () => {
+      const loop = () => {
         if (!this.isRunning) return;
-
-        // Cálculo delta time para consistency
-        const now = performance.now();
-        this.deltaTime = now - this.lastFrameTime;
-        this.lastFrameTime = now;
-
-        // Update HUD
-        this.hud.fps = Math.round(1000 / this.deltaTime);
-        this.hud.time = this.matchState.minute;
-
-        // Renderizar
-        this.renderer.render(this.scene, this.camera);
-
-        // Draw HUD overlay
-        this.renderHUDOverlay();
-
-        // Solicitar siguiente frame
-        this.animationFrameId = requestAnimationFrame(render);
+        this.updateAnimations(this.config.targetFrameTime);
+        this.render();
+        this.animationFrameId = requestAnimationFrame(loop);
       };
-
-      this.animationFrameId = requestAnimationFrame(render);
-    }
-
-    renderHUDOverlay() {
-      // Información en el DOM (se puede mejorar con canvas 2D)
-      // Por ahora usando CSS y HTML en matchView
+      this.animationFrameId = requestAnimationFrame(loop);
     }
 
     stopRendering() {
@@ -519,69 +460,224 @@
         cancelAnimationFrame(this.animationFrameId);
         this.animationFrameId = null;
       }
-      // Cancelar todos los RAFs pendientes (animaciones de movimiento)
-      this._activeRAFs.forEach((rafId) => cancelAnimationFrame(rafId));
-      this._activeRAFs = [];
+    }
+
+    render() {
+      if (!this.context || !this.canvas) return;
+      const ctx = this.context;
+      const width = this.canvas.width;
+      const height = this.canvas.height;
+      this._computeBounds(width, height);
+
+      ctx.clearRect(0, 0, width, height);
+      this._drawBroadcastFrame(ctx, width, height);
+      this.pitchRenderer.draw(ctx, this.bounds);
+      this._drawTacticalZones(ctx);
+      this._drawPlayers(ctx);
+      this._drawBall(ctx);
+      this._drawHUD(ctx, width, height);
+    }
+
+    renderHUDOverlay() {
+      this.render();
     }
 
     onWindowResize() {
-      if (!this.renderer) return;
-
-      const width = this.container.clientWidth;
-      const height = this.container.clientHeight;
-
-      this.camera.aspect = width / height;
-      this.camera.updateProjectionMatrix();
-      this.renderer.setSize(width, height);
+      if (!this.container || !this.canvas) return;
+      const width = Math.max(640, this.container.clientWidth || 960);
+      const height = Math.max(420, this.container.clientHeight || Math.round(width * 0.58));
+      this._resizeCanvas(width, height);
     }
 
-    // =========================================================================
-    // LIMPIAR
-    // =========================================================================
-
     dispose() {
-      // Cancelar render loop y todas las animaciones activas
       this.stopRendering();
-      // Asegurar que todos los RAFs estén cancelados
-      this._activeRAFs.forEach((rafId) => cancelAnimationFrame(rafId));
-      this._activeRAFs = [];
-      
       if (this._resizeHandler) {
         window.removeEventListener("resize", this._resizeHandler);
-        this._resizeHandler = null;
       }
-      if (this._visibilityHandler) {
-        document.removeEventListener("visibilitychange", this._visibilityHandler);
-        this._visibilityHandler = null;
+      if (this.canvas && this.canvas.parentNode) {
+        this.canvas.parentNode.removeChild(this.canvas);
       }
-
-      // Limpiar geometrías y materiales
-      this.scene.traverse((child) => {
-        if (child.geometry) child.geometry.dispose();
-        if (child.material) {
-          if (Array.isArray(child.material)) {
-            child.material.forEach((m) => m.dispose());
-          } else {
-            child.material.dispose();
-          }
-        }
-      });
-
-      this.renderer.dispose();
-      this.container.removeChild(this.renderer.domElement);
-
-      this.scene = null;
-      this.camera = null;
+      this.canvas = null;
+      this.context = null;
       this.renderer = null;
-      this.field = null;
-      this.ball = null;
       this.players = {};
+      this.ball = null;
+      this.animationSystem.clear();
+    }
+
+    updateAnimations(deltaMs = this.config.targetFrameTime) {
+      this.animationSystem.update(deltaMs);
+      this._syncPositionState();
+    }
+
+    getAnimationSnapshot() {
+      return {
+        players: Object.fromEntries(Object.keys(this.players).map((id) => [
+          id,
+          {
+            x: this.players[id].mesh.position.x,
+            y: this.players[id].mesh.position.y,
+            z: this.players[id].mesh.position.z,
+            target: {
+              x: this.players[id].targetPosition.x,
+              y: this.players[id].targetPosition.y,
+              z: this.players[id].targetPosition.z
+            }
+          }
+        ])),
+        ball: this.ball
+          ? {
+              x: this.ball.position.x,
+              y: this.ball.position.y,
+              z: this.ball.position.z,
+              target: {
+                x: this.ball.targetPosition.x,
+                y: this.ball.targetPosition.y,
+                z: this.ball.targetPosition.z
+              }
+            }
+          : null,
+        animations: this.animationSystem.snapshot()
+      };
+    }
+
+    _resizeCanvas(width, height) {
+      const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      this.canvas.width = Math.round(width * ratio);
+      this.canvas.height = Math.round(height * ratio);
+      this.canvas.style.width = `${width}px`;
+      this.canvas.style.height = `${height}px`;
+      this.context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      this._cssWidth = width;
+      this._cssHeight = height;
+    }
+
+    _computeBounds(width, height) {
+      const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      const cssWidth = this._cssWidth || width / ratio;
+      const cssHeight = this._cssHeight || height / ratio;
+      const topHud = 54;
+      const margin = 28;
+      const availableW = cssWidth - margin * 2;
+      const availableH = cssHeight - topHud - margin * 1.6;
+      const pitchRatio = FIELD_WIDTH / FIELD_HEIGHT;
+      let pitchW = availableW;
+      let pitchH = pitchW / pitchRatio;
+      if (pitchH > availableH) {
+        pitchH = availableH;
+        pitchW = pitchH * pitchRatio;
+      }
+      this.bounds = {
+        x: (cssWidth - pitchW) / 2,
+        y: topHud + (availableH - pitchH) / 2,
+        width: pitchW,
+        height: pitchH
+      };
+    }
+
+    _drawBroadcastFrame(ctx, width, height) {
+      const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      const cssWidth = this._cssWidth || width / ratio;
+      const cssHeight = this._cssHeight || height / ratio;
+      ctx.fillStyle = "#07130f";
+      ctx.fillRect(0, 0, cssWidth, cssHeight);
+      ctx.fillStyle = "#0b2118";
+      ctx.fillRect(0, 0, cssWidth, 54);
+      ctx.fillStyle = "rgba(255,255,255,0.04)";
+      ctx.fillRect(0, 53, cssWidth, 1);
+    }
+
+    _drawTacticalZones(ctx) {
+      const b = this.bounds;
+      ctx.save();
+      ctx.strokeStyle = "rgba(250,250,245,0.12)";
+      ctx.lineWidth = 1;
+      for (let index = 1; index < 3; index += 1) {
+        const x = b.x + (b.width / 3) * index;
+        ctx.beginPath();
+        ctx.moveTo(x, b.y);
+        ctx.lineTo(x, b.y + b.height);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    _drawPlayers(ctx) {
+      Object.keys(this.players).forEach((id) => {
+        const player = this.players[id];
+        const screen = this.pitchRenderer.toScreen(player.mesh.position, this.bounds);
+        const color = player.isHome ? this.teamColors.home : this.teamColors.away;
+        const stroke = player.isHome ? "#111111" : "#f8f8f2";
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 3;
+        ctx.fillStyle = color;
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(screen.x, screen.y, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowColor = "transparent";
+        ctx.fillStyle = player.isHome ? "#111111" : "#ffffff";
+        ctx.font = "700 9px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(id).slice(-2), screen.x, screen.y + 0.5);
+        ctx.restore();
+      });
+    }
+
+    _drawBall(ctx) {
+      if (!this.ball) return;
+      const screen = this.pitchRenderer.toScreen(this.ball.position, this.bounds);
+      const lift = clamp(Number(this.ball.position.y) || 0, 0, 4);
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.28)";
+      ctx.beginPath();
+      ctx.ellipse(screen.x + 2, screen.y + 5, 8, 3.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#fff8d8";
+      ctx.strokeStyle = "#111111";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(screen.x, screen.y - lift * 5, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    _drawHUD(ctx, width, height) {
+      const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      const cssWidth = this._cssWidth || width / ratio;
+      ctx.save();
+      ctx.fillStyle = "#f6f7ee";
+      ctx.font = "700 24px system-ui, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(`${this.matchState.homeGoals} - ${this.matchState.awayGoals}`, 28, 35);
+      ctx.font = "600 14px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`${Math.round(this.matchState.possession)}% POS`, cssWidth / 2, 33);
+      ctx.textAlign = "right";
+      ctx.fillText(`${this.matchState.minute}'`, cssWidth - 28, 33);
+      ctx.restore();
+    }
+
+    _syncPositionState() {
+      Object.keys(this.players).forEach((id) => {
+        const player = this.players[id];
+        this.matchState.playerPositions[id] = {
+          x: player.mesh.position.x,
+          y: player.mesh.position.y,
+          z: player.mesh.position.z,
+          isHome: player.isHome
+        };
+      });
     }
   }
 
-  // =============================================================================
-  // EXPORTAR
-  // =============================================================================
-
+  FMG.TacticalAnimationSystem = TacticalAnimationSystem;
+  FMG.TacticalPitchRenderer = TacticalPitchRenderer;
   FMG.MatchVisualizer = MatchVisualizer;
 })();

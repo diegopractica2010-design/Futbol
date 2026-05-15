@@ -13,6 +13,9 @@
     if (!gameState) {
       throw new Error("GameState required");
     }
+    if (!FMG.Core.Engine.GameState || typeof gameState.snapshot !== "function") {
+      throw new Error("GameState snapshot support required");
+    }
 
     this.data = gameState.snapshot();
     this.timestamp = FMG.Core.Utils.Determinism.timestampForGeneration(this.data.generation, 60);
@@ -27,6 +30,9 @@
    * Restore GameState from snapshot
    */
   StateSnapshot.prototype.restore = function () {
+    if (!FMG.Core.Engine.GameState || typeof FMG.Core.Engine.GameState.fromSnapshot !== "function") {
+      throw new Error("GameState.fromSnapshot required to restore snapshot");
+    }
     return FMG.Core.Engine.GameState.fromSnapshot(this.data);
   };
 
@@ -59,6 +65,12 @@
    * Deserialize from storage
    */
   StateSnapshot.fromJSON = function (json) {
+    if (!json || !json.data) {
+      throw new Error("Snapshot JSON data required");
+    }
+    if (!FMG.Core.Engine.GameState || typeof FMG.Core.Engine.GameState.fromSnapshot !== "function") {
+      throw new Error("GameState.fromSnapshot required to deserialize snapshot");
+    }
     const snapshot = new StateSnapshot(FMG.Core.Engine.GameState.fromSnapshot(json.data));
     snapshot.id = json.id;
     snapshot.timestamp = json.timestamp;
@@ -204,6 +216,13 @@
    * Validates that replay produces identical states
    */
   function ReplayEngine(snapshotStore) {
+    if (!snapshotStore || typeof snapshotStore.load !== "function") {
+      throw new Error("SnapshotStore required for ReplayEngine");
+    }
+    if (!FMG.Core.Engine.Reducers || typeof FMG.Core.Engine.Reducers.applyAction !== "function") {
+      throw new Error("Reducers.applyAction required for ReplayEngine");
+    }
+
     this.snapshotStore = snapshotStore;
     this.validations = [];
   }
@@ -212,6 +231,13 @@
    * Replay from snapshot through action sequence
    */
   ReplayEngine.prototype.replay = function (snapshotId, actions) {
+    if (!Array.isArray(actions)) {
+      throw new Error("Replay actions must be array");
+    }
+    if (!FMG.Core.Engine.Reducers || typeof FMG.Core.Engine.Reducers.applyAction !== "function") {
+      throw new Error("Reducers.applyAction required for replay");
+    }
+
     const startState = this.snapshotStore.load(snapshotId);
     let state = startState;
     const Reducers = FMG.Core.Engine.Reducers;

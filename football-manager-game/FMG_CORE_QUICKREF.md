@@ -13,8 +13,8 @@
 <script src="src/FMG.Core/Domain/Player/PlayerEntity.js"></script>
 <script src="src/FMG.Core/Domain/Market/MarketAggregate.js"></script>
 <script src="src/FMG.Core/Domain/Aggregates.js"></script>
-<script src="src/FMG.Core/Engine/StateBuilder.js"></script>
 <script src="src/FMG.Core/Engine/GameState.js"></script>
+<script src="src/FMG.Core/Engine/StateBuilder.js"></script>
 <script src="src/FMG.Core/Engine/Reducers.js"></script>
 <script src="src/FMG.Core/Engine/StateTransition.js"></script>
 <script src="src/FMG.Core/Engine/StateSnapshot.js"></script>

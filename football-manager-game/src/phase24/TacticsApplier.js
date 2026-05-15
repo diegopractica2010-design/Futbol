@@ -119,6 +119,9 @@
     player._instruction = plan && plan.instructions
       ? plan.instructions[instructionKey] || plan.instructions[player.id] || "none"
       : "none";
+    player._roleBehavior = window.FMG.getRoleBehavior
+      ? window.FMG.getRoleBehavior(player._tacticRole, player._instruction)
+      : {};
     player._tacticsInitialized = true;
   }
 

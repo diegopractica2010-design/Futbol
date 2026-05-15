@@ -31,6 +31,12 @@
       return;
     }
 
+    Object.keys(namespace).forEach(function (key) {
+      if (!Object.prototype.hasOwnProperty.call(Aggregate, key)) {
+        Aggregate[key] = namespace[key];
+      }
+    });
+
     if (!Object.prototype.hasOwnProperty.call(Aggregate, exportName)) {
       Object.defineProperty(Aggregate, exportName, {
         value: Aggregate,

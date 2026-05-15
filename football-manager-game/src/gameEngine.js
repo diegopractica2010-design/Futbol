@@ -305,6 +305,18 @@
     results.forEach((result) => {
       FMG.updateStandings(state.standings, result);
       FMG.applyMatchSquadStats(state, result);
+      
+      // Apply advanced player progression impacts
+      if (FMG.PlayerProgressionIntegration?.applyLeadershipBoosts) {
+        FMG.PlayerProgressionIntegration.applyLeadershipBoosts(state, result.homeTeamId);
+        FMG.PlayerProgressionIntegration.applyLeadershipBoosts(state, result.awayTeamId);
+      }
+
+      // Apply immersion impacts (rivalries, narratives)
+      if (FMG.ImmersionIntegration?.applyMatchImmersionImpact) {
+        FMG.ImmersionIntegration.applyMatchImmersionImpact(state, result);
+      }
+      
       registerMatchIncidents(state, currentFixture, result);
       const homeTeam = state.teams.find((team) => team.id === result.homeTeamId);
       const awayTeam = state.teams.find((team) => team.id === result.awayTeamId);
@@ -421,6 +433,12 @@
     FMG.initializeTeamPlans(revived);
     FMG.initializeRivalAI(revived);
     updateMarketWindow(revived);
+    if (FMG.PlayerProgressionIntegration?.initializeProgressionForGameState) {
+      FMG.PlayerProgressionIntegration.initializeProgressionForGameState(revived);
+    }
+    if (FMG.ImmersionIntegration?.initializeImmersionForGameState) {
+      FMG.ImmersionIntegration.initializeImmersionForGameState(revived);
+    }
     if (FMG.ensureSeparatedState) FMG.ensureSeparatedState(revived);
     return revived;
   }
@@ -504,6 +522,19 @@
     FMG.ensureUIState(FMG.gameState);
     FMG.ensureSettingsState(FMG.gameState);
     updateMarketWindow(FMG.gameState);
+    if (FMG.PlayerProgressionIntegration?.initializeProgressionForGameState) {
+      FMG.PlayerProgressionIntegration.initializeProgressionForGameState(FMG.gameState);
+    }
+    if (FMG.ImmersionIntegration?.initializeImmersionForGameState) {
+      FMG.ImmersionIntegration.initializeImmersionForGameState(FMG.gameState);
+    }
+    if (FMG.simulationScheduler && FMG.PlayerProgressionIntegration?.registerPlayerProgressionJobs) {
+      FMG.PlayerProgressionIntegration.registerPlayerProgressionJobs(FMG.simulationScheduler);
+      FMG.PlayerProgressionIntegration.registerMoraleRecoveryJob(FMG.simulationScheduler);
+    }
+    if (FMG.simulationScheduler && FMG.ImmersionIntegration?.registerImmersionJobs) {
+      FMG.ImmersionIntegration.registerImmersionJobs(FMG.simulationScheduler);
+    }
     if (FMG.ensureSeparatedState) FMG.ensureSeparatedState(FMG.gameState);
   };
 

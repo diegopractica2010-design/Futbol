@@ -44,6 +44,12 @@
         return updateStandings(gameState, action.payload);
       case "APPLY_WEEKLY_EFFECTS":
         return applyWeeklyEffects(gameState, action.payload);
+      case "UPDATE_TACTICS":
+        return updateTactics(gameState, action.payload);
+      case "SET_POSITION_ROLE":
+        return setPositionRole(gameState, action.payload);
+      case "SET_PLAYER_INSTRUCTION":
+        return setPlayerInstruction(gameState, action.payload);
       case "BATCH_UPDATE":
         return batchUpdate(gameState, action.payload);
       default:
@@ -165,6 +171,103 @@
     });
   }
 
+  function updateClubTactics(club, tactics) {
+    if (typeof club.withTactics === "function") {
+      return club.withTactics(tactics);
+    }
+    return Object.freeze({
+      ...club,
+      tactics: Object.freeze({
+        ...(club.tactics || {}),
+        ...tactics
+      })
+    });
+  }
+
+  function roleIsCompatible(position, role) {
+    if (FMG.getCompatibleRoles) {
+      return FMG.getCompatibleRoles(position).includes(role);
+    }
+    return Boolean(role);
+  }
+
+  function updateTactics(gameState, payload) {
+    if (!payload || !payload.teamId || !payload.tactics) {
+      throw new Error("teamId and tactics required");
+    }
+
+    const newClubs = gameState.clubs.map((club) => {
+      if ((club.teamId || club.id) !== payload.teamId) return club;
+      return updateClubTactics(club, payload.tactics);
+    });
+
+    return gameState.with({
+      clubs: newClubs,
+      metadata: {
+        ...gameState.metadata,
+        lastTacticsUpdate: FMG.Core.Utils.Determinism.timestampForGeneration(gameState.generation + 1, 8)
+      }
+    });
+  }
+
+  function setPositionRole(gameState, payload) {
+    if (!payload || !payload.teamId || !payload.position || !payload.role) {
+      throw new Error("teamId, position, and role required");
+    }
+    if (!roleIsCompatible(payload.position, payload.role)) {
+      throw new Error("Role incompatible with position");
+    }
+
+    const newClubs = gameState.clubs.map((club) => {
+      if ((club.teamId || club.id) !== payload.teamId) return club;
+      const tactics = club.tactics || {};
+      return updateClubTactics(club, {
+        ...tactics,
+        playerRoles: Object.freeze({
+          ...(tactics.playerRoles || {}),
+          [payload.position]: payload.role
+        })
+      });
+    });
+
+    return gameState.with({
+      clubs: newClubs,
+      metadata: {
+        ...gameState.metadata,
+        lastTacticsUpdate: FMG.Core.Utils.Determinism.timestampForGeneration(gameState.generation + 1, 9)
+      }
+    });
+  }
+
+  function setPlayerInstruction(gameState, payload) {
+    if (!payload || !payload.teamId || !payload.playerId || !payload.instruction) {
+      throw new Error("teamId, playerId, and instruction required");
+    }
+    if (FMG.INDIVIDUAL_INSTRUCTIONS && !FMG.INDIVIDUAL_INSTRUCTIONS[payload.instruction]) {
+      throw new Error("Instruction not available");
+    }
+
+    const newClubs = gameState.clubs.map((club) => {
+      if ((club.teamId || club.id) !== payload.teamId) return club;
+      const tactics = club.tactics || {};
+      return updateClubTactics(club, {
+        ...tactics,
+        instructions: Object.freeze({
+          ...(tactics.instructions || {}),
+          [payload.playerId]: payload.instruction
+        })
+      });
+    });
+
+    return gameState.with({
+      clubs: newClubs,
+      metadata: {
+        ...gameState.metadata,
+        lastTacticsUpdate: FMG.Core.Utils.Determinism.timestampForGeneration(gameState.generation + 1, 10)
+      }
+    });
+  }
+
   /**
    * BATCH_UPDATE: Apply multiple updates in single transaction
    * Ensures atomicity
@@ -207,6 +310,9 @@
   FMG.Core.Engine.Reducers.addMatchResult = addMatchResult;
   FMG.Core.Engine.Reducers.updateStandings = updateStandings;
   FMG.Core.Engine.Reducers.applyWeeklyEffects = applyWeeklyEffects;
+  FMG.Core.Engine.Reducers.updateTactics = updateTactics;
+  FMG.Core.Engine.Reducers.setPositionRole = setPositionRole;
+  FMG.Core.Engine.Reducers.setPlayerInstruction = setPlayerInstruction;
   FMG.Core.Engine.Reducers.batchUpdate = batchUpdate;
   FMG.Core.Engine.Reducers.compose = compose;
 })();

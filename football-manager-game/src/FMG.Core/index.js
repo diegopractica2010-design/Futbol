@@ -24,6 +24,8 @@
     if (!FMG.Core.Engine || !FMG.Core.Engine.Reducers) missing.push("FMG.Core.Engine.Reducers");
     if (!FMG.Core.Engine || !FMG.Core.Engine.StateTransaction) missing.push("FMG.Core.Engine.StateTransaction");
     if (!FMG.Core.Engine || !FMG.Core.Engine.StateSnapshot) missing.push("FMG.Core.Engine.StateSnapshot");
+    if (!FMG.Core.Engine || !FMG.Core.Engine.SnapshotStore) missing.push("FMG.Core.Engine.SnapshotStore");
+    if (!FMG.Core.Engine || !FMG.Core.Engine.ReplayEngine) missing.push("FMG.Core.Engine.ReplayEngine");
     
     // Domain aggregates (extracted into subdirectories)
     if (!FMG.Core.Domain || !FMG.Core.Domain.Club || !FMG.Core.Domain.Club.ClubAggregate) {

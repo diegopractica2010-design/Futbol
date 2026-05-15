@@ -8,7 +8,7 @@
   /**
    * Seedable PRNG (Mulberry32)
    * Deterministic: same seed always produces same sequence
-   * Isolated: does not affect global Math.random()
+   * Isolated: does not affect global browser randomness
    */
   function RNG(seed) {
     this._seed = seed === undefined || seed === null ? 0x1f2e3d4c : seed;

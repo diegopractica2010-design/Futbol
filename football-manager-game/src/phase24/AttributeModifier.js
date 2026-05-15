@@ -110,6 +110,12 @@
     if (roleName === "attacking") base = 1.3;
     else if (roleName === "defensive") base = 0.7;
     else if (roleName === "support") base = 1.0;
+    if (player._roleBehavior && Number.isFinite(player._roleBehavior.press)) {
+      base *= 1 + player._roleBehavior.press * 0.18;
+    }
+    if (player._roleBehavior && Number.isFinite(player._roleBehavior.screen)) {
+      base *= 0.92;
+    }
 
     // Según instrucción individual
     if (player._instruction === "pressMore") base *= 1.4;
@@ -128,6 +134,8 @@
     var base = 1.0;
     if (player._tacticRole === "defensive") base *= 1.16;
     else if (player._tacticRole === "attacking") base *= 0.88;
+    if (player._roleBehavior && Number.isFinite(player._roleBehavior.mark)) base *= 1 + player._roleBehavior.mark * 0.10;
+    if (player._roleBehavior && Number.isFinite(player._roleBehavior.screen)) base *= 1.08;
     if (player._instruction === "stayBack") base *= 1.12;
     var defense = player.attributes ? player.attributes.defense || 70 : 70;
     base *= 0.9 + defense / 700;
@@ -139,6 +147,8 @@
     var base = 1.0;
     if (player._tacticRole === "attacking") base *= 1.14;
     else if (player._tacticRole === "defensive") base *= 0.82;
+    if (player._roleBehavior && Number.isFinite(player._roleBehavior.shoot)) base *= 1 + player._roleBehavior.shoot * 0.10;
+    if (player._roleBehavior && Number.isFinite(player._roleBehavior.create)) base *= 1 + player._roleBehavior.create * 0.05;
     if (player._instruction === "takeRisks") base *= 1.12;
     if (player._instruction === "stayBack") base *= 0.78;
     var shooting = player.attributes ? player.attributes.shooting || 70 : 70;
@@ -155,6 +165,8 @@
     // Mentalidad ofensiva aumenta presión
     if (player._tacticRole === "attacking") modified *= 1.15;
     else if (player._tacticRole === "defensive") modified *= 0.85;
+    if (player._roleBehavior && Number.isFinite(player._roleBehavior.press)) modified *= 1 + player._roleBehavior.press * 0.15;
+    if (player._roleBehavior && Number.isFinite(player._roleBehavior.recover)) modified *= 1 + player._roleBehavior.recover * 0.08;
 
     // Instrucción "presionar más" aumenta radio
     if (player._instruction === "pressMore") modified *= 1.25;
@@ -174,6 +186,8 @@
 
     // Mental ofensivo toma más riesgo
     if (player._tacticRole === "attacking") base *= 1.2;
+    if (player._roleBehavior && Number.isFinite(player._roleBehavior.directness)) base *= 1 + player._roleBehavior.directness * 0.16;
+    if (player._roleBehavior && Number.isFinite(player._roleBehavior.roam)) base *= 1 + player._roleBehavior.roam * 0.10;
 
     // Instrucción de riesgo
     if (player._instruction === "takeRisks") base *= 1.4;

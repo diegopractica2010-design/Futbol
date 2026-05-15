@@ -10,14 +10,7 @@
    * GameState itself is defined only in Engine/GameState.js.
    */
   function StateBuilder() {
-    this._config = {
-      version: 1,
-      timestamp: FMG.Core.Utils.Determinism.timestampForGeneration(0),
-      season: null,
-      clubs: [],
-      manager: null,
-      metadata: {}
-    };
+    this._config = {};
   }
 
   StateBuilder.prototype.withVersion = function (version) {
@@ -46,7 +39,7 @@
   };
 
   StateBuilder.prototype.withMetadata = function (metadata) {
-    this._config.metadata = { ...this._config.metadata, ...metadata };
+    this._config.metadata = { ...(this._config.metadata || {}), ...metadata };
     return this;
   };
 

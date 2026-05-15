@@ -21,6 +21,10 @@
     this.matchSimulator = config.matchSimulator || (FMG.Core.Services && new FMG.Core.Services.MatchSimulator());
     this.stateValidator = config.stateValidator || new FMG.Core.Engine.StateValidator();
 
+    if (!FMG.Core.Engine.SnapshotStore || !FMG.Core.Engine.ReplayEngine) {
+      throw new Error("SnapshotStore and ReplayEngine must be loaded before SimulationEngine");
+    }
+
     // Immutable state management
     this.pipeline = null;
     this.snapshotStore = new FMG.Core.Engine.SnapshotStore();

@@ -147,14 +147,120 @@
     `;
   }
 
+  function statValue(value, fallback = 0) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+  }
+
+  function renderHudMeter(label, homeValue, awayValue, options = {}) {
+    const total = Math.max(1, statValue(homeValue) + statValue(awayValue));
+    const homePct = options.fixedPct !== undefined
+      ? FMG.clamp(statValue(options.fixedPct, 50), 0, 100)
+      : FMG.clamp(Math.round((statValue(homeValue) / total) * 100), 0, 100);
+    const awayPct = 100 - homePct;
+    const homeText = options.format ? options.format(homeValue) : homeValue;
+    const awayText = options.format ? options.format(awayValue) : awayValue;
+    return `
+      <div class="live-hud-meter" style="--home-pct:${homePct}%;--away-pct:${awayPct}%;">
+        <div class="live-hud-meter__labels">
+          <strong>${FMG.escapeHtml(String(homeText))}</strong>
+          <span>${FMG.escapeHtml(label)}</span>
+          <strong>${FMG.escapeHtml(String(awayText))}</strong>
+        </div>
+        <div class="live-hud-meter__track" aria-label="${FMG.escapeHtml(label)} ${FMG.escapeHtml(String(homeText))} contra ${FMG.escapeHtml(String(awayText))}">
+          <span class="live-hud-meter__home"></span>
+          <span class="live-hud-meter__away"></span>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderTimelineDots(events, homeTeamId, awayTeamId) {
+    return events.map((event) => {
+      const left = FMG.clamp((statValue(event.minute) / 90) * 100, 0, 100);
+      const side = event.teamId === homeTeamId ? "home" : event.teamId === awayTeamId ? "away" : "neutral";
+      return `<span class="live-timeline-dot live-timeline-dot--${side} event-${FMG.escapeHtml(event.type)}" style="left:${left}%;" title="${event.minute}' ${FMG.escapeHtml(EVENT_LABELS[event.type] || event.type)}"></span>`;
+    }).join("");
+  }
+
+  function renderLiveTacticalHud(state, liveMatch, homeTeam, awayTeam, userGoalFlash) {
+    const result = liveMatch.result || {};
+    const stats = result.stats || { home: {}, away: {} };
+    const timeline = (result.timeline || [])
+      .map((event, index) => ({ ...event, _index: index }))
+      .filter((event) => statValue(event.minute) <= statValue(liveMatch.minute))
+      .sort((left, right) => statValue(left.minute) - statValue(right.minute) || left._index - right._index);
+    const feedEvents = timeline.slice(-8).reverse();
+    const keyEvents = timeline.filter((event) => ["goal", "shot-on-target", "yellow-card", "red-card", "injury", "tactical"].includes(event.type));
+    const homePossession = statValue(stats.home.possession, 50);
+    const awayPossession = statValue(stats.away.possession, 100 - homePossession);
+    const homeXg = statValue(stats.home.xg);
+    const awayXg = statValue(stats.away.xg);
+    const homeMomentum = FMG.clamp(statValue(liveMatch.momentum, 50), 0, 100);
+    const awayMomentum = 100 - homeMomentum;
+    const minutePct = FMG.clamp((statValue(liveMatch.minute) / 90) * 100, 0, 100);
+
+    return `
+      <div class="live-tactical-hud" data-playback-minute="${statValue(liveMatch.minute)}">
+        <div class="live-hud-scoreboard">
+          <div class="live-hud-team live-hud-team--home">
+            ${FMG.clubBadge(homeTeam, "md")}
+            <div><strong>${FMG.escapeHtml(homeTeam.name)}</strong><span>${liveMatch.homeLineupIds.length} en cancha</span></div>
+          </div>
+          <div class="live-hud-score">
+            <span class="live-hud-clock">${liveMatch.completed ? "FT" : `${liveMatch.minute}'`}</span>
+            <strong class="${userGoalFlash ? "score--gol" : ""}" role="status" aria-live="polite" aria-label="Marcador: ${result.homeGoals} a ${result.awayGoals}">${result.homeGoals} - ${result.awayGoals}</strong>
+          </div>
+          <div class="live-hud-team live-hud-team--away">
+            ${FMG.clubBadge(awayTeam, "md")}
+            <div><strong>${FMG.escapeHtml(awayTeam.name)}</strong><span>${liveMatch.awayLineupIds.length} en cancha</span></div>
+          </div>
+        </div>
+        <div class="live-hud-timeline" style="--minute-pct:${minutePct}%;">
+          <div class="live-hud-timeline__rail">
+            <span class="live-hud-timeline__elapsed"></span>
+            ${renderTimelineDots(keyEvents, liveMatch.homeTeamId, liveMatch.awayTeamId)}
+          </div>
+          <div class="live-hud-timeline__ticks"><span>0'</span><span>45'</span><span>90'</span></div>
+        </div>
+        <div class="live-hud-grid">
+          <div class="live-hud-panel">
+            <span class="live-hud-label">Control</span>
+            ${renderHudMeter("Posesion", `${homePossession}%`, `${awayPossession}%`, { fixedPct: homePossession })}
+            ${renderHudMeter("Momentum", homeMomentum, awayMomentum, { fixedPct: homeMomentum, format: (value) => `${Math.round(statValue(value))}%` })}
+            ${renderHudMeter("xG", homeXg, awayXg, { format: (value) => statValue(value).toFixed(2) })}
+          </div>
+          <div class="live-hud-panel live-hud-kpis">
+            <div><span>Remates</span><strong>${statValue(stats.home.shots)}-${statValue(stats.away.shots)}</strong></div>
+            <div><span>Al arco</span><strong>${statValue(stats.home.shotsOnTarget)}-${statValue(stats.away.shotsOnTarget)}</strong></div>
+            <div><span>Faltas</span><strong>${statValue(stats.home.fouls)}-${statValue(stats.away.fouls)}</strong></div>
+            <div><span>Tarjetas</span><strong>${statValue(stats.home.yellowCards) + statValue(stats.home.redCards)}-${statValue(stats.away.yellowCards) + statValue(stats.away.redCards)}</strong></div>
+          </div>
+          <div class="live-hud-panel live-hud-feed">
+            <div class="live-hud-feed__head"><span class="live-hud-label">Eventos</span><strong>${timeline.length}</strong></div>
+            <div class="live-hud-feed__list">
+              ${feedEvents.map((event) => `
+                <div class="live-hud-event event-${FMG.escapeHtml(event.type)} ${event.type === "goal" && event.teamId === state.userTeamId ? "event-goal--user" : ""}">
+                  <strong>${event.minute}' ${FMG.escapeHtml(EVENT_LABELS[event.type] || event.type)}</strong>
+                  <span>${FMG.escapeHtml(event.text || event.playerName || "")}</span>
+                </div>
+              `).join("") || `<div class="live-hud-event live-hud-event--empty"><strong>0'</strong><span>Esperando el primer evento.</span></div>`}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function renderLiveMatch(state) {
     const liveMatch = state.liveMatch;
     const homeTeam = state.teams.find((team) => team.id === liveMatch.homeTeamId);
     const awayTeam = state.teams.find((team) => team.id === liveMatch.awayTeamId);
     const result = liveMatch.result;
-    const stats = result.stats;
-    const momentumHome = liveMatch.momentum;
-    const lastGoal = [...(result.timeline || [])].reverse().find((event) => event.type === "goal");
+    const visibleTimeline = (result.timeline || [])
+      .map((event, index) => ({ ...event, _index: index }))
+      .filter((event) => statValue(event.minute) <= statValue(liveMatch.minute))
+      .sort((left, right) => statValue(left.minute) - statValue(right.minute) || left._index - right._index);
+    const lastGoal = [...visibleTimeline].reverse().find((event) => event.type === "goal");
     const userGoalFlash = lastGoal && lastGoal.teamId === state.userTeamId && liveMatch.minute - lastGoal.minute <= 2;
 
     return `
@@ -163,34 +269,15 @@
           <h2>Partido en vivo</h2>
           <span class="chip">${liveMatch.completed ? "Final" : `${liveMatch.minute}'`}</span>
         </div>
+        ${renderLiveTacticalHud(state, liveMatch, homeTeam, awayTeam, userGoalFlash)}
         <div id="match-visualizer-container"></div>
-        <div class="live-scoreboard">
-          <div>${FMG.clubBadge(homeTeam, "md")}<strong>${FMG.escapeHtml(homeTeam.name)}</strong><p class="muted">${liveMatch.homeLineupIds.length} en cancha</p></div>
-          <div class="score ${userGoalFlash ? "score--gol" : ""}" role="status" aria-live="polite" aria-label="Marcador: ${result.homeGoals} a ${result.awayGoals}">${result.homeGoals} - ${result.awayGoals}</div>
-          <div>${FMG.clubBadge(awayTeam, "md")}<strong>${FMG.escapeHtml(awayTeam.name)}</strong><p class="muted">${liveMatch.awayLineupIds.length} en cancha</p></div>
-        </div>
-        <div class="momentum-wrap">
-          <span>${FMG.escapeHtml(homeTeam.name.slice(0, 3).toUpperCase())}</span>
-          <div class="momentum-bar" style="--home-pct:${momentumHome}%">
-            <div class="momentum-bar__home"></div><div class="momentum-bar__away"></div>
-          </div>
-          <span>${FMG.escapeHtml(awayTeam.name.slice(0, 3).toUpperCase())}</span>
-        </div>
-        <div class="match-stats">
-          ${renderStatLine("Posesión", `${stats.home.possession}%`, `${stats.away.possession}%`)}
-          ${renderStatLine("Remates", stats.home.shots, stats.away.shots)}
-          ${renderStatLine("Al arco", stats.home.shotsOnTarget, stats.away.shotsOnTarget)}
-          ${renderStatLine("xG", stats.home.xg.toFixed(2), stats.away.xg.toFixed(2))}
-          ${renderStatLine("Faltas", stats.home.fouls, stats.away.fouls)}
-          ${renderStatLine("Tarjetas", `${stats.home.yellowCards}/${stats.home.redCards}`, `${stats.away.yellowCards}/${stats.away.redCards}`)}
-        </div>
         ${renderLiveControls(liveMatch)}
       </section>
       <section class="content-grid">
         <section class="card">
-          <div class="section-title"><h2>Relato en vivo</h2><span class="chip">${result.timeline.length} eventos</span></div>
+          <div class="section-title"><h2>Relato en vivo</h2><span class="chip">${visibleTimeline.length} eventos</span></div>
           <div class="log-list">
-            ${result.timeline.slice(-16).reverse().map((event) => `
+            ${visibleTimeline.slice(-16).reverse().map((event) => `
               <div class="log-item event-${FMG.escapeHtml(event.type)} ${event.type === "goal" && event.teamId === state.userTeamId ? "event-goal--user" : ""}">
                 <strong>${event.minute}' | ${FMG.escapeHtml(EVENT_LABELS[event.type] || event.type)}</strong>
                 <p class="muted">${FMG.escapeHtml(event.text)}</p>

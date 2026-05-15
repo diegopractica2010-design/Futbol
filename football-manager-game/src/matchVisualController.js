@@ -8,6 +8,7 @@
   class MatchVisualController {
     constructor() {
       this.visualizer = null;
+      this.playback = null;
       this.matchState = null;
       this.eventQueue = [];
       this.isProcessingEvents = false;
@@ -22,7 +23,16 @@
 
       this.visualizer = new FMG.MatchVisualizer(container);
       this.visualizer.init();
-      this._seenTimelineLength = matchData.result ? matchData.result.timeline.length : 0;
+      this._seenTimelineLength = matchData.result && Array.isArray(matchData.result.timeline)
+        ? matchData.result.timeline.length
+        : 0;
+      this.playback = FMG.MatchPlaybackEngine ? new FMG.MatchPlaybackEngine({ speed: matchData.speed || 1 }) : null;
+      if (this.playback) {
+        this.playback.load(matchData, {
+          minute: matchData.minute || 0,
+          playing: !matchData.paused && !matchData.completed
+        });
+      }
 
       // Configurar equipos
       const homeTeam = state.teams.find((t) => t.id === matchData.homeTeamId);
@@ -153,19 +163,55 @@
 
     syncLiveMatch(liveMatch) {
       if (!this.visualizer || !liveMatch || !liveMatch.result) return;
+      if (!this.playback && FMG.MatchPlaybackEngine) {
+        this.playback = new FMG.MatchPlaybackEngine({ speed: liveMatch.speed || 1 });
+        this.playback.load(liveMatch, { minute: liveMatch.minute || 0 });
+      }
+
+      let snapshot = null;
+      if (this.playback) {
+        this.playback.setSpeed(liveMatch.speed || this.playback.speed);
+        if (liveMatch.paused || liveMatch.completed) this.playback.pause();
+        else this.playback.play();
+        snapshot = this.playback.sync(liveMatch);
+      }
+
       const stats = liveMatch.result.stats || {};
-      const possession = stats.home ? stats.home.possession : 50;
+      const possession = snapshot ? snapshot.possession : stats.home ? stats.home.possession : 50;
       this.visualizer.updateMatchState(
-        liveMatch.minute,
-        liveMatch.result.homeGoals,
-        liveMatch.result.awayGoals,
+        snapshot ? snapshot.minute : liveMatch.minute,
+        snapshot ? snapshot.homeGoals : liveMatch.result.homeGoals,
+        snapshot ? snapshot.awayGoals : liveMatch.result.awayGoals,
         possession
       );
 
-      const timeline = liveMatch.result.timeline || [];
-      const fresh = timeline.slice(this._seenTimelineLength);
-      this._seenTimelineLength = timeline.length;
+      const fresh = this.playback
+        ? this.playback.drainEvents()
+        : (liveMatch.result.timeline || []).slice(this._seenTimelineLength);
+      this._seenTimelineLength = liveMatch.result.timeline ? liveMatch.result.timeline.length : this._seenTimelineLength;
       fresh.forEach((event) => this.queueTimelineEvent(event, liveMatch));
+    }
+
+    play() {
+      return this.playback ? this.playback.play() : null;
+    }
+
+    pause() {
+      return this.playback ? this.playback.pause() : null;
+    }
+
+    setPlaybackSpeed(speed) {
+      return this.playback ? this.playback.setSpeed(speed) : null;
+    }
+
+    tickPlayback(deltaMs) {
+      if (!this.playback) return null;
+      const snapshot = this.playback.tick(deltaMs);
+      if (this.visualizer && typeof this.visualizer.updateAnimations === "function") {
+        this.visualizer.updateAnimations(deltaMs);
+      }
+      this.playback.drainEvents().forEach((event) => this.queueTimelineEvent(event, this.matchState));
+      return snapshot;
     }
 
     queueTimelineEvent(event, liveMatch) {
@@ -303,6 +349,7 @@
       }
       this.eventQueue = [];
       this.matchState = null;
+      this.playback = null;
       this._seenTimelineLength = 0;
     }
   }
