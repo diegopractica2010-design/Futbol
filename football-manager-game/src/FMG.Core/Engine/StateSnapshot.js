@@ -15,13 +15,12 @@
     }
 
     this.data = gameState.snapshot();
-    this.timestamp = new Date().toISOString();
+    this.timestamp = FMG.Core.Utils.Determinism.timestampForGeneration(this.data.generation, 60);
     this.id = this._generateSnapshotId();
   }
 
   StateSnapshot.prototype._generateSnapshotId = function () {
-    const hash = Math.random().toString(36).slice(2, 8);
-    return "snap_" + Date.now().toString(36) + "_" + hash;
+    return FMG.Core.Utils.Determinism.id("snap", [this.data.stateId, this.data.generation, this.data.checksum]);
   };
 
   /**
@@ -176,7 +175,7 @@
     return {
       snapshots: Object.keys(this.snapshots).map((id) => this.snapshots[id].toJSON()),
       index: this.index.slice(),
-      exportedAt: new Date().toISOString()
+      exportedAt: FMG.Core.Utils.Determinism.nextTimestamp()
     };
   };
 
@@ -242,7 +241,7 @@
       expectedChecksum: expectedChecksum,
       actualChecksum: finalChecksum,
       isDeterministic: isValid,
-      timestamp: new Date().toISOString()
+      timestamp: FMG.Core.Utils.Determinism.timestampForGeneration(result.finalState.generation, 70)
     };
 
     this.validations.push(validation);

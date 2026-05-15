@@ -86,7 +86,7 @@
       self.eventBus.emit("STATE_TRANSITION_ERROR", {
         error: context.error.message,
         action: context.action.type,
-        timestamp: new Date().toISOString()
+        timestamp: FMG.Core.Utils.Determinism.timestampForGeneration(context.currentState.generation, 80)
       });
     });
   };
@@ -122,8 +122,8 @@
       this.pipeline.gameState = gameState;
     }
 
-    const commandId = Math.random().toString(36).slice(2, 8);
-    const startTime = Date.now();
+    const commandId = FMG.Core.Utils.Determinism.id("cmd", [gameState.stateId, gameState.generation, command && command.weekSeed]);
+    const startTick = FMG.Core.Utils.Determinism.nextTick();
 
     try {
       // 1. VALIDATE current state
@@ -231,7 +231,7 @@
         gameState: state,
         events: this.eventBus.history(),
         matchResults: matchResults,
-        executionMs: Date.now() - startTime,
+        executionMs: FMG.Core.Utils.Determinism.nextTick() - startTick,
         commandId: commandId,
         transitionLog: this.pipeline.getTransitionLog(),
         auditTrail: this._executionLog.slice()
@@ -243,7 +243,7 @@
       this.eventBus.emit("SIMULATION_ERROR", {
         commandId: commandId,
         error: err.message,
-        timestamp: new Date().toISOString()
+        timestamp: FMG.Core.Utils.Determinism.timestampForGeneration(gameState.generation, 90)
       });
       throw err;
     }

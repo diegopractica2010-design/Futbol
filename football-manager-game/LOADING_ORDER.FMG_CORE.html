@@ -20,20 +20,26 @@
 <script src="src/FMG.Core/Domain/Market/MarketAggregate.js"></script>
 <script src="src/FMG.Core/Domain/Aggregates.js"></script>
 
-<!-- 4. ENGINE (Core simulation) -->
+<!-- 4. ENGINE STATE + TRANSITIONS -->
 <script src="src/FMG.Core/Engine/StateBuilder.js"></script>
-<script src="src/FMG.Core/Engine/SimulationEngine.js"></script>
+<script src="src/FMG.Core/Engine/GameState.js"></script>
+<script src="src/FMG.Core/Engine/Reducers.js"></script>
+<script src="src/FMG.Core/Engine/StateTransition.js"></script>
+<script src="src/FMG.Core/Engine/StateSnapshot.js"></script>
 
 <!-- 5. SERVICES (Match simulation) -->
 <script src="src/FMG.Core/Services/MatchSimulator.js"></script>
 
-<!-- 6. PERSISTENCE (Repository layer) -->
+<!-- 6. ENGINE ORCHESTRATION -->
+<script src="src/FMG.Core/Engine/SimulationEngine.js"></script>
+
+<!-- 7. PERSISTENCE (Repository layer) -->
 <script src="src/FMG.Core/Repository/GameStateRepository.js"></script>
 <script src="src/FMG.Core/Repository/SeasonRepository.js"></script>
 <script src="src/FMG.Core/Repository/ClubRepository.js"></script>
 
-<!-- 7. ADAPTERS (Legacy compatibility) -->
+<!-- 8. ADAPTERS (Legacy compatibility) -->
 <script src="src/FMG.Core/Adapters/LegacyGameStateAdapter.js"></script>
 
-<!-- 8. INITIALIZATION -->
+<!-- 9. INITIALIZATION -->
 <script src="src/FMG.Core/index.js"></script>

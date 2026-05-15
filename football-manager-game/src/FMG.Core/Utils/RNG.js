@@ -11,7 +11,7 @@
    * Isolated: does not affect global Math.random()
    */
   function RNG(seed) {
-    this._seed = seed || Math.floor(Math.random() * 0xffffffff);
+    this._seed = seed === undefined || seed === null ? 0x1f2e3d4c : seed;
     this._state = this._seed;
   }
 
@@ -58,6 +58,49 @@
 
   FMG.Core.Utils.RNG = RNG;
 
+  FMG.Core.Utils.Determinism = FMG.Core.Utils.Determinism || {
+    _tick: 0,
+
+    nextTick: function () {
+      this._tick += 1;
+      return this._tick;
+    },
+
+    timestampForTick: function (tick) {
+      const totalSeconds = Math.max(0, Math.floor(tick || 0));
+      const day = 1 + Math.floor(totalSeconds / 86400) % 28;
+      const hour = Math.floor(totalSeconds / 3600) % 24;
+      const minute = Math.floor(totalSeconds / 60) % 60;
+      const second = totalSeconds % 60;
+      return "2000-01-" + pad(day, 2) + "T" + pad(hour, 2) + ":" + pad(minute, 2) + ":" + pad(second, 2) + ".000Z";
+    },
+
+    nextTimestamp: function () {
+      return this.timestampForTick(this.nextTick());
+    },
+
+    timestampForGeneration: function (generation, offset) {
+      return this.timestampForTick((generation || 0) * 100 + (offset || 0));
+    },
+
+    id: function (prefix, parts) {
+      const value = stableStringify(parts || []);
+      return prefix + "_" + FMG.Core.Utils.hashSeed(value).toString(36);
+    },
+
+    nextId: function (prefix) {
+      return this.id(prefix, [this.nextTick()]);
+    },
+
+    seed: function (parts) {
+      return FMG.Core.Utils.hashSeed(stableStringify(parts || []));
+    },
+
+    reset: function () {
+      this._tick = 0;
+    }
+  };
+
   /**
    * Global RNG factory for simulation context
    */
@@ -88,4 +131,17 @@
     }
     return Math.abs(hash);
   };
+
+  function pad(value, length) {
+    return String(value).padStart(length, "0");
+  }
+
+  function stableStringify(value) {
+    if (value === null || value === undefined) return String(value);
+    if (typeof value !== "object") return String(value);
+    if (Array.isArray(value)) {
+      return "[" + value.map(stableStringify).join(",") + "]";
+    }
+    return "{" + Object.keys(value).sort().map((key) => key + ":" + stableStringify(value[key])).join(",") + "}";
+  }
 })();

@@ -53,7 +53,7 @@
     this.actions.push({
       type: action.type,
       payload: action.payload,
-      timestamp: new Date().toISOString()
+      timestamp: FMG.Core.Utils.Determinism.timestampForGeneration(this.gameState.generation, this.actions.length + 10)
     });
 
     return this;
@@ -78,7 +78,7 @@
         generation: this.gameState.generation,
         actionCount: this.actions.length,
         actions: this.actions,
-        timestamp: new Date().toISOString()
+        timestamp: FMG.Core.Utils.Determinism.timestampForGeneration(this.gameState.generation, 50)
       }
     };
   };
@@ -188,7 +188,7 @@
       this.transitions.push({
         action: action.type,
         description: description,
-        timestamp: new Date().toISOString(),
+        timestamp: result.transaction.timestamp,
         transaction: result.transaction
       });
 

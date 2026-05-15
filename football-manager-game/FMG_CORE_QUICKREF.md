@@ -14,8 +14,12 @@
 <script src="src/FMG.Core/Domain/Market/MarketAggregate.js"></script>
 <script src="src/FMG.Core/Domain/Aggregates.js"></script>
 <script src="src/FMG.Core/Engine/StateBuilder.js"></script>
-<script src="src/FMG.Core/Engine/SimulationEngine.js"></script>
+<script src="src/FMG.Core/Engine/GameState.js"></script>
+<script src="src/FMG.Core/Engine/Reducers.js"></script>
+<script src="src/FMG.Core/Engine/StateTransition.js"></script>
+<script src="src/FMG.Core/Engine/StateSnapshot.js"></script>
 <script src="src/FMG.Core/Services/MatchSimulator.js"></script>
+<script src="src/FMG.Core/Engine/SimulationEngine.js"></script>
 <script src="src/FMG.Core/Repository/GameStateRepository.js"></script>
 <script src="src/FMG.Core/Repository/SeasonRepository.js"></script>
 <script src="src/FMG.Core/Repository/ClubRepository.js"></script>

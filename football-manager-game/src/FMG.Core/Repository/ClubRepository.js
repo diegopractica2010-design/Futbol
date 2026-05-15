@@ -38,7 +38,7 @@
           form: club.form,
           strength: club.strength
         },
-        timestamp: new Date().toISOString()
+        timestamp: FMG.Core.Utils.Determinism.timestampForTick(FMG.Core.Utils.Determinism.seed(["club", clubId]))
       };
 
       if (window.localStorage) {

@@ -66,7 +66,7 @@
       fixture,
       standings: FMG.gameState.standings || [],
       matchResults: [],
-      startSeed: FMG.gameState._startSeed || Math.floor(Math.random() * 0xffffffff)
+      startSeed: FMG.gameState._startSeed || FMG.Core.Utils.Determinism.seed(["legacy-season", FMG.gameState.seasonNumber || 1, fixture.length])
     });
 
     // Convert manager
@@ -88,7 +88,7 @@
     // Build CoreGameState
     return new GameState({
       version: FMG.CURRENT_VERSION || 1,
-      timestamp: new Date().toISOString(),
+      timestamp: FMG.Core.Utils.Determinism.timestampForGeneration(FMG.gameState.currentWeek || 1),
       season,
       clubs,
       manager,

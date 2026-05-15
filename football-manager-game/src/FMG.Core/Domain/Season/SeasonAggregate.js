@@ -29,7 +29,7 @@
       rankings: { scorers: [], shooters: [], cards: [], keepers: [] }
     });
 
-    this.startSeed = config.startSeed || Math.floor(Math.random() * 0xffffffff);
+    this.startSeed = config.startSeed || FMG.Core.Utils.Determinism.seed(["season", this.number, this.totalWeeks, this.fixture.length]);
 
     Object.freeze(this);
   }

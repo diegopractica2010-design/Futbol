@@ -29,7 +29,7 @@
       const data = {
         id,
         gameState: gameState.toJSON(),
-        timestamp: new Date().toISOString()
+        timestamp: FMG.Core.Utils.Determinism.timestampForGeneration(gameState.generation, 100)
       };
 
       if (this.useIndexedDB && window.indexedDB) {

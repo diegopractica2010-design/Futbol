@@ -36,7 +36,7 @@
           competitions: season.competitions,
           startSeed: season.startSeed
         },
-        timestamp: new Date().toISOString()
+        timestamp: FMG.Core.Utils.Determinism.timestampForGeneration(season.week, 110)
       };
 
       if (window.localStorage) {

@@ -82,7 +82,7 @@
               minute,
               type: "goal",
               team: isHomeAttack ? "home" : "away",
-              playerName: this._pickPlayer(attackSquad).name
+              playerName: this._pickPlayer(attackSquad, rng).name
             });
           }
         }
@@ -97,7 +97,7 @@
           minute,
           type: isRed ? "redCard" : "yellowCard",
           team: rng.next() < 0.5 ? "home" : "away",
-          playerName: this._pickPlayer(rng.next() < 0.5 ? homeSquad : awaySquad).name
+          playerName: this._pickPlayer(rng.next() < 0.5 ? homeSquad : awaySquad, rng).name
         });
       }
 
@@ -107,7 +107,7 @@
           minute,
           type: "injury",
           team: rng.next() < 0.5 ? "home" : "away",
-          playerName: this._pickPlayer(rng.next() < 0.5 ? homeSquad : awaySquad).name
+          playerName: this._pickPlayer(rng.next() < 0.5 ? homeSquad : awaySquad, rng).name
         });
       }
     }
@@ -125,7 +125,7 @@
       events,
       stats: { home: homeStats, away: awayStats },
       seed,
-      timestamp: new Date().toISOString(),
+      timestamp: FMG.Core.Utils.Determinism.timestampForTick(seed || 0),
       summary: this._createSummary(homeTeam, awayTeam, homeGoals, awayGoals)
     };
   };
@@ -166,9 +166,9 @@
     };
   };
 
-  MatchSimulator.prototype._pickPlayer = function (squad) {
+  MatchSimulator.prototype._pickPlayer = function (squad, rng) {
     if (!squad || squad.length === 0) return { name: "Unknown" };
-    return squad[Math.floor(Math.random() * squad.length)];
+    return (rng || new FMG.Core.Utils.RNG(0)).choice(squad);
   };
 
   MatchSimulator.prototype._createSummary = function (homeTeam, awayTeam, homeGoals, awayGoals) {

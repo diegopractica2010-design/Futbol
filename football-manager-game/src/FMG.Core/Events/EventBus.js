@@ -11,8 +11,8 @@
   function DomainEvent(type, payload) {
     this.type = type;
     this.payload = payload || {};
-    this.timestamp = new Date().toISOString();
-    this.id = Math.random().toString(36).slice(2, 10);
+    this.timestamp = this.payload.timestamp || FMG.Core.Utils.Determinism.nextTimestamp();
+    this.id = this.payload.id || FMG.Core.Utils.Determinism.id("event", [type, this.timestamp, this.payload]);
   }
 
   DomainEvent.prototype.freeze = function () {
@@ -117,7 +117,7 @@
     return {
       eventCount: this._history.length,
       events: this._history.slice(),
-      timestamp: new Date().toISOString()
+      timestamp: FMG.Core.Utils.Determinism.nextTimestamp()
     };
   };
 

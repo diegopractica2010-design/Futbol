@@ -20,42 +20,37 @@
    */
 
   /**
-   * Create convenience aliases for aggregates
-   * These point to the actual implementations loaded from subdirectories
+   * Create convenience aliases for aggregates.
+   * The aliases are plain values, not getters, so they cannot recurse when read.
    */
-  Object.defineProperty(FMG.Core.Domain, 'Club', {
-    get: function () {
-      return (FMG.Core.Domain.Club && FMG.Core.Domain.Club.ClubAggregate) || undefined;
-    }
-  });
+  function registerAggregate(namespaceName, exportName, aliasName) {
+    const namespace = FMG.Core.Domain[namespaceName];
+    const Aggregate = namespace && namespace[exportName];
 
-  Object.defineProperty(FMG.Core.Domain, 'Season', {
-    get: function () {
-      return (FMG.Core.Domain.Season && FMG.Core.Domain.Season.SeasonAggregate) || undefined;
+    if (typeof Aggregate !== "function") {
+      return;
     }
-  });
 
-  Object.defineProperty(FMG.Core.Domain, 'Manager', {
-    get: function () {
-      return (FMG.Core.Domain.Manager && FMG.Core.Domain.Manager.ManagerAggregate) || undefined;
+    if (!Object.prototype.hasOwnProperty.call(Aggregate, exportName)) {
+      Object.defineProperty(Aggregate, exportName, {
+        value: Aggregate,
+        enumerable: false,
+        configurable: true
+      });
     }
-  });
 
-  Object.defineProperty(FMG.Core.Domain, 'MatchRecord', {
-    get: function () {
-      return (FMG.Core.Domain.Match && FMG.Core.Domain.Match.MatchRecord) || undefined;
-    }
-  });
+    Object.defineProperty(FMG.Core.Domain, aliasName || namespaceName, {
+      value: Aggregate,
+      enumerable: true,
+      configurable: true,
+      writable: false
+    });
+  }
 
-  Object.defineProperty(FMG.Core.Domain, 'PlayerEntity', {
-    get: function () {
-      return (FMG.Core.Domain.Player && FMG.Core.Domain.Player.PlayerEntity) || undefined;
-    }
-  });
-
-  Object.defineProperty(FMG.Core.Domain, 'MarketAggregate', {
-    get: function () {
-      return (FMG.Core.Domain.Market && FMG.Core.Domain.Market.MarketAggregate) || undefined;
-    }
-  });
+  registerAggregate("Club", "ClubAggregate");
+  registerAggregate("Season", "SeasonAggregate");
+  registerAggregate("Manager", "ManagerAggregate");
+  registerAggregate("Match", "MatchRecord", "MatchRecord");
+  registerAggregate("Player", "PlayerEntity", "PlayerEntity");
+  registerAggregate("Market", "MarketAggregate", "MarketAggregate");
 })();

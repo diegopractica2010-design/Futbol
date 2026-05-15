@@ -63,7 +63,7 @@
     const newSeason = gameState.season.nextWeek();
     return gameState.with({
       season: newSeason,
-      timestamp: new Date().toISOString()
+      timestamp: FMG.Core.Utils.Determinism.timestampForGeneration(gameState.generation + 1, 1)
     });
   }
 
@@ -79,7 +79,7 @@
       clubs: payload.clubs,
       metadata: {
         ...gameState.metadata,
-        lastClubsUpdate: new Date().toISOString()
+        lastClubsUpdate: FMG.Core.Utils.Determinism.timestampForGeneration(gameState.generation + 1, 2)
       }
     });
   }
@@ -96,7 +96,7 @@
       season: payload.season,
       metadata: {
         ...gameState.metadata,
-        lastSeasonUpdate: new Date().toISOString()
+        lastSeasonUpdate: FMG.Core.Utils.Determinism.timestampForGeneration(gameState.generation + 1, 3)
       }
     });
   }
@@ -113,7 +113,7 @@
       manager: payload.manager,
       metadata: {
         ...gameState.metadata,
-        lastManagerUpdate: new Date().toISOString()
+        lastManagerUpdate: FMG.Core.Utils.Determinism.timestampForGeneration(gameState.generation + 1, 4)
       }
     });
   }

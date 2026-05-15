@@ -14,7 +14,12 @@
   function MatchRecord(config) {
     config = config || {};
 
-    this.id = config.id || Math.random().toString(36).slice(2, 10);
+    this.id = config.id || FMG.Core.Utils.Determinism.id("match", {
+      homeTeamId: config.homeTeamId,
+      awayTeamId: config.awayTeamId,
+      week: config.week || 0,
+      seed: config.seed || 0
+    });
     this.homeTeamId = config.homeTeamId;
     this.awayTeamId = config.awayTeamId;
     this.homeTeam = config.homeTeam;
@@ -54,7 +59,7 @@
     // Match metadata
     this.venue = config.venue || "Away";
     this.attendance = config.attendance || 0;
-    this.date = config.date || new Date().toISOString();
+    this.date = config.date || FMG.Core.Utils.Determinism.timestampForGeneration(this.week, 20);
     this.seed = config.seed || 0;
 
     Object.freeze(this);

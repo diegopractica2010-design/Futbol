@@ -17,29 +17,32 @@
 
     // Core structure
     this.version = config.version || 1;
-    this.timestamp = config.timestamp || new Date().toISOString();
+    this.timestamp = config.timestamp || FMG.Core.Utils.Determinism.timestampForGeneration(config.generation || 0);
     this.season = config.season || null;
     this.clubs = Object.freeze(config.clubs || []);
     this.manager = config.manager || null;
     this.metadata = Object.freeze(config.metadata || {});
 
     // State tracking
-    this.stateId = config.stateId || this._generateStateId();
     this.parentStateId = config.parentStateId || null;
     this.generation = config.generation || 0;
+    this.stateId = config.stateId || this._generateStateId();
 
     // Immutability guarantee
     Object.freeze(this);
   }
 
-  /**
-   * Generate unique state ID
-   * format: "state_<timestamp>_<random>"
-   */
   GameState.prototype._generateStateId = function () {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).slice(2, 8);
-    return "state_" + timestamp + "_" + random;
+    return FMG.Core.Utils.Determinism.id("state", {
+      version: this.version,
+      timestamp: this.timestamp,
+      seasonWeek: this.season ? this.season.week : null,
+      seasonNumber: this.season ? this.season.number : null,
+      clubs: this.clubs.map((club) => club.teamId || club.id || club.name || ""),
+      manager: this.manager && this.manager.profile ? this.manager.profile.name : null,
+      parentStateId: this.parentStateId,
+      generation: this.generation
+    });
   };
 
   /**
@@ -53,7 +56,7 @@
 
     const newState = new GameState({
       version: changes.version !== undefined ? changes.version : this.version,
-      timestamp: changes.timestamp !== undefined ? changes.timestamp : new Date().toISOString(),
+      timestamp: changes.timestamp !== undefined ? changes.timestamp : FMG.Core.Utils.Determinism.timestampForGeneration(this.generation + 1),
       season: changes.season !== undefined ? changes.season : this.season,
       clubs: changes.clubs !== undefined ? Object.freeze(changes.clubs) : this.clubs,
       manager: changes.manager !== undefined ? changes.manager : this.manager,
@@ -218,57 +221,6 @@
   };
 
   FMG.Core.Engine.GameState = GameState;
-
-  /**
-   * GameStateBuilder: Fluent API for constructing GameState
-   * (Preserved from original for backward compatibility)
-   */
-  function StateBuilder() {
-    this._config = {
-      version: 1,
-      timestamp: new Date().toISOString(),
-      season: null,
-      clubs: [],
-      manager: null,
-      metadata: {}
-    };
-  }
-
-  StateBuilder.prototype.withVersion = function (version) {
-    this._config.version = version;
-    return this;
-  };
-
-  StateBuilder.prototype.withTimestamp = function (timestamp) {
-    this._config.timestamp = timestamp;
-    return this;
-  };
-
-  StateBuilder.prototype.withSeason = function (season) {
-    this._config.season = season;
-    return this;
-  };
-
-  StateBuilder.prototype.withClubs = function (clubs) {
-    this._config.clubs = Array.isArray(clubs) ? clubs : [];
-    return this;
-  };
-
-  StateBuilder.prototype.withManager = function (manager) {
-    this._config.manager = manager;
-    return this;
-  };
-
-  StateBuilder.prototype.withMetadata = function (metadata) {
-    this._config.metadata = { ...this._config.metadata, ...metadata };
-    return this;
-  };
-
-  StateBuilder.prototype.build = function () {
-    return new GameState(this._config);
-  };
-
-  FMG.Core.Engine.StateBuilder = StateBuilder;
 
   /**
    * StateValidator: Check state invariants
