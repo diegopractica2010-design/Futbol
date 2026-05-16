@@ -1,6 +1,26 @@
 (function () {
   const FMG = (window.FMG = window.FMG || {});
 
+  function playerValueBand(player) {
+    if (player.overall >= 78) return { label: "Titular elite", className: "success" };
+    if (player.overall >= 72) return { label: "Primer equipo", className: "warning" };
+    return { label: "Rotacion", className: "neutral" };
+  }
+
+  function renderMarketKpis(state) {
+    const active = state.market.listings.length;
+    const pending = state.market.negotiations.filter((item) => item.status === "pending" || item.status === "countered").length;
+    const incoming = state.market.incomingOffers.filter((item) => item.status === "pending").length;
+    return `
+      <div class="market-kpis">
+        <div><span>Saldo</span><strong>${FMG.currency(state.finances.balance)}</strong></div>
+        <div><span>Ventana</span><strong>${state.market.windowOpen ? "Abierta" : "Cerrada"}</strong></div>
+        <div><span>En vitrina</span><strong>${active}</strong></div>
+        <div><span>Operaciones</span><strong>${pending + incoming}</strong></div>
+      </div>
+    `;
+  }
+
   function renderListings(state) {
     const listings = state.market.listings
       .map((listing) => ({ listing, player: state.players.find((item) => item.id === listing.playerId) }))
@@ -10,16 +30,28 @@
       ? listings.map(({ listing, player }) => {
           const value = FMG.calculatePlayerValue(player);
           const wage = FMG.estimatePlayerWageDemand(player, player.overall >= 76 ? "starter" : "rotation");
+          const band = playerValueBand(player);
           return `
-            <article class="list-row">
-              <div>
-                <strong>${FMG.escapeHtml(player.name)}</strong>
-                <div class="meta">
-                  <span>${FMG.escapeHtml(player.position)}</span><span>OVR ${player.overall}</span><span>POT ${player.potential}</span><span>${player.age} anos</span><span>${FMG.escapeHtml(listing.sellerTeamName)}</span><span>Scout ${listing.scoutingLevel}%</span>
+            <article class="market-player-card">
+              <div class="market-player-card__main">
+                <div class="market-avatar">${FMG.escapeHtml(player.position)}</div>
+                <div>
+                  <strong>${FMG.escapeHtml(player.name)}</strong>
+                  <p>${FMG.escapeHtml(listing.sellerTeamName)} | ${player.age} anos</p>
+                  <div class="market-tags">
+                    <span class="chip chip-${band.className}">${band.label}</span>
+                    <span>Scout ${listing.scoutingLevel}%</span>
+                    <span>${listing.loanAvailable ? "Cesion viable" : "Solo compra"}</span>
+                  </div>
                 </div>
               </div>
-              <div><div class="muted">Valor / salario</div><strong>${FMG.currency(value)}</strong><p class="muted">${FMG.currency(wage)}</p></div>
-              <div class="button-row">
+              <div class="market-rating">
+                <div><span>OVR</span><strong>${player.overall}</strong></div>
+                <div><span>POT</span><strong>${player.potential}</strong></div>
+                <div><span>Valor</span><strong>${FMG.currency(value)}</strong></div>
+                <div><span>Salario</span><strong>${FMG.currency(wage)}</strong></div>
+              </div>
+              <div class="button-row market-actions">
                 <button class="btn-primary" data-action="create-transfer-offer" data-player-id="${player.id}" data-transfer-type="${listing.askingPrice === 0 ? "free" : "buy"}" ${state.market.windowOpen ? "" : "disabled"}>Ofertar</button>
                 <button class="btn-secondary" data-action="create-loan-offer" data-player-id="${player.id}" ${state.market.windowOpen && listing.loanAvailable ? "" : "disabled"}>Cesion</button>
               </div>
@@ -71,16 +103,19 @@
     state.market.incomingOffers = state.market.incomingOffers || [];
     state.market.transferHistory = state.market.transferHistory || [];
     return `
-      <section class="card">
+      <section class="card market-hero">
         <div class="section-title">
-          <h2>Mercado de fichajes</h2>
+          <div>
+            <span class="eyebrow">Direccion deportiva</span>
+            <h2>Mercado de fichajes</h2>
+          </div>
           <div class="button-row">
             <button class="btn-secondary" data-action="refresh-market" ${state.market.windowOpen ? "" : "disabled"}>Actualizar scouting</button>
             <button class="btn-ghost" data-action="generate-incoming-offers" ${state.market.windowOpen ? "" : "disabled"}>Buscar ofertas</button>
           </div>
         </div>
-        <p class="muted">Saldo disponible: ${FMG.currency(state.finances.balance)} | ${state.market.windowOpen ? "Ventana abierta" : "Ventana cerrada"}</p>
-        <div class="list" style="margin-top:18px;">${renderListings(state)}</div>
+        ${renderMarketKpis(state)}
+        <div class="market-board">${renderListings(state)}</div>
       </section>
       <section class="content-grid">
         <section class="card"><div class="section-title"><h2>Negociaciones</h2></div><div class="log-list">${renderNegotiations(state)}</div></section>

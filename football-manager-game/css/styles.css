@@ -696,6 +696,7 @@ textarea {
   width: 100%;
   height: 500px;
   background:
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08), transparent 34%),
     linear-gradient(135deg, color-mix(in srgb, var(--club-primary, var(--primary)) 28%, #0f2a21), #0f2a21);
   border-radius: var(--radius-md);
   border: 1px solid var(--club-primary, var(--line));
@@ -706,7 +707,22 @@ textarea {
   transition: opacity 0.3s ease;
 }
 
+.match-renderer-loading,
+.match-renderer-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(246, 247, 238, 0.82);
+  font-weight: 800;
+  letter-spacing: 0;
+  background: #07130f;
+  z-index: 0;
+}
+
 #match-visualizer-container canvas {
+  position: relative;
+  z-index: 1;
   width: 100% !important;
   height: 100% !important;
   display: block;
@@ -715,5 +731,478 @@ textarea {
 @media (max-width: 768px) {
   #match-visualizer-container {
     height: 320px;
+  }
+}
+
+/* Cohesive football UI layer */
+:root {
+  --bg: #0b1210;
+  --surface: #17211d;
+  --surface-2: #202b26;
+  --surface-3: #26332d;
+  --line: rgba(179, 202, 190, 0.16);
+  --text: #edf4ef;
+  --muted: #a8b8af;
+  --primary: #29a877;
+  --primary-2: #e7b84a;
+  --danger: #e05a4f;
+  --success: #43d08a;
+  --focus: #f1c75d;
+  --shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+}
+
+body {
+  background:
+    linear-gradient(180deg, rgba(9, 20, 16, 0.96), rgba(13, 18, 16, 0.98)),
+    linear-gradient(90deg, rgba(41, 168, 119, 0.12), rgba(231, 184, 74, 0.08));
+}
+
+body::before {
+  opacity: 0.45;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.52), transparent 86%);
+}
+
+.panel, .card, .match-card, .list-row, .table-row, .selector-card, .calendar-week {
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: var(--shadow);
+}
+
+.panel, .card, .selector-card {
+  border-radius: 10px;
+}
+
+.nav {
+  background: #111b17;
+  border-color: rgba(231, 184, 74, 0.18);
+  backdrop-filter: none;
+}
+
+.nav button,
+button {
+  border-radius: 8px;
+  letter-spacing: 0;
+}
+
+.nav button.active,
+.button-row button.active {
+  background: linear-gradient(135deg, var(--club-primary, var(--primary)), #17684f);
+  color: #fff;
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.22);
+}
+
+.btn-ghost {
+  background: #202b26;
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.btn-secondary {
+  background: rgba(231, 184, 74, 0.15);
+  color: #f3d789;
+  border: 1px solid rgba(231, 184, 74, 0.18);
+}
+
+.stat-card,
+.tactic-control,
+.match-stats,
+.calendar-match,
+.meta span,
+.live-hud-panel,
+.market-player-card {
+  background: var(--surface-2);
+  border-color: var(--line);
+}
+
+.empty-state {
+  background: #141d19;
+  border-color: rgba(168, 184, 175, 0.22);
+  color: var(--muted);
+}
+
+.eyebrow {
+  background: rgba(41, 168, 119, 0.14);
+  color: #80e2b2;
+}
+
+.chip {
+  background: rgba(41, 168, 119, 0.13);
+  color: #80e2b2;
+}
+
+.chip-neutral {
+  background: rgba(168, 184, 175, 0.13);
+  color: var(--muted);
+}
+
+.table-row.header {
+  color: #c9d5ce;
+}
+
+.live-tactical-hud,
+#match-visualizer-container {
+  border-radius: 10px;
+  border-color: rgba(231, 184, 74, 0.2);
+}
+
+.live-hud-event {
+  background: #202b26;
+}
+
+.toast-stack {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 30;
+  display: grid;
+  gap: 10px;
+  width: min(420px, calc(100vw - 36px));
+  pointer-events: none;
+}
+
+.toast {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  display: grid;
+  grid-template-columns: 38px 1fr 32px;
+  gap: 12px;
+  align-items: start;
+  width: 100%;
+  max-width: none;
+  padding: 13px;
+  border: 1px solid rgba(237, 244, 239, 0.14);
+  border-left: 4px solid var(--primary);
+  border-radius: 10px;
+  background: #111b17;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.32);
+  animation: toastIn 0.22s ease;
+  pointer-events: auto;
+}
+
+.toast-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(41, 168, 119, 0.16);
+  color: #86e7b8;
+  font-weight: 950;
+}
+
+.toast-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.toast-copy strong {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #d9e5de;
+}
+
+.toast-copy p {
+  color: var(--text);
+  line-height: 1.35;
+  font-size: 13px;
+}
+
+.toast-close {
+  width: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  color: var(--muted);
+}
+
+.toast-warning { border-left-color: var(--primary-2); }
+.toast-warning .toast-icon { background: rgba(231, 184, 74, 0.16); color: #f4d47d; }
+.toast-error { border-left-color: var(--danger); }
+.toast-error .toast-icon { background: rgba(224, 90, 79, 0.16); color: #ff9d94; }
+.toast-success { border-left-color: var(--success); }
+.toast-match { border-left-color: #5da7e8; }
+.toast-market { border-left-color: var(--primary-2); }
+.toast-achievement { border-left-color: var(--primary-2); background: #1c231a; }
+
+.market-hero {
+  overflow: hidden;
+}
+
+.market-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.market-kpis div,
+.market-rating div {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.market-kpis span,
+.market-rating span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.market-kpis strong {
+  font-size: clamp(1.2rem, 2vw, 1.8rem);
+}
+
+.market-board {
+  display: grid;
+  gap: 12px;
+}
+
+.market-player-card {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(300px, 1.1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.market-player-card__main {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.market-player-card__main p {
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.market-avatar {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--club-primary, var(--primary)), #123d30);
+  color: white;
+  font-weight: 950;
+}
+
+.market-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.market-tags span:not(.chip) {
+  padding: 7px 9px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255,255,255,0.05);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.market-rating {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.market-rating strong {
+  font-size: 15px;
+}
+
+.market-actions {
+  justify-content: flex-end;
+}
+
+.ui-pulse {
+  animation: goalPulse 0.5s ease-out;
+}
+
+@media (max-width: 1040px) {
+  .market-player-card {
+    grid-template-columns: 1fr;
+  }
+  .market-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .toast-stack {
+    right: 10px;
+    bottom: 10px;
+    width: calc(100vw - 20px);
+  }
+  .market-kpis,
+  .market-rating {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Broadcast presentation and atmosphere layer */
+:root {
+  --broadcast-home: var(--club-primary, #29a877);
+  --broadcast-away: #5da7e8;
+  --broadcast-home-accent: var(--club-accent, #e7b84a);
+  --broadcast-away-accent: #ffffff;
+}
+
+.live-match {
+  position: relative;
+  border-color: rgba(231, 184, 74, 0.22);
+}
+
+.live-match::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--broadcast-home) 18%, transparent), transparent 34%, transparent 66%, color-mix(in srgb, var(--broadcast-away) 18%, transparent)),
+    linear-gradient(180deg, rgba(255,255,255,0.035), transparent 38%);
+  opacity: 0.9;
+}
+
+.live-match > * {
+  position: relative;
+  z-index: 1;
+}
+
+.broadcast-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: end;
+  margin: 4px 0 14px;
+  padding: 16px;
+  border: 1px solid rgba(231, 184, 74, 0.22);
+  border-left: 5px solid var(--broadcast-home);
+  border-radius: 10px;
+  background:
+    linear-gradient(115deg, rgba(255,255,255,0.055), transparent 42%),
+    #101a16;
+}
+
+.broadcast-intro span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.broadcast-intro strong {
+  display: block;
+  margin-top: 5px;
+  color: #f4f7f2;
+  font-size: clamp(1.35rem, 2.4vw, 2.35rem);
+  line-height: 1;
+  font-weight: 950;
+}
+
+.broadcast-intro p {
+  margin-top: 7px;
+  color: rgba(244, 247, 242, 0.72);
+  font-weight: 700;
+}
+
+.broadcast-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.broadcast-tags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  color: #dce8e0;
+}
+
+.broadcast-intro--goal,
+.broadcast-intro--fulltime {
+  border-left-color: var(--broadcast-home-accent);
+}
+
+[data-derby="true"] .broadcast-intro {
+  border-color: rgba(231, 184, 74, 0.34);
+  box-shadow: 0 0 0 1px rgba(231, 184, 74, 0.08), var(--shadow);
+}
+
+[data-match-stage="late"] .live-tactical-hud,
+[data-match-stage="fulltime"] .live-tactical-hud {
+  border-color: rgba(231, 184, 74, 0.34);
+}
+
+[data-weather="rain"] #match-visualizer-container {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(170,210,230,0.11), transparent 34%),
+    linear-gradient(135deg, #0d2521, #07130f);
+}
+
+.live-hud-scoreboard {
+  padding: 10px;
+  border-radius: 10px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--broadcast-home) 20%, transparent), transparent 45%, color-mix(in srgb, var(--broadcast-away) 20%, transparent)),
+    rgba(255,255,255,0.04);
+}
+
+.live-hud-score {
+  padding: 8px 14px;
+  border: 1px solid rgba(231, 184, 74, 0.2);
+  border-radius: 10px;
+  background: rgba(7, 19, 15, 0.72);
+}
+
+.live-hud-feed {
+  border-left: 3px solid rgba(231, 184, 74, 0.28);
+}
+
+.live-hud-event {
+  border-radius: 8px;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.live-hud-event:first-child {
+  border-left-color: var(--broadcast-home-accent);
+  transform: translateX(2px);
+}
+
+.match-card {
+  background:
+    linear-gradient(120deg, rgba(231,184,74,0.08), transparent 40%),
+    var(--surface);
+}
+
+.score {
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: rgba(7, 19, 15, 0.52);
+  color: #fff;
+}
+
+@media (max-width: 720px) {
+  .broadcast-intro {
+    grid-template-columns: 1fr;
+  }
+  .broadcast-tags {
+    justify-content: flex-start;
   }
 }

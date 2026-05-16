@@ -848,6 +848,9 @@
   };
 
   FMG.pushNotification = function (message, type = "info") {
+    if (FMG.NotificationManager) {
+      return FMG.NotificationManager.push(FMG.gameState, message, type);
+    }
     const notification = { id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, message, type, createdAt: new Date().toISOString() };
     FMG.gameState.notifications = FMG.gameState.notifications || [];
     FMG.gameState.notificationLog = FMG.gameState.notificationLog || [];
@@ -858,6 +861,10 @@
   };
 
   FMG.dismissNotification = function (id) {
+    if (FMG.NotificationManager) {
+      FMG.NotificationManager.dismiss(FMG.gameState, id);
+      return;
+    }
     FMG.gameState.notifications = FMG.gameState.notifications.filter((item) => item.id !== id);
   };
 

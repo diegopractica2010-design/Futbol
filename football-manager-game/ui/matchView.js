@@ -31,16 +31,21 @@
     if (liveMatch.completed) {
       return `<div class="button-row"><button class="btn-primary" data-action="finish-live-match">Cerrar fecha</button></div>`;
     }
+    const isPaused = liveMatch.paused === true;
     return `
       <div class="button-row">
-        <button class="btn-primary" data-action="advance-live-match">Avanzar ${liveMatch.speed} min</button>
+        <button class="btn-primary" data-action="toggle-live-playback">${isPaused ? "Reproducir" : "Pausar"}</button>
+        <button class="btn-secondary" data-action="advance-live-match">Avanzar ${liveMatch.speed} min</button>
+        <button class="btn-ghost" data-action="advance-live-minute">+1 min</button>
         <button class="btn-secondary" data-action="advance-live-half">Avanzar al descanso/final</button>
         <button class="btn-ghost" data-action="simulate-live-full">Simular completo</button>
       </div>
       <div class="button-row">
-        <button class="btn-ghost" data-action="set-live-speed" data-speed="3">x3</button>
-        <button class="btn-ghost" data-action="set-live-speed" data-speed="5">x5</button>
-        <button class="btn-ghost" data-action="set-live-speed" data-speed="10">x10</button>
+        <button class="${liveMatch.speed === 1 ? "active" : "btn-ghost"}" data-action="set-live-speed" data-speed="1">x1</button>
+        <button class="${liveMatch.speed === 3 ? "active" : "btn-ghost"}" data-action="set-live-speed" data-speed="3">x3</button>
+        <button class="${liveMatch.speed === 5 ? "active" : "btn-ghost"}" data-action="set-live-speed" data-speed="5">x5</button>
+        <button class="${liveMatch.speed === 10 ? "active" : "btn-ghost"}" data-action="set-live-speed" data-speed="10">x10</button>
+        <button class="${liveMatch.speed === 20 ? "active" : "btn-ghost"}" data-action="set-live-speed" data-speed="20">x20</button>
         <button class="btn-secondary" data-action="live-tactic" data-mode="defend">Proteger area</button>
         <button class="btn-secondary" data-action="live-tactic" data-mode="balanced">Equilibrar</button>
         <button class="btn-secondary" data-action="live-tactic" data-mode="attack">Adelantar lineas</button>
@@ -262,6 +267,7 @@
       .sort((left, right) => statValue(left.minute) - statValue(right.minute) || left._index - right._index);
     const lastGoal = [...visibleTimeline].reverse().find((event) => event.type === "goal");
     const userGoalFlash = lastGoal && lastGoal.teamId === state.userTeamId && liveMatch.minute - lastGoal.minute <= 2;
+    const presentation = FMG.PresentationController?.getState ? FMG.PresentationController.getState(state, liveMatch) : null;
 
     return `
       <section class="card live-match ${userGoalFlash ? "live-match--goal" : ""}">
@@ -269,8 +275,11 @@
           <h2>Partido en vivo</h2>
           <span class="chip">${liveMatch.completed ? "Final" : `${liveMatch.minute}'`}</span>
         </div>
+        ${FMG.PresentationController?.renderMatchIntro ? FMG.PresentationController.renderMatchIntro(presentation, FMG.escapeHtml) : ""}
         ${renderLiveTacticalHud(state, liveMatch, homeTeam, awayTeam, userGoalFlash)}
-        <div id="match-visualizer-container"></div>
+        <div id="match-visualizer-container" aria-label="Visualizacion tactica del partido">
+          <div class="match-renderer-loading">Preparando vista tactica...</div>
+        </div>
         ${renderLiveControls(liveMatch)}
       </section>
       <section class="content-grid">

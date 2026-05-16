@@ -17,6 +17,15 @@
     return color || fallback;
   }
 
+  function hashId(value) {
+    const text = String(value || "");
+    let hash = 0;
+    for (let index = 0; index < text.length; index += 1) {
+      hash = (hash * 31 + text.charCodeAt(index)) >>> 0;
+    }
+    return hash;
+  }
+
   function makePosition(x = 0, y = 0, z = 0) {
     return {
       x,
@@ -111,16 +120,16 @@
       ctx.fillRect(0, 0, width, height);
       for (let index = 0; index < 12; index += 1) {
         ctx.fillStyle = index % 2 === 0 ? this.options.pitchAltColor : "rgba(255,255,255,0.018)";
-        ctx.fillRect(index * width / 12, 0, width / 12, height);
+        ctx.fillRect(0, index * height / 12, width, height / 12);
       }
 
       ctx.strokeStyle = "rgba(255,255,255,0.08)";
       ctx.lineWidth = 1;
       for (let index = 1; index < 12; index += 1) {
-        const x = index * width / 12;
+        const y = index * height / 12;
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
         ctx.stroke();
       }
 
@@ -131,20 +140,64 @@
 
       const mid = map(0, 0);
       ctx.beginPath();
-      ctx.moveTo(mid.x, 0);
-      ctx.lineTo(mid.x, height);
+      ctx.moveTo(0, mid.y);
+      ctx.lineTo(width, mid.y);
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.arc(mid.x, mid.y, 9.15 * meterX, 0, Math.PI * 2);
+      ctx.arc(mid.x, mid.y, 9.15 * Math.min(meterX, meterY), 0, Math.PI * 2);
       ctx.stroke();
       this._spot(ctx, mid.x, mid.y, width);
 
-      this._drawPenaltyArea(ctx, map, meterX, meterY, -FIELD_WIDTH / 2, 1);
-      this._drawPenaltyArea(ctx, map, meterX, meterY, FIELD_WIDTH / 2, -1);
-      this._drawGoals(ctx, map, meterX, meterY);
+      this._drawPenaltyAreaByGoalLine(ctx, map, meterX, meterY, -FIELD_HEIGHT / 2, 1);
+      this._drawPenaltyAreaByGoalLine(ctx, map, meterX, meterY, FIELD_HEIGHT / 2, -1);
+      this._drawGoalsByGoalLine(ctx, map, meterY);
       this._drawCornerArcs(ctx, width, height, 1.5 * Math.min(meterX, meterY));
 
+      ctx.restore();
+    }
+
+    _drawPenaltyAreaByGoalLine(ctx, map, meterX, meterY, goalZ, direction) {
+      const areaDepth = 16.5;
+      const areaWidth = 40.32;
+      const sixDepth = 5.5;
+      const sixWidth = 18.32;
+      this._strokeFieldRect(ctx, map, -areaWidth / 2, goalZ, areaWidth / 2, goalZ + direction * areaDepth);
+      this._strokeFieldRect(ctx, map, -sixWidth / 2, goalZ, sixWidth / 2, goalZ + direction * sixDepth);
+
+      const penalty = map(0, goalZ + direction * 11);
+      this._spot(ctx, penalty.x, penalty.y, meterX * FIELD_WIDTH);
+      ctx.beginPath();
+      if (direction > 0) {
+        ctx.arc(penalty.x, penalty.y, 9.15 * Math.min(meterX, meterY), Math.PI * 0.14, Math.PI * 0.86);
+      } else {
+        ctx.arc(penalty.x, penalty.y, 9.15 * Math.min(meterX, meterY), Math.PI * 1.14, Math.PI * 1.86);
+      }
+      ctx.stroke();
+    }
+
+    _drawGoalsByGoalLine(ctx, map, meterY) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(245,248,242,0.92)";
+      ctx.lineWidth = Math.max(2, meterY * 0.8);
+      const topLeft = map(-3.66, -FIELD_HEIGHT / 2);
+      const topRight = map(3.66, -FIELD_HEIGHT / 2);
+      const bottomLeft = map(-3.66, FIELD_HEIGHT / 2);
+      const bottomRight = map(3.66, FIELD_HEIGHT / 2);
+
+      ctx.beginPath();
+      ctx.moveTo(topLeft.x, topLeft.y);
+      ctx.lineTo(topLeft.x, topLeft.y - 5 * meterY);
+      ctx.lineTo(topRight.x, topRight.y - 5 * meterY);
+      ctx.lineTo(topRight.x, topRight.y);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(bottomLeft.x, bottomLeft.y);
+      ctx.lineTo(bottomLeft.x, bottomLeft.y + 5 * meterY);
+      ctx.lineTo(bottomRight.x, bottomRight.y + 5 * meterY);
+      ctx.lineTo(bottomRight.x, bottomRight.y);
+      ctx.stroke();
       ctx.restore();
     }
 
@@ -331,6 +384,8 @@
       this.context = null;
       this.renderer = null;
       this.pitchRenderer = new TacticalPitchRenderer();
+      this.tacticalEngine = FMG.TacticalPositioningEngine ? new FMG.TacticalPositioningEngine() : null;
+      this.atmosphere = FMG.MatchAtmosphereController ? new FMG.MatchAtmosphereController() : null;
       this.players = {};
       this.ball = null;
       this.animationFrameId = null;
@@ -349,8 +404,13 @@
         awayGoals: 0,
         minute: 0,
         possession: 50,
+        momentum: 50,
+        lastEvent: null,
         playerPositions: {}
       };
+      this.flowPaths = [];
+      this.tacticalOverlays = { supportLines: [], pressZones: [], shapeLines: { home: [], away: [] }, phase: null };
+      this.presentation = null;
       this.teamColors = {
         home: "#f6f6f1",
         away: "#1763a6"
@@ -365,6 +425,9 @@
       this.canvas.style.width = "100%";
       this.canvas.style.height = "100%";
       this.context = this.canvas.getContext("2d");
+      if (!this.context) {
+        throw new Error("Canvas 2D renderer unavailable");
+      }
       this.renderer = {
         domElement: this.canvas,
         setSize: (width, height) => this._resizeCanvas(width, height),
@@ -384,14 +447,18 @@
       this.teamColors.away = colorToCss(awayTeamColor, "#1763a6");
     }
 
-    addPlayer(playerId, startPos, isHome) {
+    addPlayer(playerId, startPos, isHome, meta = {}) {
       const position = makePosition(startPos?.x, startPos?.y, startPos?.z);
       this.players[playerId] = {
         id: playerId,
         isHome,
+        name: meta.name || String(playerId),
+        positionCode: meta.position || "",
+        energy: Number(meta.energy) || 75,
         mesh: { position },
         position,
-        targetPosition: makePosition(position.x, position.y, position.z)
+        targetPosition: makePosition(position.x, position.y, position.z),
+        basePosition: makePosition(position.x, position.y, position.z)
       };
       this.matchState.playerPositions[playerId] = {
         x: position.x,
@@ -414,6 +481,70 @@
       this.matchState.homeGoals = homeGoals;
       this.matchState.awayGoals = awayGoals;
       this.matchState.possession = possession;
+    }
+
+    setMatchContext(context = {}) {
+      this.matchState.momentum = Number(context.momentum) || this.matchState.momentum || 50;
+      this.matchState.lastEvent = context.lastEvent || null;
+      if (context.presentation) this.presentation = context.presentation;
+      if (context.gameState && context.liveMatch && this.atmosphere) {
+        this.presentation = this.atmosphere.sync(context.gameState, context.liveMatch);
+      }
+      const players = context.players || {};
+      Object.keys(players).forEach((id) => {
+        if (!this.players[id]) return;
+        this.players[id].name = players[id].name || this.players[id].name;
+        this.players[id].energy = Number(players[id].energy) || this.players[id].energy;
+      });
+    }
+
+    moveTeamShape(liveMatch) {
+      if (!liveMatch) return;
+      if (this.tacticalEngine) {
+        const tactical = this.tacticalEngine.compute(liveMatch, this.players, this.ball?.position);
+        this.tacticalOverlays = tactical.overlays;
+        Object.keys(tactical.targets).forEach((id) => {
+          this.animatePlayerMove(id, tactical.targets[id], 520);
+        });
+        if (this.ball && tactical.ball) this.animateBallMove(tactical.ball, 420);
+        return;
+      }
+      const minute = Number(liveMatch.minute) || 0;
+      const homePossession = Number(liveMatch.result?.stats?.home?.possession) || this.matchState.possession || 50;
+      const momentum = Number(liveMatch.momentum) || 50;
+      const timeline = Array.isArray(liveMatch.result?.timeline) ? liveMatch.result.timeline : [];
+      const lastEvent = timeline[timeline.length - 1] || null;
+      const eventTeam = lastEvent && lastEvent.minute >= minute - 2 ? lastEvent.teamId : null;
+
+      Object.keys(this.players).forEach((id) => {
+        const player = this.players[id];
+        const base = player.basePosition || player.mesh.position;
+        const sideSign = player.isHome ? 1 : -1;
+        const hasBallBias = player.isHome ? homePossession - 50 : 50 - homePossession;
+        const momentumBias = player.isHome ? momentum - 50 : 50 - momentum;
+        const idPhase = (hashId(id) % 100) / 100;
+        const wave = Math.sin((minute * 0.43) + idPhase * Math.PI * 2);
+        const lane = Math.cos((minute * 0.27) + idPhase * Math.PI * 2);
+        const ownsEvent = eventTeam && ((player.isHome && eventTeam === liveMatch.homeTeamId) || (!player.isHome && eventTeam === liveMatch.awayTeamId));
+        const eventLift = ownsEvent ? 5 : 0;
+        const roleDepth = player.positionCode === "POR" ? 0 : player.positionCode === "DEF" ? 2 : player.positionCode === "MED" ? 5 : 8;
+        this.animatePlayerMove(id, {
+          x: clamp(base.x + lane * 4 + hasBallBias * 0.08, -FIELD_WIDTH / 2 + 5, FIELD_WIDTH / 2 - 5),
+          y: 0,
+          z: clamp(base.z + sideSign * (hasBallBias * 0.16 + momentumBias * 0.12 + eventLift + roleDepth) + wave * 2.8, -FIELD_HEIGHT / 2 + 2, FIELD_HEIGHT / 2 - 2)
+        }, 520);
+      });
+    }
+
+    addFlowPath(fromPos, toPos, color = "rgba(232,196,102,0.8)") {
+      if (!fromPos || !toPos) return;
+      this.flowPaths.push({
+        from: { x: fromPos.x, y: fromPos.y || 0, z: fromPos.z },
+        to: { x: toPos.x, y: toPos.y || 0, z: toPos.z },
+        color,
+        ttl: 900
+      });
+      this.flowPaths = this.flowPaths.slice(-8);
     }
 
     animatePlayerMove(playerId, targetPos, duration = 1000) {
@@ -471,10 +602,15 @@
 
       ctx.clearRect(0, 0, width, height);
       this._drawBroadcastFrame(ctx, width, height);
+      this._drawLighting(ctx, width, height);
       this.pitchRenderer.draw(ctx, this.bounds);
+      this._drawStadiumAtmosphere(ctx);
       this._drawTacticalZones(ctx);
+      this._drawTacticalIntelligence(ctx);
+      this._drawFlowPaths(ctx);
       this._drawPlayers(ctx);
       this._drawBall(ctx);
+      this._drawPresentationOverlay(ctx, width, height);
       this._drawHUD(ctx, width, height);
     }
 
@@ -502,11 +638,17 @@
       this.renderer = null;
       this.players = {};
       this.ball = null;
+      this.flowPaths = [];
+      this.tacticalOverlays = { supportLines: [], pressZones: [], shapeLines: { home: [], away: [] }, phase: null };
+      this.presentation = null;
       this.animationSystem.clear();
     }
 
     updateAnimations(deltaMs = this.config.targetFrameTime) {
       this.animationSystem.update(deltaMs);
+      this.atmosphere?.update(this.bounds, deltaMs);
+      this.flowPaths.forEach((path) => { path.ttl -= deltaMs; });
+      this.flowPaths = this.flowPaths.filter((path) => path.ttl > 0);
       this._syncPositionState();
     }
 
@@ -581,10 +723,55 @@
       const cssHeight = this._cssHeight || height / ratio;
       ctx.fillStyle = "#07130f";
       ctx.fillRect(0, 0, cssWidth, cssHeight);
+      const gradient = ctx.createLinearGradient(0, 54, 0, cssHeight);
+      gradient.addColorStop(0, "rgba(255,255,255,0.035)");
+      gradient.addColorStop(1, "rgba(0,0,0,0.18)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 54, cssWidth, cssHeight - 54);
       ctx.fillStyle = "#0b2118";
       ctx.fillRect(0, 0, cssWidth, 54);
       ctx.fillStyle = "rgba(255,255,255,0.04)";
       ctx.fillRect(0, 53, cssWidth, 1);
+    }
+
+    _drawLighting(ctx, width, height) {
+      const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      const cssWidth = this._cssWidth || width / ratio;
+      const cssHeight = this._cssHeight || height / ratio;
+      const lighting = clamp(this.presentation?.lighting || 42, 0, 100) / 100;
+      ctx.save();
+      const beam = ctx.createRadialGradient(cssWidth / 2, 0, 20, cssWidth / 2, 0, cssWidth * 0.72);
+      beam.addColorStop(0, `rgba(255,244,204,${0.12 + lighting * 0.16})`);
+      beam.addColorStop(0.45, `rgba(255,244,204,${0.04 + lighting * 0.08})`);
+      beam.addColorStop(1, "rgba(255,244,204,0)");
+      ctx.fillStyle = beam;
+      ctx.fillRect(0, 54, cssWidth, cssHeight - 54);
+      if (this.presentation?.weather?.tint) {
+        ctx.fillStyle = this.presentation.weather.tint;
+        ctx.fillRect(0, 54, cssWidth, cssHeight - 54);
+      }
+      ctx.restore();
+    }
+
+    _drawStadiumAtmosphere(ctx) {
+      const b = this.bounds;
+      ctx.save();
+      ctx.fillStyle = "rgba(255,255,255,0.045)";
+      for (let row = 0; row < 3; row += 1) {
+        const yTop = b.y - 24 - row * 10;
+        const yBottom = b.y + b.height + 16 + row * 10;
+        for (let index = 0; index < 42; index += 1) {
+          const x = b.x + (index / 41) * b.width;
+          ctx.fillRect(x, yTop + ((index + row) % 2) * 3, 5, 3);
+          ctx.fillRect(x, yBottom + ((index + row) % 2) * 3, 5, 3);
+        }
+      }
+      const particles = this.atmosphere?.particles || [];
+      ctx.fillStyle = this.presentation?.weather?.code === "rain" ? "rgba(170,210,230,0.34)" : "rgba(240,230,180,0.18)";
+      particles.forEach((particle) => {
+        ctx.fillRect(particle.x, particle.y, particle.size, this.presentation?.weather?.code === "rain" ? particle.size * 4 : particle.size);
+      });
+      ctx.restore();
     }
 
     _drawTacticalZones(ctx) {
@@ -593,12 +780,79 @@
       ctx.strokeStyle = "rgba(250,250,245,0.12)";
       ctx.lineWidth = 1;
       for (let index = 1; index < 3; index += 1) {
-        const x = b.x + (b.width / 3) * index;
+        const y = b.y + (b.height / 3) * index;
         ctx.beginPath();
-        ctx.moveTo(x, b.y);
-        ctx.lineTo(x, b.y + b.height);
+        ctx.moveTo(b.x, y);
+        ctx.lineTo(b.x + b.width, y);
         ctx.stroke();
       }
+      ctx.restore();
+    }
+
+    _drawFlowPaths(ctx) {
+      ctx.save();
+      this.flowPaths.forEach((path) => {
+        const from = this.pitchRenderer.toScreen(path.from, this.bounds);
+        const to = this.pitchRenderer.toScreen(path.to, this.bounds);
+        const alpha = clamp(path.ttl / 900, 0, 1);
+        ctx.strokeStyle = `rgba(232,196,102,${0.18 + alpha * 0.62})`;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 8]);
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = `rgba(255,255,255,${0.25 + alpha * 0.5})`;
+        ctx.beginPath();
+        ctx.arc(to.x, to.y, 4 + alpha * 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+
+    _drawTacticalIntelligence(ctx) {
+      const overlays = this.tacticalOverlays || {};
+      ctx.save();
+      (overlays.pressZones || []).forEach((zone) => {
+        const center = this.pitchRenderer.toScreen(zone.center, this.bounds);
+        const scale = this.bounds.width / FIELD_WIDTH;
+        const radius = Math.max(8, zone.radius * scale);
+        ctx.strokeStyle = zone.side === "home" ? `rgba(232,196,102,${zone.intensity})` : `rgba(93,167,232,${zone.intensity})`;
+        ctx.fillStyle = zone.side === "home" ? "rgba(232,196,102,0.07)" : "rgba(93,167,232,0.07)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 7]);
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+
+      ["home", "away"].forEach((side) => {
+        const line = overlays.shapeLines?.[side] || [];
+        if (line.length < 2) return;
+        ctx.strokeStyle = side === "home" ? "rgba(246,247,238,0.24)" : "rgba(93,167,232,0.24)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        line.forEach((point, index) => {
+          const screen = this.pitchRenderer.toScreen(point, this.bounds);
+          if (index === 0) ctx.moveTo(screen.x, screen.y);
+          else ctx.lineTo(screen.x, screen.y);
+        });
+        ctx.stroke();
+      });
+
+      (overlays.supportLines || []).forEach((lane) => {
+        const from = this.pitchRenderer.toScreen(lane.from, this.bounds);
+        const to = this.pitchRenderer.toScreen(lane.to, this.bounds);
+        ctx.strokeStyle = lane.side === "home" ? "rgba(116,217,159,0.22)" : "rgba(93,167,232,0.22)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.stroke();
+      });
       ctx.restore();
     }
 
@@ -625,6 +879,12 @@
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(String(id).slice(-2), screen.x, screen.y + 0.5);
+        const energyPct = clamp(player.energy, 0, 100) / 100;
+        ctx.fillStyle = energyPct > 0.6 ? "#74d99f" : energyPct > 0.38 ? "#e8c466" : "#e26565";
+        ctx.fillRect(screen.x - 11, screen.y + 14, 22 * energyPct, 3);
+        ctx.fillStyle = "rgba(5,12,9,0.72)";
+        ctx.font = "700 8px system-ui, sans-serif";
+        ctx.fillText(player.positionCode || "", screen.x, screen.y - 16);
         ctx.restore();
       });
     }
@@ -648,6 +908,31 @@
       ctx.restore();
     }
 
+    _drawPresentationOverlay(ctx, width, height) {
+      const presentation = this.presentation;
+      if (!presentation) return;
+      const alpha = this.atmosphere?.transitionAlpha || 0;
+      const showBanner = alpha > 0.02 || presentation.stage === "intro" || presentation.stage === "halftime" || presentation.stage === "fulltime" || presentation.event?.type === "goal";
+      if (!showBanner) return;
+      const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      const cssWidth = this._cssWidth || width / ratio;
+      const bannerAlpha = presentation.event?.type === "goal" ? Math.max(alpha, 0.65) : Math.max(alpha, presentation.stage === "intro" ? 0.72 : 0.28);
+      ctx.save();
+      ctx.globalAlpha = clamp(bannerAlpha, 0, 0.88);
+      ctx.fillStyle = "rgba(7, 19, 15, 0.92)";
+      ctx.fillRect(24, 68, Math.min(520, cssWidth - 48), 76);
+      ctx.fillStyle = presentation.event?.type === "goal" ? "#e7b84a" : "rgba(231,184,74,0.88)";
+      ctx.fillRect(24, 68, 5, 76);
+      ctx.fillStyle = "#f4f7f2";
+      ctx.font = "900 20px system-ui, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(String(presentation.headline || "").slice(0, 42), 44, 98);
+      ctx.font = "700 12px system-ui, sans-serif";
+      ctx.fillStyle = "rgba(244,247,242,0.72)";
+      ctx.fillText(String(presentation.strapline || "").slice(0, 70), 44, 122);
+      ctx.restore();
+    }
+
     _drawHUD(ctx, width, height) {
       const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
       const cssWidth = this._cssWidth || width / ratio;
@@ -661,6 +946,17 @@
       ctx.fillText(`${Math.round(this.matchState.possession)}% POS`, cssWidth / 2, 33);
       ctx.textAlign = "right";
       ctx.fillText(`${this.matchState.minute}'`, cssWidth - 28, 33);
+      if (this.presentation) {
+        ctx.font = "700 11px system-ui, sans-serif";
+        ctx.fillStyle = "rgba(246,247,238,0.58)";
+        ctx.fillText(`${this.presentation.weather.label} | Ambiente ${Math.round(this.presentation.crowd)}%`, cssWidth - 28, 50);
+      }
+      if (this.matchState.lastEvent) {
+        ctx.font = "600 12px system-ui, sans-serif";
+        ctx.fillStyle = "rgba(246,247,238,0.78)";
+        ctx.textAlign = "center";
+        ctx.fillText(String(this.matchState.lastEvent.text || this.matchState.lastEvent.type || "").slice(0, 86), cssWidth / 2, 50);
+      }
       ctx.restore();
     }
 

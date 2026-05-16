@@ -107,7 +107,10 @@
       const formations = {
         "4-3-3": { defenders: 4, midfielders: 3, forwards: 3 },
         "5-3-2": { defenders: 5, midfielders: 3, forwards: 2 },
-        "3-5-2": { defenders: 3, midfielders: 5, forwards: 2 }
+        "3-5-2": { defenders: 3, midfielders: 5, forwards: 2 },
+        "4-4-2": { defenders: 4, midfielders: 4, forwards: 2 },
+        "4-2-3-1": { defenders: 4, midfielders: 5, forwards: 1 },
+        "3-4-3": { defenders: 3, midfielders: 4, forwards: 3 }
       };
 
       const form = formations[formation] || formations["4-3-3"];
@@ -152,7 +155,7 @@
           fwdIndex++;
         }
 
-        this.visualizer.addPlayer(player.id, { x, y: 0, z: clampZ(z) }, isHome);
+        this.visualizer.addPlayer(player.id, { x, y: 0, z: clampZ(z) }, isHome, player);
       });
     }
 
@@ -184,12 +187,32 @@
         snapshot ? snapshot.awayGoals : liveMatch.result.awayGoals,
         possession
       );
+      this.visualizer.setMatchContext?.({
+        momentum: liveMatch.momentum,
+        lastEvent: (liveMatch.result.timeline || []).filter((event) => event.minute <= liveMatch.minute).slice(-1)[0] || null,
+        players: this._buildPlayerContext(liveMatch),
+        gameState: window.FMG.gameState,
+        liveMatch
+      });
+      this.visualizer.moveTeamShape?.(liveMatch);
 
       const fresh = this.playback
         ? this.playback.drainEvents()
         : (liveMatch.result.timeline || []).slice(this._seenTimelineLength);
       this._seenTimelineLength = liveMatch.result.timeline ? liveMatch.result.timeline.length : this._seenTimelineLength;
       fresh.forEach((event) => this.queueTimelineEvent(event, liveMatch));
+    }
+
+    _buildPlayerContext(liveMatch) {
+      const state = window.FMG.gameState || {};
+      const ids = new Set([...(liveMatch.homeLineupIds || []), ...(liveMatch.awayLineupIds || [])]);
+      const context = {};
+      (state.players || []).forEach((player) => {
+        if (ids.has(player.id)) {
+          context[player.id] = { name: player.name, energy: player.energy, position: player.position };
+        }
+      });
+      return context;
     }
 
     play() {
@@ -228,9 +251,27 @@
       } else if (event.type === "foul" || event.type === "yellow-card" || event.type === "red-card") {
         this.queueEvent("tackle", { playerId });
       } else {
-        const toPlayer = lineup.find((id) => id !== playerId);
+        const toPlayer = this.chooseSupportTarget(playerId, lineup, homeEvent);
         if (toPlayer) this.queueEvent("pass", { fromPlayer: playerId, toPlayer });
       }
+    }
+
+    chooseSupportTarget(playerId, lineup, isHome) {
+      const from = this.visualizer?.players?.[playerId];
+      if (!from) return lineup.find((id) => id !== playerId);
+      const direction = isHome ? 1 : -1;
+      const candidates = lineup
+        .filter((id) => id !== playerId && this.visualizer.players[id])
+        .map((id) => {
+          const player = this.visualizer.players[id];
+          const dx = Math.abs(player.mesh.position.x - from.mesh.position.x);
+          const dz = (player.mesh.position.z - from.mesh.position.z) * direction;
+          const forwardBonus = dz > -4 ? 18 : 0;
+          const spacingPenalty = Math.abs(dx - 18) * 0.35 + Math.abs(dz - 10) * 0.25;
+          return { id, score: forwardBonus - spacingPenalty };
+        })
+        .sort((left, right) => right.score - left.score);
+      return candidates[0]?.id || lineup.find((id) => id !== playerId);
     }
 
     // Cola de eventos para procesarlos secuencialmente
@@ -290,6 +331,7 @@
         this.visualizer.ball.position.copy(fromPos);
         this.visualizer.ball.position.y = fromPos.y + 0.5;
       }
+      this.visualizer.addFlowPath?.(fromPos, toPos, "rgba(232,196,102,0.8)");
 
       // Balón viaja del jugador A al jugador B
       this.visualizer.animateBallMove(
@@ -312,6 +354,11 @@
         { x: 0, y: 1.5, z: 34 } :
         { x: 0, y: 1.5, z: -34 };
 
+      if (this.visualizer.ball) {
+        this.visualizer.ball.position.copy(from.mesh.position);
+        this.visualizer.ball.position.y = from.mesh.position.y + 0.5;
+      }
+      this.visualizer.addFlowPath?.(from.mesh.position, goalPos, "rgba(226,101,101,0.82)");
       this.visualizer.animateShot(goalPos, 300);
 
       await new Promise((resolve) => setTimeout(resolve, 300));
@@ -351,6 +398,21 @@
       this.matchState = null;
       this.playback = null;
       this._seenTimelineLength = 0;
+    }
+
+    recover(container, liveMatch, state) {
+      try {
+        this.dispose();
+        if (container && liveMatch) {
+          this.initMatch(container, liveMatch, state || window.FMG.gameState);
+          this.syncLiveMatch(liveMatch);
+        }
+      } catch (error) {
+        console.error("[match visualizer] recovery failed", error);
+        if (container) {
+          container.innerHTML = `<div class="match-renderer-fallback">Vista tactica en recuperacion. Puedes seguir avanzando el partido.</div>`;
+        }
+      }
     }
   }
 

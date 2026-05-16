@@ -3,6 +3,8 @@
   const app = document.querySelector("#app");
   const isDevMode = new URLSearchParams(location.search).has("dev");
   let menuAudio = null;
+  let livePlaybackTimer = 0;
+  let notificationPruneTimer = 0;
 
   function ensureMenuAudio() {
     if (menuAudio || !FMG.Phase23?.StadiumAudio) return;
@@ -91,7 +93,7 @@
 
     return `
       <nav class="nav" role="navigation" aria-label="Menu principal">
-        <button class="btn-ghost nav-save" data-action="change-route" data-route="${FMG.ROUTES.settings}" aria-label="Gestionar guardados">💾</button>
+        <button class="btn-ghost nav-save" data-action="change-route" data-route="${FMG.ROUTES.settings}" aria-label="Gestionar guardados">Guardar</button>
         ${visibleItems.map(([route, label, tooltip]) => `
           <button class="${FMG.gameState.route === route ? "active" : "btn-ghost"}" data-action="change-route" data-route="${route}" title="${FMG.escapeHtml(tooltip)}" aria-label="${FMG.escapeHtml(tooltip)}">${label}</button>`).join("")}
       </nav>
@@ -99,11 +101,8 @@
   }
 
   function renderNotifications() {
-    return FMG.gameState.notifications.map((notification, index) => `
-      <div class="toast toast-${FMG.escapeHtml(notification.type || "info")}" data-id="${notification.id}" role="status" aria-live="polite" style="bottom:${20 + index * 84}px;">
-        <strong>${FMG.escapeHtml(notification.message)}</strong>
-        <div class="button-row" style="margin-top:10px;"><button class="btn-ghost" data-action="dismiss-toast" data-id="${notification.id}">Cerrar</button></div>
-      </div>`).join("");
+    if (FMG.NotificationManager) return FMG.NotificationManager.render(FMG.gameState, FMG.escapeHtml);
+    return "";
   }
 
   function syncLiveVisualizer() {
@@ -113,11 +112,50 @@
 
     const currentCanvas = FMG.matchVisualController.visualizer?.renderer?.domElement;
     if (!currentCanvas || !container.contains(currentCanvas)) {
-      if (FMG._visualizerInitialized) return;
-      FMG._visualizerInitialized = true;
-      FMG.matchVisualController.initMatch(container, liveMatch, FMG.gameState);
+      try {
+        FMG.matchVisualController.initMatch(container, liveMatch, FMG.gameState);
+        FMG._visualizerInitialized = true;
+      } catch (error) {
+        console.error("[match visualizer] init failed", error);
+        container.innerHTML = `<div class="match-renderer-fallback">Vista tactica no disponible. El partido sigue simulado de forma segura.</div>`;
+        return;
+      }
     }
-    if (FMG.matchVisualController.syncLiveMatch) FMG.matchVisualController.syncLiveMatch(liveMatch);
+    try {
+      if (FMG.matchVisualController.syncLiveMatch) FMG.matchVisualController.syncLiveMatch(liveMatch);
+    } catch (error) {
+      console.error("[match visualizer] sync failed", error);
+      FMG.matchVisualController.recover?.(container, liveMatch, FMG.gameState);
+    }
+  }
+
+  function stopLivePlaybackLoop() {
+    if (livePlaybackTimer) {
+      window.clearTimeout(livePlaybackTimer);
+      livePlaybackTimer = 0;
+    }
+  }
+
+  function scheduleLivePlaybackLoop() {
+    stopLivePlaybackLoop();
+    const liveMatch = FMG.gameState.liveMatch;
+    if (!liveMatch || liveMatch.completed || liveMatch.paused) return;
+    const interval = Math.max(220, Math.round(1000 / Math.max(1, Number(liveMatch.speed) || 1)));
+    livePlaybackTimer = window.setTimeout(() => {
+      livePlaybackTimer = 0;
+      const current = FMG.gameState.liveMatch;
+      if (!current || current.completed || current.paused) return;
+      const result = FMG.advanceLiveUserMatch(1);
+      if (!result.ok) {
+        current.paused = true;
+        FMG.pushNotification(result.message, "warning");
+      }
+      render();
+      requestAnimationFrame(() => {
+        syncLiveVisualizer();
+        scheduleLivePlaybackLoop();
+      });
+    }, interval);
   }
 
   function renderRoute() {
@@ -151,16 +189,30 @@
   }
 
   function render() {
+    const presentation = FMG.gameState.liveMatch && FMG.PresentationController?.getState
+      ? FMG.PresentationController.getState(FMG.gameState, FMG.gameState.liveMatch)
+      : null;
+    FMG.FootballIdentityTheme?.apply(FMG.gameState, presentation);
+    FMG.UITheme?.apply(FMG.gameState);
+    FMG.NotificationManager?.prune(FMG.gameState);
     app.innerHTML = FMG.gameState.route === FMG.ROUTES.onboarding
       ? `${FMG.renderOnboardingView()}${renderNotifications()}`
       : FMG.gameState.selectionMode
       ? `${renderSelection()}${renderNotifications()}`
       : `<div class="shell">${renderNavigation()}${renderRoute()}</div>${renderNotifications()}`;
+    scheduleLivePlaybackLoop();
   }
   FMG.render = render;
   FMG.syncLiveVisualizer = function () {
     syncLiveVisualizer();
   };
+
+  function startNotificationPruner() {
+    if (notificationPruneTimer) return;
+    notificationPruneTimer = window.setInterval(() => {
+      if (FMG.NotificationManager?.prune(FMG.gameState)) render();
+    }, 1000);
+  }
 
   function handleAction(action, target) {
     if (!action) return;
@@ -198,13 +250,29 @@
     if (action === "start-live-match") {
       FMG.pushNotification(FMG.startLiveUserMatch().message);
     }
+    if (action === "toggle-live-playback") {
+      const liveMatch = FMG.gameState.liveMatch;
+      if (liveMatch && !liveMatch.completed) {
+        liveMatch.paused = !liveMatch.paused;
+        FMG.pushNotification(liveMatch.paused ? "Partido pausado." : "Partido en reproduccion.");
+      }
+    }
+    if (action === "advance-live-minute") {
+      const liveMatch = FMG.gameState.liveMatch;
+      if (liveMatch) liveMatch.paused = true;
+      const result = FMG.advanceLiveUserMatch(1);
+      if (!result.ok) FMG.pushNotification(result.message);
+    }
     if (action === "advance-live-match") {
+      const liveMatch = FMG.gameState.liveMatch;
+      if (liveMatch) liveMatch.paused = true;
       const result = FMG.advanceLiveUserMatch(FMG.gameState.liveMatch ? FMG.gameState.liveMatch.speed : 5);
       if (!result.ok) FMG.pushNotification(result.message);
     }
     if (action === "advance-live-half") {
       const liveMatch = FMG.gameState.liveMatch;
       if (liveMatch && !liveMatch.completed) {
+        liveMatch.paused = true;
         const target = liveMatch.minute < 45 ? 45 : 90;
         const steps = Math.max(0, target - liveMatch.minute);
         if (steps > 0) {
@@ -215,6 +283,7 @@
     }
     if (action === "simulate-live-full") {
       const liveMatch = FMG.gameState.liveMatch;
+      if (liveMatch) liveMatch.paused = true;
       const result = FMG.advanceLiveUserMatch(liveMatch ? 90 - liveMatch.minute : 90);
       if (!result.ok) FMG.pushNotification(result.message);
     }
@@ -224,7 +293,10 @@
       FMG.matchVisualController.dispose();
       FMG._visualizerInitialized = false;
     }
-    if (action === "set-live-speed") FMG.pushNotification(FMG.setLiveMatchSpeed(Number(target.dataset.speed)).message);
+    if (action === "set-live-speed") {
+      FMG.pushNotification(FMG.setLiveMatchSpeed(Number(target.dataset.speed)).message);
+      scheduleLivePlaybackLoop();
+    }
     if (action === "live-tactic") FMG.pushNotification(FMG.applyLiveTacticalShift(target.dataset.mode).message);
     if (action === "live-team-order") FMG.pushNotification(FMG.setLiveTeamOrder(target.dataset.group, target.dataset.value).message);
     if (action === "live-player-order") FMG.pushNotification(FMG.setLivePlayerOrder(target.dataset.playerId, target.dataset.order).message);
@@ -378,6 +450,7 @@
     try {
       const seed = await loadSeedData();
       FMG.initializeGame(seed.teams, seed.players);
+      startNotificationPruner();
       if (!localStorage.getItem("fmg-onboarding-done")) {
         FMG.gameState.route = FMG.ROUTES.onboarding;
       }
@@ -398,5 +471,6 @@
     }
   }
 
+  startNotificationPruner();
   boot();
 })();
