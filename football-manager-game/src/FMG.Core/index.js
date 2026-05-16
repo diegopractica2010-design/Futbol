@@ -26,6 +26,7 @@
     if (!FMG.Core.Engine || !FMG.Core.Engine.StateSnapshot) missing.push("FMG.Core.Engine.StateSnapshot");
     if (!FMG.Core.Engine || !FMG.Core.Engine.SnapshotStore) missing.push("FMG.Core.Engine.SnapshotStore");
     if (!FMG.Core.Engine || !FMG.Core.Engine.ReplayEngine) missing.push("FMG.Core.Engine.ReplayEngine");
+    if (!FMG.Core.Diagnostics || !FMG.Core.Diagnostics.RuntimeDiagnosticsController) missing.push("FMG.Core.Diagnostics.RuntimeDiagnosticsController");
     
     // Domain aggregates (extracted into subdirectories)
     if (!FMG.Core.Domain || !FMG.Core.Domain.Club || !FMG.Core.Domain.Club.ClubAggregate) {
@@ -50,15 +51,18 @@
     const eventBus = new FMG.Core.Events.EventBus();
     const matchSimulator = new FMG.Core.Services.MatchSimulator(config);
     const stateValidator = new FMG.Core.Engine.StateValidator();
+    const diagnostics = new FMG.Core.Diagnostics.RuntimeDiagnosticsController(config.diagnostics || {});
     const simulationEngine = new FMG.Core.Engine.SimulationEngine({
       eventBus,
       matchSimulator,
-      stateValidator
+      stateValidator,
+      diagnostics
     });
 
     FMG.Core.eventBus = eventBus;
     FMG.Core.engine = simulationEngine;
     FMG.Core.adapter = new FMG.Core.Adapters.LegacyGameStateAdapter();
+    FMG.Core.diagnostics = diagnostics.attachEngine(simulationEngine);
 
     FMG.Core._initialized = true;
 
@@ -67,7 +71,8 @@
     return {
       engine: simulationEngine,
       eventBus,
-      adapter: FMG.Core.adapter
+      adapter: FMG.Core.adapter,
+      diagnostics
     };
   };
 

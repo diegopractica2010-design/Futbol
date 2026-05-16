@@ -48,6 +48,101 @@
       </div>`;
   }
 
+  function renderEcosystemSnapshot(state) {
+    const eco = FMG.ensureManagerEcosystemState ? FMG.ensureManagerEcosystemState(state) : state.managerEcosystem;
+    if (!eco) return "";
+    const club = eco.clubs?.[state.userTeamId] || {};
+    const manager = eco.manager || {};
+    const dressing = eco.squad?.dressingRoom || {};
+    const politics = eco.politics?.currentPressure || {};
+    const latestReport = eco.scouting?.reports?.[0] || null;
+    const latestConference = eco.media?.pressConferences?.[0] || null;
+    const latestYouth = eco.youth?.intakeHistory?.[0] || null;
+    const staff = club.staff || {};
+    const world = FMG.ensureFootballWorldMediaState ? FMG.ensureFootballWorldMediaState(state) : eco.worldMedia;
+    const latestWorldStory = world?.narratives?.storylines?.[0] || null;
+
+    return `
+      <section class="content-grid manager-ecosystem-grid">
+        <section class="card manager-ecosystem-card">
+          <div class="section-title"><h2>Ecosistema del club</h2><span class="chip">${FMG.escapeHtml(club.board?.expectation || "Proyecto")}</span></div>
+          <div class="ecosystem-kpis">
+            <article><span>Cultura</span><strong>${FMG.escapeHtml(club.culture?.identity || "Club")}</strong></article>
+            <article><span>Reputacion club</span><strong>${club.reputation || 50}/100</strong></article>
+            <article><span>Presion politica</span><strong>${FMG.escapeHtml(politics.topic || "resultados")}</strong></article>
+            <article><span>Burnout manager</span><strong>${manager.burnout || 0}/100</strong></article>
+            <article><span>Media mundial</span><strong>${world?.media?.pressure || 0}/100</strong></article>
+            <article><span>Hinchas</span><strong>${world?.fans?.pressure || 0}/100</strong></article>
+          </div>
+          <div class="log-list ecosystem-list">
+            ${(club.board?.politics || []).map((faction) => `
+              <div class="log-item">
+                <strong>${FMG.escapeHtml(faction.name)} | Influencia ${faction.influence}</strong>
+                <p class="muted">Animo ${Math.round(faction.mood)}/100</p>
+                <div class="progress"><span style="width:${FMG.clamp(faction.mood, 0, 100)}%"></span></div>
+              </div>
+            `).join("")}
+          </div>
+        </section>
+        <section class="card manager-ecosystem-card">
+          <div class="section-title"><h2>Vestuario y staff</h2><span class="chip">Ambiente ${dressing.atmosphere || 50}/100</span></div>
+          <div class="ecosystem-kpis">
+            <article><span>Liderazgo</span><strong>${dressing.leadership || 50}/100</strong></article>
+            <article><span>Riesgo conflicto</span><strong>${dressing.conflictRisk || 35}/100</strong></article>
+            <article><span>Asistente</span><strong>${FMG.escapeHtml(staff.assistant?.name || "Sin dato")}</strong></article>
+            <article><span>Psicologia</span><strong>${staff.psychologist?.quality || 50}/100</strong></article>
+          </div>
+          <div class="log-list ecosystem-list">
+            ${(eco.squad?.hierarchy || []).slice(0, 4).map((leader) => `
+              <div class="log-item">
+                <strong>${FMG.escapeHtml(leader.name)}</strong>
+                <p class="muted">${FMG.escapeHtml(leader.role)} | Influencia ${leader.influence}/100</p>
+              </div>
+            `).join("") || `<div class="empty-state">Aun no hay jerarquia clara.</div>`}
+          </div>
+        </section>
+      </section>
+      <section class="content-grid manager-ecosystem-grid">
+        <section class="card">
+          <div class="section-title"><h2>Prensa y mundo</h2><span class="chip">Media rep ${manager.mediaReputation || 50}/100</span></div>
+          <div class="log-list">
+            ${latestWorldStory ? `
+              <div class="log-item">
+                <strong>${FMG.escapeHtml(latestWorldStory.topic)} | ${FMG.escapeHtml(latestWorldStory.arc)}</strong>
+                <p class="muted">Narrativa mundial ${latestWorldStory.heat}/100 | Prestigio liga ${world?.reputation?.leaguePrestige || 0}/100</p>
+              </div>` : ""}
+            ${latestConference ? `
+              <div class="log-item">
+                <strong>${FMG.escapeHtml(latestConference.journalistName)} | ${FMG.escapeHtml(latestConference.tone)}</strong>
+                <p class="muted">Tema: ${FMG.escapeHtml(latestConference.topic)}</p>
+              </div>` : `<div class="empty-state">Sin rueda de prensa reciente.</div>`}
+            ${(eco.media?.rumors || []).slice(0, 3).map((rumor) => `
+              <div class="log-item">
+                <strong>${FMG.escapeHtml(rumor.playerName)}</strong>
+                <p class="muted">${FMG.escapeHtml(rumor.topic)} | Credibilidad ${rumor.credibility}/100</p>
+              </div>
+            `).join("")}
+          </div>
+        </section>
+        <section class="card">
+          <div class="section-title"><h2>Scouting y cantera</h2><span class="chip">${eco.scouting?.reports?.length || 0} informes</span></div>
+          <div class="log-list">
+            ${latestReport ? `
+              <div class="log-item">
+                <strong>${FMG.escapeHtml(latestReport.playerName)} | ${FMG.escapeHtml(latestReport.position)}</strong>
+                <p class="muted">Encaje ${latestReport.fit}/100 | Riesgo ${latestReport.risk}/100 | ${FMG.escapeHtml(latestReport.note)}</p>
+              </div>` : `<div class="empty-state">La red de scouting prepara informes.</div>`}
+            ${latestYouth ? `
+              <div class="log-item">
+                <strong>Ultima camada juvenil</strong>
+                <p class="muted">Semana ${latestYouth.week}, temporada ${latestYouth.seasonNumber}: ${latestYouth.count} jugador(es).</p>
+              </div>` : ""}
+          </div>
+        </section>
+      </section>
+    `;
+  }
+
   FMG.renderCareerView = function (state) {
     FMG.ensureCareerState(state);
     FMG.evaluateBoardObjectives(state, { seasonEnd: false });
@@ -113,6 +208,7 @@
           </div>
         </section>
       </section>
+      ${renderEcosystemSnapshot(state)}
       <section class="content-grid">
         <section class="card">
           <div class="section-title"><h2>Decisiones narrativas</h2></div>

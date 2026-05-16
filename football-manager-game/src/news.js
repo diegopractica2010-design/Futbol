@@ -80,12 +80,22 @@
     return rivalryPairs.find((rivalry) => rivalry.teams.includes(homeTeamId) && rivalry.teams.includes(awayTeamId)) || null;
   }
 
+  function stableId(prefix, value) {
+    const text = String(value || prefix);
+    let hash = 2166136261;
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return `${prefix}-${(hash >>> 0).toString(36)}`;
+  }
+
   function addNews(state, item) {
     FMG.ensureWorldNews(state);
     if (!item || !item.title || !item.body) return null;
     if (item.dedupeKey && state.worldNews.items.some((news) => news.dedupeKey === item.dedupeKey)) return null;
     const news = {
-      id: item.id || FMG.uid("news"),
+      id: item.id || (item.dedupeKey ? stableId("news", item.dedupeKey) : FMG.uid("news")),
       week: state.currentWeek,
       seasonNumber: state.seasonNumber,
       type: item.type || "general",
@@ -95,7 +105,7 @@
       importance: item.importance || 50,
       entities: item.entities || {},
       dedupeKey: item.dedupeKey || null,
-      createdAt: new Date().toISOString()
+      createdAt: item.createdAt || `S${state.seasonNumber}-W${state.currentWeek}`
     };
     state.worldNews.items.unshift(news);
     state.worldNews.items = state.worldNews.items.slice(0, 80);
@@ -104,13 +114,16 @@
 
   function addPressQuestion(state, question, context) {
     FMG.ensureWorldNews(state);
+    const dedupeKey = `press-${state.seasonNumber}-${state.currentWeek}-${context}-${question}`;
+    if (state.worldNews.pressQuestions.some((entry) => entry.dedupeKey === dedupeKey)) return null;
     const entry = {
-      id: FMG.uid("press"),
+      id: stableId("press", dedupeKey),
       week: state.currentWeek,
       seasonNumber: state.seasonNumber,
       question,
       context,
-      status: "open"
+      status: "open",
+      dedupeKey
     };
     state.worldNews.pressQuestions.unshift(entry);
     state.worldNews.pressQuestions = state.worldNews.pressQuestions.slice(0, 12);

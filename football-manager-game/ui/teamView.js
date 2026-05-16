@@ -100,6 +100,87 @@
     `;
   }
 
+  function renderAcademyDashboard(state) {
+    const academy = FMG.ensureFootballGenerationState ? FMG.ensureFootballGenerationState(state) : state.youthAcademy;
+    if (!academy) return "";
+    const record = academy.academies?.[state.userTeamId] || {};
+    const prospects = (academy.prospects || []).filter((item) => item.teamId === state.userTeamId).slice(0, 5);
+    const latestNarrative = academy.narratives?.[0] || null;
+    const latestLineage = academy.lineages?.find((item) => item.teamId === state.userTeamId) || null;
+    return `
+      <section class="card academy-dashboard">
+        <div class="section-title"><h2>Academia y generaciones</h2><span class="chip">${FMG.escapeHtml(record.identity || "formativa")}</span></div>
+        <div class="ecosystem-kpis">
+          <article><span>Reputacion</span><strong>${record.reputation || 0}/100</strong></article>
+          <article><span>Filosofia</span><strong>${FMG.escapeHtml(record.philosophy || "cantera")}</strong></article>
+          <article><span>Region</span><strong>${FMG.escapeHtml(record.region || "centro")}</strong></article>
+          <article><span>Era</span><strong>${FMG.escapeHtml(academy.culture?.era || "presion moderna")}</strong></article>
+        </div>
+        <div class="content-grid academy-grid">
+          <section>
+            <strong>Prospectos</strong>
+            <div class="log-list" style="margin-top:10px;">
+              ${prospects.length ? prospects.map((prospect) => `
+                <div class="log-item">
+                  <strong>${FMG.escapeHtml(prospect.playerName)} | ${FMG.escapeHtml(prospect.position)}</strong>
+                  <p class="muted">${FMG.escapeHtml(prospect.tag)} | POT ${prospect.potential} | ${FMG.escapeHtml(prospect.source)}</p>
+                </div>`).join("") : `<div class="empty-state">La captacion prepara una nueva generacion.</div>`}
+            </div>
+          </section>
+          <section>
+            <strong>Memoria formativa</strong>
+            <div class="log-list" style="margin-top:10px;">
+              ${latestNarrative ? `<div class="log-item"><strong>${FMG.escapeHtml(latestNarrative.title)}</strong><p class="muted">${FMG.escapeHtml(latestNarrative.detail)}</p></div>` : `<div class="empty-state">Sin narrativa juvenil reciente.</div>`}
+              ${latestLineage ? `<div class="log-item"><strong>${FMG.escapeHtml(latestLineage.familyTag)}</strong><p class="muted">${FMG.escapeHtml(latestLineage.playerName)}${latestLineage.parentName ? ` hereda memoria de ${FMG.escapeHtml(latestLineage.parentName)}` : " inicia una linea familiar."}</p></div>` : ""}
+            </div>
+          </section>
+        </div>
+      </section>`;
+  }
+
+  function renderPsychologyDashboard(state) {
+    const psych = FMG.ensureSquadPsychologyState ? FMG.ensureSquadPsychologyState(state) : state.psychology;
+    if (!psych) return "";
+    const latestMemory = psych.memory?.[0] || null;
+    const latestInteraction = psych.interactions?.[0] || null;
+    const mostPressed = Object.values(psych.players || {})
+      .map((record) => ({ record, player: state.players.find((item) => item.id === record.playerId) }))
+      .filter((entry) => entry.player && entry.player.teamId === state.userTeamId && !entry.player.retired)
+      .sort((a, b) => (b.record.emotions?.pressure || 0) - (a.record.emotions?.pressure || 0))[0];
+    return `
+      <section class="card psychology-dashboard">
+        <div class="section-title"><h2>Psicologia del plantel</h2><span class="chip">Cohesion ${psych.chemistry?.cohesion || 0}/100</span></div>
+        <div class="ecosystem-kpis">
+          <article><span>Confianza</span><strong>${psych.chemistry?.trust || 0}/100</strong></article>
+          <article><span>Conflicto</span><strong>${psych.chemistry?.conflict || 0}/100</strong></article>
+          <article><span>Liderazgo</span><strong>${psych.chemistry?.leadership || 0}/100</strong></article>
+          <article><span>Momentum</span><strong>${psych.chemistry?.emotionalMomentum || 0}</strong></article>
+          <article><span>Presion manager</span><strong>${psych.manager?.pressure || 0}/100</strong></article>
+          <article><span>Burnout manager</span><strong>${psych.manager?.burnout || 0}/100</strong></article>
+        </div>
+        <div class="content-grid psychology-grid">
+          <section>
+            <strong>Jerarquia emocional</strong>
+            <div class="log-list" style="margin-top:10px;">
+              ${(psych.hierarchy || []).slice(0, 4).map((item) => `
+                <div class="log-item">
+                  <strong>${FMG.escapeHtml(item.name)}</strong>
+                  <p class="muted">${FMG.escapeHtml(item.role)} | Influencia ${item.influence}/100</p>
+                </div>`).join("") || `<div class="empty-state">El liderazgo aun esta en formacion.</div>`}
+            </div>
+          </section>
+          <section>
+            <strong>Memoria humana</strong>
+            <div class="log-list" style="margin-top:10px;">
+              ${mostPressed ? `<div class="log-item"><strong>${FMG.escapeHtml(mostPressed.player.name)}</strong><p class="muted">Presion ${mostPressed.record.emotions.pressure}/100 | Frustracion ${mostPressed.record.emotions.frustration}/100 | Confianza ${mostPressed.record.emotions.confidence}/100</p></div>` : ""}
+              ${latestMemory ? `<div class="log-item"><strong>${FMG.escapeHtml(latestMemory.title)}</strong><p class="muted">${FMG.escapeHtml(latestMemory.detail)} | Intensidad ${latestMemory.intensity}/100</p></div>` : `<div class="empty-state">Sin recuerdos emocionales recientes.</div>`}
+              ${latestInteraction ? `<div class="log-item"><strong>${FMG.escapeHtml(latestInteraction.title)}</strong><p class="muted">${FMG.escapeHtml(latestInteraction.detail)}</p></div>` : ""}
+            </div>
+          </section>
+        </div>
+      </section>`;
+  }
+
   FMG.renderTeamView = function (state) {
     const plan = FMG.getTeamPlan(state, state.userTeamId);
     const starters = FMG.getMatchSquad(state, state.userTeamId);
@@ -160,6 +241,8 @@
           ${["POR", "DEF", "MED", "EXT", "DEL"].map((position) => renderRoleButtons(plan, position)).join("")}
         </div>
       </section>
+      ${renderPsychologyDashboard(state)}
+      ${renderAcademyDashboard(state)}
       <section class="card">
         <div class="section-title"><h2>Plantilla profesional</h2><span class="chip">${squad.length} jugadores</span></div>
         <div class="button-row">

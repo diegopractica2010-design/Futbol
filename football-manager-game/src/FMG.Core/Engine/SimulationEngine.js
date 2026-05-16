@@ -20,6 +20,7 @@
     this.eventBus = config.eventBus || (FMG.Core.Events && new FMG.Core.Events.EventBus());
     this.matchSimulator = config.matchSimulator || (FMG.Core.Services && new FMG.Core.Services.MatchSimulator());
     this.stateValidator = config.stateValidator || new FMG.Core.Engine.StateValidator();
+    this.diagnostics = config.diagnostics || null;
 
     if (!FMG.Core.Engine.SnapshotStore || !FMG.Core.Engine.ReplayEngine) {
       throw new Error("SnapshotStore and ReplayEngine must be loaded before SimulationEngine");
@@ -68,11 +69,17 @@
       if (!validation.valid) {
         throw new Error("Invalid state before transition: " + validation.errors.join("; "));
       }
+      if (self.diagnostics && typeof self.diagnostics.beforeTransition === "function") {
+        self.diagnostics.beforeTransition(context);
+      }
     });
 
     // After hook: emit event and log
     this.pipeline.after(function (context) {
       self._logTransition(context);
+      if (self.diagnostics && typeof self.diagnostics.afterTransition === "function") {
+        self.diagnostics.afterTransition(context);
+      }
 
       // Emit typed event
       self.eventBus.emit("STATE_TRANSITION", {
@@ -87,6 +94,9 @@
     // Error hook: log error
     this.pipeline.onError(function (context) {
       console.error("State transition error:", context.error);
+      if (self.diagnostics && typeof self.diagnostics.captureError === "function") {
+        self.diagnostics.captureError(context.error, "state-transition");
+      }
       self.eventBus.emit("STATE_TRANSITION_ERROR", {
         error: context.error.message,
         action: context.action.type,
@@ -231,6 +241,10 @@
       this.snapshotStore.save(state, "week_" + gameState.season.week);
 
       // 6. BUILD RESPONSE
+      const replayValidation = this.diagnostics && typeof this.diagnostics.validateReplay === "function"
+        ? this.diagnostics.validateReplay()
+        : { ok: true, skipped: true };
+
       const response = {
         gameState: state,
         events: this.eventBus.history(),
@@ -238,12 +252,19 @@
         executionMs: FMG.Core.Utils.Determinism.nextTick() - startTick,
         commandId: commandId,
         transitionLog: this.pipeline.getTransitionLog(),
-        auditTrail: this._executionLog.slice()
+        auditTrail: this._executionLog.slice(),
+        validation: {
+          replay: replayValidation,
+          runtime: this.diagnostics ? this.diagnostics.snapshot() : null
+        }
       };
 
       return response;
     } catch (err) {
       console.error(`SimulationEngine error (${commandId}):`, err);
+      if (this.diagnostics && typeof this.diagnostics.captureError === "function") {
+        this.diagnostics.captureError(err, "advance-week");
+      }
       this.eventBus.emit("SIMULATION_ERROR", {
         commandId: commandId,
         error: err.message,

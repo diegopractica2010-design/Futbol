@@ -111,6 +111,7 @@
       createdWeek: state.currentWeek,
       message: "Oferta enviada"
     };
+    FMG.ManagerEcosystem?.enrichNegotiation?.(state, negotiation, player);
     state.market.negotiations.unshift(negotiation);
     state.market.negotiations = state.market.negotiations.slice(0, 12);
     return { ok: true, message: `Oferta enviada por ${player.name}.`, negotiation };
@@ -124,10 +125,14 @@
     const player = state.players.find((item) => item.id === negotiation.playerId);
     if (!player || player.retired) return { ok: false, message: "Jugador no disponible." };
     const listing = state.market.listings.find((item) => item.playerId === player.id) || createListing(player, state);
+    FMG.ManagerEcosystem?.enrichNegotiation?.(state, negotiation, player);
+    const ecosystemContext = FMG.ManagerEcosystem?.evaluateNegotiationContext
+      ? FMG.ManagerEcosystem.evaluateNegotiationContext(state, negotiation, player)
+      : { wageMultiplier: 1, feeMultiplier: 1, message: "" };
     const requiredFee = negotiation.type === "loan" ? Math.round(listing.askingPrice * 0.12) : listing.askingPrice;
-    const requiredWage = FMG.estimatePlayerWageDemand(player, negotiation.role);
+    const requiredWage = Math.round(FMG.estimatePlayerWageDemand(player, negotiation.role) * ecosystemContext.wageMultiplier);
     const totalCost = negotiation.fee + negotiation.signingBonus;
-    const clubAccepts = negotiation.type === "free" || isFreeAgent(player) || negotiation.fee >= requiredFee * 0.9;
+    const clubAccepts = negotiation.type === "free" || isFreeAgent(player) || negotiation.fee >= requiredFee * 0.9 * ecosystemContext.feeMultiplier;
     const playerAccepts = negotiation.wage >= requiredWage * 0.92 && FMG.SQUAD_ROLES[negotiation.role];
 
     FMG.ensureAdvancedFinances(state);
@@ -140,7 +145,7 @@
       negotiation.status = "countered";
       negotiation.fee = Math.max(negotiation.fee, requiredFee);
       negotiation.wage = Math.max(negotiation.wage, requiredWage);
-      negotiation.message = !clubAccepts ? "El club pide mejorar la oferta." : "El jugador pide mejor contrato.";
+      negotiation.message = !clubAccepts ? "El club pide mejorar la oferta." : ecosystemContext.message || "El jugador pide mejor contrato.";
       return { ok: false, message: negotiation.message, negotiation };
     }
 
@@ -150,6 +155,9 @@
     player.salary = negotiation.wage;
     player.releaseClause = negotiation.releaseClause;
     player.squadRole = negotiation.role;
+    (negotiation.promises || []).forEach((promise) => {
+      FMG.ManagerEcosystem?.SquadRelationshipController?.addPromise?.(state, player.id, promise);
+    });
     player.loan = negotiation.type === "loan" ? { fromTeamId: oldTeamId, untilSeason: state.seasonNumber + 1 } : null;
     player.injuredWeeks = 0;
     player.suspendedWeeks = 0;

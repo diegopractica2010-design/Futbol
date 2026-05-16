@@ -10,7 +10,8 @@
     ["player-story", "Jugadores"],
     ["classic", "Clasicos"],
     ["dressing-room", "Vestuario"],
-    ["streak", "Rachas"]
+    ["streak", "Rachas"],
+    ["world-reaction", "Mundo"]
   ];
 
   function renderNewsCard(item) {
@@ -34,8 +35,53 @@
       </div>`;
   }
 
+  function renderWorldMediaPulse(state) {
+    const world = FMG.ensureFootballWorldMediaState ? FMG.ensureFootballWorldMediaState(state) : state.managerEcosystem?.worldMedia;
+    if (!world) return "";
+    const latestReaction = world.media?.reactions?.[0] || null;
+    const latestStory = world.narratives?.storylines?.[0] || null;
+    const latestSponsor = world.sponsors?.history?.[0] || null;
+    return `
+      <section class="content-grid world-media-grid">
+        <section class="card world-media-card">
+          <div class="section-title"><h2>Presion del mundo futbolero</h2><span class="chip">${FMG.escapeHtml(world.fans?.atmosphere || "expectante")}</span></div>
+          <div class="ecosystem-kpis">
+            <article><span>Media</span><strong>${world.media?.pressure || 0}/100</strong></article>
+            <article><span>Hinchas</span><strong>${world.fans?.pressure || 0}/100</strong></article>
+            <article><span>Sponsors</span><strong>${world.sponsors?.pressure || 0}/100</strong></article>
+            <article><span>Prestigio liga</span><strong>${world.reputation?.leaguePrestige || 0}/100</strong></article>
+          </div>
+          <div class="world-pressure-bars">
+            <div><span>Obsesion mediatica</span><div class="progress"><span style="width:${FMG.clamp(world.media?.obsession?.[state.userTeamId] || 0, 0, 100)}%"></span></div></div>
+            <div><span>Relacion sponsor</span><div class="progress"><span style="width:${FMG.clamp(world.sponsors?.relationship || 0, 0, 100)}%"></span></div></div>
+          </div>
+        </section>
+        <section class="card world-media-card">
+          <div class="section-title"><h2>Narrativa activa</h2><span class="chip">${FMG.escapeHtml(latestStory?.arc || "continuidad")}</span></div>
+          <div class="log-list">
+            ${latestStory ? `
+              <div class="log-item">
+                <strong>${FMG.escapeHtml(latestStory.topic)}</strong>
+                <p class="muted">Calor narrativo ${latestStory.heat}/100 | Semana ${latestStory.week}</p>
+              </div>` : `<div class="empty-state">El mundo aun no fijo una narrativa dominante.</div>`}
+            ${latestReaction ? `
+              <div class="log-item">
+                <strong>${FMG.escapeHtml(latestReaction.title)}</strong>
+                <p class="muted">${FMG.escapeHtml(latestReaction.detail)}</p>
+              </div>` : ""}
+            ${latestSponsor ? `
+              <div class="log-item">
+                <strong>Patrocinio: ${FMG.escapeHtml(latestSponsor.topic)}</strong>
+                <p class="muted">Relacion ${latestSponsor.relationship}/100 | Presion ${latestSponsor.pressure}/100</p>
+              </div>` : ""}
+          </div>
+        </section>
+      </section>`;
+  }
+
   FMG.renderNewsView = function (state) {
     FMG.ensureWorldNews(state);
+    if (FMG.ensureFootballWorldMediaState) FMG.ensureFootballWorldMediaState(state);
     const selected = state.worldNews.filter || "all";
     const news = selected === "all"
       ? state.worldNews.items
@@ -78,6 +124,7 @@
           </section>
         </div>
       </section>
+      ${renderWorldMediaPulse(state)}
       <section class="content-grid">
         <section class="card">
           <div class="section-title"><h2>Titulares</h2><span class="chip">${FMG.escapeHtml(selected)}</span></div>

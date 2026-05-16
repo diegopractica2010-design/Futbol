@@ -41,6 +41,10 @@
 
   function validateImportedSave(data) {
     if (!data || typeof data !== "object") throw new Error("Save vacio");
+    if (FMG.Core?.diagnostics?.saveValidator) {
+      const validation = FMG.Core.diagnostics.saveValidator.validate(data.game || data);
+      if (!validation.ok) throw new Error(validation.errors.join("; "));
+    }
     if (data.finances?.balance > 10000000000) throw new Error("Balance invalido");
     (data.players || []).forEach((player) => {
       if (player.overall < 40 || player.overall > 99) throw new Error(`Overall invalido para ${player.name}`);
@@ -60,12 +64,17 @@
     const savedAt = new Date().toISOString();
     const snapshot = FMG.deepClone(state);
     if (FMG.syncLegacyStateFacets) FMG.syncLegacyStateFacets(snapshot);
+    if (FMG.Core?.diagnostics?.validation) {
+      const validation = FMG.Core.diagnostics.validation.validateLegacyState(snapshot);
+      if (!validation.ok) return { ok: false, message: "La partida no paso la validacion de guardado.", errors: validation.errors };
+    }
     snapshot.version = FMG.CURRENT_VERSION;
     snapshot.saveMeta = snapshot.saveMeta || {};
     snapshot.saveMeta.activeSlotId = targetSlot;
     snapshot.saveMeta.lastSavedAt = savedAt;
     snapshot.saveMeta.safeSave = { status: "committed", savedAt, slotId: targetSlot };
-    const payload = JSON.stringify(snapshot);
+    const persistable = FMG.Core?.diagnostics?.persistence ? FMG.Core.diagnostics.persistence.wrap(snapshot) : snapshot;
+    const payload = JSON.stringify(persistable);
     if (existing) localStorage.setItem(backupKey, existing);
     localStorage.setItem(tempKey, payload);
     localStorage.setItem(key, localStorage.getItem(tempKey));

@@ -2,6 +2,7 @@
   const FMG = (window.FMG = window.FMG || {});
   const app = document.querySelector("#app");
   const isDevMode = new URLSearchParams(location.search).has("dev");
+  const isDebugMode = isDevMode || new URLSearchParams(location.search).has("debug");
   let menuAudio = null;
   let livePlaybackTimer = 0;
   let notificationPruneTimer = 0;
@@ -450,6 +451,10 @@
     try {
       const seed = await loadSeedData();
       FMG.initializeGame(seed.teams, seed.players);
+      if (FMG.Core?.initialize && !FMG.Core.isInitialized?.()) {
+        FMG.Core.initialize({ diagnostics: { scaling: { profile: "low-end" } } });
+      }
+      if (isDebugMode) FMG.Core?.diagnostics?.enableOverlay(true);
       startNotificationPruner();
       if (!localStorage.getItem("fmg-onboarding-done")) {
         FMG.gameState.route = FMG.ROUTES.onboarding;

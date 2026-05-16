@@ -365,6 +365,7 @@
       FMG.evaluateCareerSeasonEnd(state, seasonRecord);
     }
     updateMarketWindow(state);
+    FMG.runManagerEcosystemWeek?.(state, { phase: "post-week" });
 
     const nextOpponent = FMG.getNextOpponent();
     const message = state.seasonComplete
@@ -428,6 +429,10 @@
     FMG.ensureWorldNews(revived);
     FMG.ensureUIState(revived);
     FMG.ensureSettingsState(revived);
+    FMG.ensureManagerEcosystemState?.(revived);
+    FMG.ensureAdvancedTransferMarket?.(revived);
+    FMG.ensureFootballGenerationState?.(revived);
+    FMG.ensureSquadPsychologyState?.(revived);
     if (revived.userTeamId && !revived.career.objectives.length) FMG.createBoardObjectives(revived);
     FMG.preparePlayersForSeason(revived.players);
     FMG.initializeTeamPlans(revived);
@@ -521,6 +526,10 @@
     FMG.ensureWorldNews(FMG.gameState);
     FMG.ensureUIState(FMG.gameState);
     FMG.ensureSettingsState(FMG.gameState);
+    FMG.ensureManagerEcosystemState?.(FMG.gameState);
+    FMG.ensureAdvancedTransferMarket?.(FMG.gameState);
+    FMG.ensureFootballGenerationState?.(FMG.gameState);
+    FMG.ensureSquadPsychologyState?.(FMG.gameState);
     updateMarketWindow(FMG.gameState);
     if (FMG.PlayerProgressionIntegration?.initializeProgressionForGameState) {
       FMG.PlayerProgressionIntegration.initializeProgressionForGameState(FMG.gameState);
@@ -551,6 +560,10 @@
     FMG.ensureAdvancedFinances(FMG.gameState);
     FMG.registerFinanceEntry(FMG.gameState.finances, "income", "Capital inicial de temporada", team.budget);
     FMG.createBoardObjectives(FMG.gameState);
+    FMG.ensureManagerEcosystemState?.(FMG.gameState);
+    FMG.ensureAdvancedTransferMarket?.(FMG.gameState);
+    FMG.ensureFootballGenerationState?.(FMG.gameState);
+    FMG.ensureSquadPsychologyState?.(FMG.gameState);
     FMG.autoSelectLineup(FMG.gameState, team.id);
     FMG.buildTransferMarket(FMG.gameState);
     FMG.ensureUIState(FMG.gameState);
@@ -587,7 +600,7 @@
         const weekSeed = FMG.deriveSeed(
           state._startSeed || FMG.gameState.season?.startSeed || 12345,
           state.currentWeek,
-          Math.floor(Math.random() * 1000)
+          (state.seasonNumber || 1) * 1000 + (state.completedWeeks || 0)
         );
         const coreResult = FMG.Core.advanceWeekFromLegacy(weekSeed);
         console.log("[advanceWeek] Core execution: " + coreResult.executionMs + "ms");
@@ -799,6 +812,10 @@
     state.tactics.trainingUsedWeek = 0;
     ensureCompetitions(state);
     FMG.prepareCareerNewSeason(state);
+    FMG.ensureManagerEcosystemState?.(state);
+    FMG.ensureAdvancedTransferMarket?.(state);
+    FMG.ensureFootballGenerationState?.(state);
+    FMG.ensureSquadPsychologyState?.(state);
     state.teams.forEach((team) => {
       team.form = FMG.clamp(9 + FMG.randomInt(0, 5), 0, 20);
     });
@@ -809,7 +826,8 @@
       player.energy = FMG.clamp(84 + FMG.randomInt(0, 12), 0, 100);
       player.morale = FMG.clamp(66 + FMG.randomInt(0, 18), 0, 100);
     });
-    FMG.progressPlayersForNewSeason(state);
+    const retiredPlayers = FMG.progressPlayersForNewSeason(state);
+    FMG.runFootballGenerationSeasonRollover?.(state, { retired: retiredPlayers });
     FMG.preparePlayersForSeason(state.players, { newSeason: true });
     FMG.initializeTeamPlans(state);
     FMG.initializeRivalAI(state);
