@@ -27,15 +27,13 @@
     };
   };
 
-  // RNG global del juego
-  FMG.rng = Math.random; // Por defecto, usar Math.random
+  // RNG global del juego. El fallback inicial es determinista; runtimeHardening
+  // sustituye esto por un motor serializable cuando termina de cargar.
+  FMG.rng = FMG.mulberry32(1);
 
   // Inicializar RNG con seed
   FMG.initRNG = function (seed) {
-    if (!seed) {
-      // Si no hay seed, generar uno basado en el timestamp
-      seed = Math.floor(Date.now() % 4294967296);
-    }
+    if (!seed) seed = FMG.gameState?.seed || FMG._currentSeed || 1;
     FMG._currentSeed = seed;
     FMG.rng = FMG.mulberry32(seed);
   };

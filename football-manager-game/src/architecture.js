@@ -48,10 +48,10 @@
 
   EventBus.prototype.emit = function (type, payload = {}) {
     const event = {
-      id: FMG.uid ? FMG.uid("evt") : String(Date.now()),
+      id: FMG.uid ? FMG.uid("evt") : "evt-0",
       type,
       payload,
-      createdAt: new Date().toISOString()
+      createdAt: FMG.nowISO ? FMG.nowISO("event") : new Date().toISOString()
     };
     this._queue.push(event);
     if (!this._dispatching) this.flush();

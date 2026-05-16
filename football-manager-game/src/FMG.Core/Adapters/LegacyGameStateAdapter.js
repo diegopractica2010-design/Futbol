@@ -21,9 +21,9 @@
       throw new Error("Legacy gameState not initialized");
     }
 
-    const Club = FMG.Core.Domain.Club;
-    const Season = FMG.Core.Domain.Season;
-    const Manager = FMG.Core.Domain.Manager;
+    const Club = FMG.Core.Domain.Club.ClubAggregate;
+    const Season = FMG.Core.Domain.Season.SeasonAggregate;
+    const Manager = FMG.Core.Domain.Manager.ManagerAggregate;
     const GameState = FMG.Core.Engine.GameState;
 
     // Convert clubs
@@ -112,18 +112,29 @@
     // Preserve existing legacy fields, update from Core
     const legacy = FMG.gameState || {};
 
-    // Update teams (read-only from Core clubs)
-    legacy.teams = (coreGameState.clubs || []).map((club) => ({
-      id: club.teamId,
-      name: club.name,
-      budget: club.budget,
-      fanBase: club.fanBase,
-      form: club.form || 10,
-      stadium: legacy.teams?.find((t) => t.id === club.teamId)?.stadium || "Stadium"
-    }));
+    const previousTeams = legacy.teams || [];
+    const previousPlayers = legacy.players || [];
+    const previousPlayerById = new Map(previousPlayers.map((player) => [player.id, player]));
 
-    // Update players (read-only from Core clubs)
-    legacy.players = (coreGameState.clubs || []).flatMap((club) => club.squad || []);
+    // Update teams (read-only from Core clubs) without dropping legacy-only fields.
+    legacy.teams = (coreGameState.clubs || []).map((club) => {
+      const previous = previousTeams.find((team) => team.id === club.teamId) || {};
+      return {
+        ...previous,
+        id: club.teamId,
+        name: club.name || previous.name,
+        budget: club.budget !== undefined ? club.budget : previous.budget,
+        fanBase: club.fanBase !== undefined ? club.fanBase : previous.fanBase,
+        form: club.form !== undefined ? club.form : (previous.form || 10)
+      };
+    });
+
+    // Update players (read-only from Core clubs) without stripping legacy gameplay fields.
+    legacy.players = (coreGameState.clubs || []).flatMap((club) => (club.squad || []).map((player) => ({
+      ...(previousPlayerById.get(player.id) || {}),
+      ...player,
+      teamId: player.teamId || club.teamId
+    })));
 
     // Update fixtures
     if (coreGameState.season) {

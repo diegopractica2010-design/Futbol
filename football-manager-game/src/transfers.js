@@ -61,7 +61,7 @@
       .filter((player) => player.teamId !== state.userClub.id)
       .sort((left, right) => FMG.calculatePlayerValue(right) - FMG.calculatePlayerValue(left))
       .slice(0, 18)
-      .filter(() => Math.random() > 0.22);
+      .filter(() => FMG.rng() > 0.22);
     state.market.listings = [...freeAgents.slice(0, 6), ...marketable].map((player) => createListing(player, state));
     state.market.incomingOffers = state.market.incomingOffers || [];
   };
@@ -239,7 +239,7 @@
       .filter((player) => player.teamId === state.userTeamId && !player.retired && !player.loan)
       .sort((left, right) => FMG.calculatePlayerValue(right) - FMG.calculatePlayerValue(left))
       .slice(0, 5);
-    const offers = sellable.filter(() => Math.random() < 0.45).map((player) => {
+    const offers = sellable.filter(() => FMG.rng() < 0.45).map((player) => {
       const buyer = FMG.sample(state.teams.filter((team) => team.id !== state.userTeamId));
       return {
         id: FMG.uid("offer"),
@@ -561,8 +561,8 @@
       }
       if (options.afterMatches) {
         renewRivalContracts(state, team);
-        const sold = Math.random() < 0.28 ? makeRivalSale(state, team) : false;
-        const bought = Math.random() < 0.42 ? makeRivalPurchase(state, team) : false;
+        const sold = FMG.rng() < 0.28 ? makeRivalSale(state, team) : false;
+        const bought = FMG.rng() < 0.42 ? makeRivalPurchase(state, team) : false;
         if (sold || bought) actions.push({ teamId: team.id, type: "market" });
       }
     });

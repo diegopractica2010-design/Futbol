@@ -404,13 +404,13 @@
     state.players.forEach((player) => {
       if (player.retired) return;
       const minutesFactor = Math.min(1, (player.seasonStats?.minutes || 0) / 1800);
-      const youngGrowth = player.age <= 24 && player.overall < player.potential && Math.random() < 0.18 + minutesFactor * 0.32;
-      const veteranDecline = player.age >= 32 && Math.random() < 0.25 + (player.age - 32) * 0.04;
+      const youngGrowth = player.age <= 24 && player.overall < player.potential && FMG.rng() < 0.18 + minutesFactor * 0.32;
+      const veteranDecline = player.age >= 32 && FMG.rng() < 0.25 + (player.age - 32) * 0.04;
       if (youngGrowth) {
         player.overall += 1;
         improvedPlayers += 1;
         Object.keys(player.attributes || {}).forEach((key) => {
-          if (Math.random() < 0.38) player.attributes[key] = FMG.clamp(player.attributes[key] + 1, 35, 99);
+          if (FMG.rng() < 0.38) player.attributes[key] = FMG.clamp(player.attributes[key] + 1, 35, 99);
         });
         player.moraleReason = "Progreso por desarrollo";
         addMoraleEntry(player, player.moraleReason, 2);
@@ -418,10 +418,10 @@
       if (veteranDecline) {
         player.overall = Math.max(45, player.overall - 1);
         Object.keys(player.attributes || {}).forEach((key) => {
-          if (Math.random() < 0.28) player.attributes[key] = FMG.clamp(player.attributes[key] - 1, 30, 99);
+          if (FMG.rng() < 0.28) player.attributes[key] = FMG.clamp(player.attributes[key] - 1, 30, 99);
         });
       }
-      if (player.age >= 36 && Math.random() < 0.3 + (player.age - 36) * 0.12) {
+      if (player.age >= 36 && FMG.rng() < 0.3 + (player.age - 36) * 0.12) {
         player.retired = true;
         player.retiredSeason = state.seasonNumber;
         retired.push(player);
@@ -495,7 +495,7 @@
     squad.forEach((player) => {
       player.energy = FMG.clamp(player.energy + focus.energy, 0, 100);
       player.morale = FMG.clamp(player.morale + focus.morale, 0, 100);
-      if (player.overall < player.potential && Math.random() < focus.overallChance) {
+      if (player.overall < player.potential && FMG.rng() < focus.overallChance) {
         player.overall += 1;
         improvedPlayers += 1;
       }
@@ -589,7 +589,7 @@
       ...FMG.getMatchSquad(state, result.awayTeamId)
     ];
 
-    if (matchPlayers.length && Math.random() < 0.08) {
+    if (matchPlayers.length && FMG.rng() < 0.08) {
       const injured = FMG.sample(matchPlayers);
       injured.injuredWeeks = FMG.randomInt(1, 4);
       injured.energy = FMG.clamp(injured.energy - 20, 20, 100);
@@ -598,7 +598,7 @@
       return { title: "Lesion de partido", detail: `${injured.name} estara fuera ${injured.injuredWeeks} semana(s).` };
     }
 
-    if (matchPlayers.length && Math.random() < 0.12) {
+    if (matchPlayers.length && FMG.rng() < 0.12) {
       const suspended = FMG.sample(matchPlayers);
       suspended.suspendedWeeks = 1;
       suspended.seasonStats = suspended.seasonStats || { appearances: 0, goals: 0, injuries: 0, cards: 0 };

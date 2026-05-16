@@ -34,9 +34,9 @@
       this.ensure(state);
       const resolvedType = inferType(message, type);
       const meta = CATEGORY_MAP[resolvedType] || CATEGORY_MAP.info;
-      const now = Date.now();
+      const now = FMG.simulationClock ? FMG.simulationClock.tick("notification-ui") : Date.now();
       const notification = {
-        id: `${now}-${Math.random().toString(16).slice(2)}`,
+        id: FMG.uid ? FMG.uid("toast") : `${now}`,
         message,
         type: resolvedType,
         label: meta.label,
@@ -55,7 +55,7 @@
       state.notifications = state.notifications.filter((item) => item.id !== id);
     },
 
-    prune(state, now = Date.now()) {
+    prune(state, now = FMG.simulationClock ? FMG.simulationClock.now() : Date.now()) {
       this.ensure(state);
       const before = state.notifications.length;
       state.notifications = state.notifications.filter((item) => !item.expiresAt || item.expiresAt > now);

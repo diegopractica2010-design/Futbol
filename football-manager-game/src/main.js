@@ -196,11 +196,23 @@
     FMG.FootballIdentityTheme?.apply(FMG.gameState, presentation);
     FMG.UITheme?.apply(FMG.gameState);
     FMG.NotificationManager?.prune(FMG.gameState);
-    app.innerHTML = FMG.gameState.route === FMG.ROUTES.onboarding
-      ? `${FMG.renderOnboardingView()}${renderNotifications()}`
+    const routeHtml = FMG.gameState.route === FMG.ROUTES.onboarding
+      ? FMG.renderOnboardingView()
       : FMG.gameState.selectionMode
-      ? `${renderSelection()}${renderNotifications()}`
-      : `<div class="shell">${renderNavigation()}${renderRoute()}</div>${renderNotifications()}`;
+      ? renderSelection()
+      : renderRoute();
+    const navHtml = (!FMG.gameState.selectionMode && FMG.gameState.route !== FMG.ROUTES.onboarding) ? renderNavigation() : "";
+    const overlayHtml = renderNotifications();
+    if (FMG.Hardening?.PersistentUIShell && FMG.renderScheduler) {
+      FMG.persistentUIShell = FMG.persistentUIShell || new FMG.Hardening.PersistentUIShell(app, FMG.renderScheduler);
+      FMG.persistentUIShell.render({ nav: navHtml, route: routeHtml, overlay: overlayHtml });
+    } else {
+      app.innerHTML = FMG.gameState.route === FMG.ROUTES.onboarding
+        ? `${routeHtml}${overlayHtml}`
+        : FMG.gameState.selectionMode
+        ? `${routeHtml}${overlayHtml}`
+        : `<div class="shell">${navHtml}${routeHtml}</div>${overlayHtml}`;
+    }
     scheduleLivePlaybackLoop();
   }
   FMG.render = render;
@@ -355,7 +367,8 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `football-manager-chile-${Date.now()}.json`;
+      const exportTick = FMG.simulationClock ? FMG.simulationClock.tick("export") : Date.now();
+      link.download = `football-manager-chile-${exportTick}.json`;
       link.click();
       URL.revokeObjectURL(url);
       FMG.pushNotification("Partida exportada como archivo.", "info");
@@ -440,7 +453,7 @@
   let _lastAction = 0;
   document.addEventListener("click", (event) => {
     ensureMenuAudio();
-    const now = Date.now();
+    const now = performance.now();
     if (now - _lastAction < 300) return;
     _lastAction = now;
     const target = event.target.closest("[data-action]");

@@ -461,6 +461,7 @@
       selectionMode: true,
       teams: expandedTeams,
       players: seasonPlayers,
+      seed: FMG.getCurrentSeed?.() || 1,
       fixtures,
       currentWeek: 1,
       totalWeeks: fixtures.length,
@@ -869,7 +870,7 @@
     if (FMG.NotificationManager) {
       return FMG.NotificationManager.push(FMG.gameState, message, type);
     }
-    const notification = { id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, message, type, createdAt: new Date().toISOString() };
+    const notification = { id: FMG.uid("note"), message, type, createdAt: FMG.nowISO ? FMG.nowISO("notification") : new Date().toISOString() };
     FMG.gameState.notifications = FMG.gameState.notifications || [];
     FMG.gameState.notificationLog = FMG.gameState.notificationLog || [];
     FMG.gameState.notifications.push(notification);

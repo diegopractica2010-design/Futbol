@@ -99,7 +99,7 @@
   ];
 
   FMG.applyWeeklyEvent = function (state) {
-    if (Math.random() > 0.55) return null;
+    if (FMG.rng() > 0.55) return null;
     const event = FMG.sample(eventPool);
     const detail = event.execute(state);
     const log = { week: state.currentWeek, title: event.title, detail };

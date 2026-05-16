@@ -124,15 +124,77 @@
    * Used to validate replay consistency
    */
   GameState.prototype._calculateChecksum = function () {
-    // Simple hash of critical state values
-    const parts = [
-      this.version,
-      this.season ? this.season.week : "no_season",
-      this.season ? this.season.number : "no_season",
-      this.clubs.length,
-      this.manager ? this.manager.profile.name : "no_manager"
-    ];
-    return this._hash(parts.join("|"));
+    const projection = {
+      version: this.version,
+      generation: this.generation,
+      season: this.season ? {
+        number: this.season.number,
+        week: this.season.week,
+        totalWeeks: this.season.totalWeeks,
+        startSeed: this.season.startSeed,
+        standings: (this.season.standings || []).map((s) => ({
+          teamId: s.teamId,
+          played: s.played,
+          wins: s.wins,
+          draws: s.draws,
+          losses: s.losses,
+          goalsFor: s.goalsFor,
+          goalsAgainst: s.goalsAgainst,
+          goalDifference: s.goalDifference,
+          points: s.points
+        })),
+        fixture: (this.season.fixture || []).map((f) => ({
+          week: f.week,
+          matches: (f.matches || []).map((m) => ({
+            homeTeamId: m.homeTeamId,
+            awayTeamId: m.awayTeamId,
+            played: !!m.played,
+            homeGoals: m.homeGoals,
+            awayGoals: m.awayGoals
+          }))
+        }))
+      } : null,
+      clubs: this.clubs.map((club) => ({
+        teamId: club.teamId,
+        name: club.name,
+        budget: club.budget,
+        fanBase: club.fanBase,
+        form: club.form,
+        finances: club.finances,
+        tactics: club.tactics,
+        squad: (club.squad || []).map((player) => ({
+          id: player.id,
+          teamId: player.teamId,
+          position: player.position,
+          age: player.age,
+          overall: player.overall,
+          morale: player.morale,
+          energy: player.energy,
+          value: player.value,
+          salary: player.salary,
+          injuryWeeks: player.injuryWeeks || 0,
+          suspendedWeeks: player.suspendedWeeks || player.suspensionWeeks || 0,
+          isRetired: !!player.isRetired
+        })),
+        lineup: (club.lineup || []).map((player) => player.id || player)
+      })),
+      manager: this.manager ? {
+        profile: this.manager.profile,
+        career: this.manager.career
+      } : null,
+      metadata: this.metadata
+    };
+    return this._hash(this._stableStringify(projection));
+  };
+
+  GameState.prototype._stableStringify = function (value) {
+    if (value === null || typeof value !== "object") {
+      return JSON.stringify(value);
+    }
+    if (Array.isArray(value)) {
+      return "[" + value.map((entry) => this._stableStringify(entry)).join(",") + "]";
+    }
+    return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + this._stableStringify(value[key])).join(",") + "}";
   };
 
   /**

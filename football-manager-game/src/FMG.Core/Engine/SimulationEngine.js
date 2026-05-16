@@ -140,6 +140,9 @@
     const startTick = FMG.Core.Utils.Determinism.nextTick();
 
     try {
+      const replayStartSnapshotId = this.snapshotStore.save(gameState, "pre_week_" + gameState.season.week);
+      const transitionStartIndex = this.pipeline.getTransitionLog().length;
+
       // 1. VALIDATE current state
       const validation = gameState.validate();
       if (!validation.valid) {
@@ -241,9 +244,11 @@
       this.snapshotStore.save(state, "week_" + gameState.season.week);
 
       // 6. BUILD RESPONSE
-      const replayValidation = this.diagnostics && typeof this.diagnostics.validateReplay === "function"
-        ? this.diagnostics.validateReplay()
-        : { ok: true, skipped: true };
+      const replayActions = this.pipeline.getTransitionLog()
+        .slice(transitionStartIndex)
+        .flatMap((entry) => (entry.transaction && entry.transaction.actions ? entry.transaction.actions : []))
+        .map((action) => ({ type: action.type, payload: action.payload }));
+      const replayValidation = this.replayEngine.validateDeterminism(replayStartSnapshotId, replayActions, state._calculateChecksum());
 
       const response = {
         gameState: state,
@@ -316,10 +321,14 @@
       return club;
     }
 
-    const availablePlayers = club.squad.filter((p) => !p.isInjured && p.suspensionWeeks === 0);
-    const lineup = availablePlayers.slice(0, 11);
+    const availablePlayers = club.squad.filter((p) => {
+      const suspendedWeeks = p.suspensionWeeks !== undefined ? p.suspensionWeeks : (p.suspendedWeeks || 0);
+      return !p.isInjured && !p.injuryWeeks && suspendedWeeks === 0;
+    });
+    const emergencyPool = club.squad.filter((p) => !p.isRetired);
+    const lineup = (availablePlayers.length >= 11 ? availablePlayers : emergencyPool).slice(0, 11);
 
-    return club.withSquad ? club.withSquad(Object.freeze(lineup)) : club;
+    return club.withLineup ? club.withLineup(Object.freeze(lineup)) : club;
   };
 
   /**

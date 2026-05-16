@@ -40,7 +40,7 @@
     }
     this._log = this._log.slice(0, 80);
     if (state.simulationState) {
-      state.simulationState.lastRunAt = new Date().toISOString();
+      state.simulationState.lastRunAt = FMG.nowISO ? FMG.nowISO("simulation-scheduler") : new Date().toISOString();
       state.simulationState.completedJobs = this._log.slice(0, 20);
     }
     return executed;

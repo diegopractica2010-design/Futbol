@@ -61,7 +61,7 @@
     const tempKey = `${key}.tmp`;
     const existing = localStorage.getItem(key);
     if (existing && !overwrite) return { ok: false, message: "El slot ya existe. Confirma antes de sobrescribir." };
-    const savedAt = new Date().toISOString();
+    const savedAt = FMG.nowISO ? FMG.nowISO("save") : new Date().toISOString();
     const snapshot = FMG.deepClone(state);
     if (FMG.syncLegacyStateFacets) FMG.syncLegacyStateFacets(snapshot);
     if (FMG.Core?.diagnostics?.validation) {
@@ -74,6 +74,7 @@
     snapshot.saveMeta.lastSavedAt = savedAt;
     snapshot.saveMeta.safeSave = { status: "committed", savedAt, slotId: targetSlot };
     const persistable = FMG.Core?.diagnostics?.persistence ? FMG.Core.diagnostics.persistence.wrap(snapshot) : snapshot;
+    const asyncSave = FMG.incrementalSavePipeline ? FMG.incrementalSavePipeline.enqueue(targetSlot, snapshot) : null;
     const payload = JSON.stringify(persistable);
     if (existing) localStorage.setItem(backupKey, existing);
     localStorage.setItem(tempKey, payload);
@@ -93,7 +94,7 @@
       week: state.currentWeek || 1
     });
     writeIndex(index.slice(0, 12));
-    return { ok: true, message: `Partida guardada en ${targetSlot}.`, slotId: targetSlot, savedAt };
+    return { ok: true, message: `Partida guardada en ${targetSlot}.`, slotId: targetSlot, savedAt, asyncSave };
   }
 
   FMG.defaultGameSettings = defaultSettings;
@@ -111,7 +112,7 @@
 
   FMG.pushSystemError = function (state, message, detail) {
     state.systemErrors = state.systemErrors || [];
-    state.systemErrors.unshift({ id: FMG.uid("err"), week: state.currentWeek || 1, message, detail: detail || "", createdAt: new Date().toISOString() });
+    state.systemErrors.unshift({ id: FMG.uid("err"), week: state.currentWeek || 1, message, detail: detail || "", createdAt: FMG.nowISO ? FMG.nowISO("system-error") : new Date().toISOString() });
     state.systemErrors = state.systemErrors.slice(0, 8);
   };
 
@@ -154,7 +155,7 @@
       }
       const migrated = FMG.migrateSaveState(parsed);
       migrated.saveMeta.activeSlotId = slotId === "legacy" ? "slot-1" : slotId;
-      migrated.saveMeta.lastLoadedAt = new Date().toISOString();
+      migrated.saveMeta.lastLoadedAt = FMG.nowISO ? FMG.nowISO("load") : new Date().toISOString();
       FMG.replaceGameState(migrated);
       // Restaurar RNG si hay un liveMatch activo
       if (migrated.liveMatch) {

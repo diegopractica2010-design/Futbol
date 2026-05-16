@@ -64,6 +64,24 @@
   };
 
   /**
+   * Create new Club with updated lineup while preserving the authoritative squad.
+   */
+  ClubAggregate.prototype.withLineup = function (newLineup) {
+    return new ClubAggregate({
+      teamId: this.teamId,
+      name: this.name,
+      budget: this.budget,
+      fanBase: this.fanBase,
+      squad: this.squad,
+      lineup: newLineup,
+      finances: this.finances,
+      tactics: this.tactics,
+      form: this.form,
+      strength: this.strength
+    });
+  };
+
+  /**
    * Create new Club with updated finances
    */
   ClubAggregate.prototype.withFinances = function (newFinances) {

@@ -411,9 +411,12 @@
   };
 
   FMG.createLiveMatch = function ({ homeTeam, awayTeam, state, week, otherMatches, seed }) {
-    // Inicializar RNG con seed si existe, sino generar uno
     if (seed === undefined) {
-      seed = Math.floor(Date.now() % 4294967296);
+      const baseSeed = state.seed || FMG.getCurrentSeed?.() || 1;
+      const salt = `${homeTeam.id}|${awayTeam.id}|${week || state.currentWeek || 1}|${state.seasonNumber || 1}`;
+      seed = FMG.Core?.Utils?.deriveSeed
+        ? FMG.Core.Utils.deriveSeed(baseSeed, week || 1, FMG.Core.Utils.hashSeed(salt))
+        : (baseSeed ^ (week || 1) ^ salt.length) >>> 0;
     }
     FMG.initRNG(seed);
 

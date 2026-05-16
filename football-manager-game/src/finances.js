@@ -193,7 +193,7 @@
     const finances = FMG.ensureAdvancedFinances(state);
     const club = state.userClub;
     const stadiumBoost = 1 + (finances.infrastructure.stadium - 1) * 0.12;
-    const estimatedAttendance = FMG.clamp(Math.round((club.fanBase * 0.006 + Math.random() * 3500) * stadiumBoost), 2500, 52000);
+    const estimatedAttendance = FMG.clamp(Math.round((club.fanBase * 0.006 + FMG.rng() * 3500) * stadiumBoost), 2500, 52000);
     const ticketPrice = 6500 + (finances.infrastructure.stadium - 1) * 450;
     const attendanceIncome = Math.round(estimatedAttendance * ticketPrice);
     const sponsorshipIncome = Math.round(finances.sponsorDeal.weeklyAmount);
@@ -248,11 +248,11 @@
     const medicalReduction = Math.max(0, finances.infrastructure.medical - 1) + Math.max(0, finances.staff.medical - 1);
     let improvedPlayers = 0;
     state.players.filter((player) => player.teamId === state.userTeamId && !player.retired).forEach((player) => {
-      if (player.overall < player.potential && Math.random() < trainingBonus) {
+      if (player.overall < player.potential && FMG.rng() < trainingBonus) {
         player.overall += 1;
         improvedPlayers += 1;
       }
-      if ((player.injuredWeeks || 0) > 0 && medicalReduction > 0 && Math.random() < medicalReduction * 0.08) {
+      if ((player.injuredWeeks || 0) > 0 && medicalReduction > 0 && FMG.rng() < medicalReduction * 0.08) {
         player.injuredWeeks = Math.max(0, player.injuredWeeks - 1);
       }
     });

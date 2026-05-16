@@ -253,7 +253,7 @@
       toTeamId: targetTeam.id,
       toTeamName: targetTeam.name,
       content: rng ? rng.choice(rumors) : FMG.sample(rumors),
-      probability: rng ? rng.nextFloat(0.3, 0.7) : Math.random() * 0.4 + 0.3, // 30-70% chance
+      probability: rng ? rng.nextFloat(0.3, 0.7) : FMG.rng() * 0.4 + 0.3, // 30-70% chance
       week: state.currentWeek
     };
   }
@@ -351,7 +351,7 @@
   function processWeeklyImmersion(state, rng = null) {
     ensureImmersionState(state);
     const results = { milestones: 0, questions: 0, rumors: 0, declarations: 0 };
-    const randomValue = () => (rng ? rng.next() : Math.random());
+    const randomValue = () => (rng ? rng.next() : FMG.rng());
 
     // Generate press questions
     if (randomValue() < 0.6) {
