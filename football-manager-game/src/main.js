@@ -367,7 +367,7 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      const exportTick = FMG.simulationClock ? FMG.simulationClock.tick("export") : Date.now();
+      const exportTick = FMG.simulationClock ? FMG.simulationClock.tick("export") : FMG.tickMs ? FMG.tickMs("export") : Date.UTC(2025, 0, 1, 12, 0, 0);
       link.download = `football-manager-chile-${exportTick}.json`;
       link.click();
       URL.revokeObjectURL(url);

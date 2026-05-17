@@ -25,6 +25,47 @@
     localStorage.setItem(FMG.SAVE_INDEX_KEY, JSON.stringify(index));
   }
 
+  function cloneForPersistence(value) {
+    try {
+      return FMG.deepClone ? FMG.deepClone(value) : JSON.parse(JSON.stringify(value));
+    } catch (error) {
+      return JSON.parse(JSON.stringify(value));
+    }
+  }
+
+  function persistenceMetaKey(slotId) {
+    return `${slotKey(slotId)}.persistence`;
+  }
+
+  function validateLoadedSave(data) {
+    const errors = [];
+    if (!data || typeof data !== "object") errors.push("Save vacio");
+    if (FMG.saveIntegrityValidator) {
+      const validation = FMG.saveIntegrityValidator.validate(data);
+      if (!validation.ok) errors.push(...validation.errors);
+    } else if (FMG.Core?.diagnostics?.saveValidator) {
+      const validation = FMG.Core.diagnostics.saveValidator.validate(data);
+      if (!validation.ok) errors.push(...validation.errors);
+    } else {
+      if (!Array.isArray(data.teams)) errors.push("Save missing teams");
+      if (!Array.isArray(data.players)) errors.push("Save missing players");
+      if (!Array.isArray(data.fixtures)) errors.push("Save missing fixtures");
+    }
+    return { ok: errors.length === 0, errors };
+  }
+
+  function parseSlotPayload(raw, backupRaw) {
+    try {
+      return JSON.parse(raw);
+    } catch (parseError) {
+      if (!backupRaw) throw parseError;
+      const parsedBackup = JSON.parse(backupRaw);
+      parsedBackup.saveMeta = parsedBackup.saveMeta || {};
+      parsedBackup.saveMeta.recoveredFromBackup = true;
+      return parsedBackup;
+    }
+  }
+
   function normalizeSettings(settings) {
     const merged = FMG.deepClone(defaultSettings);
     const source = settings || {};
@@ -61,8 +102,8 @@
     const tempKey = `${key}.tmp`;
     const existing = localStorage.getItem(key);
     if (existing && !overwrite) return { ok: false, message: "El slot ya existe. Confirma antes de sobrescribir." };
-    const savedAt = FMG.nowISO ? FMG.nowISO("save") : new Date().toISOString();
-    const snapshot = FMG.deepClone(state);
+    const savedAt = FMG.nowISO ? FMG.nowISO("save") : "2025-01-01T12:00:00.000Z";
+    const snapshot = cloneForPersistence(state);
     if (FMG.syncLegacyStateFacets) FMG.syncLegacyStateFacets(snapshot);
     if (FMG.Core?.diagnostics?.validation) {
       const validation = FMG.Core.diagnostics.validation.validateLegacyState(snapshot);
@@ -72,7 +113,7 @@
     snapshot.saveMeta = snapshot.saveMeta || {};
     snapshot.saveMeta.activeSlotId = targetSlot;
     snapshot.saveMeta.lastSavedAt = savedAt;
-    snapshot.saveMeta.safeSave = { status: "committed", savedAt, slotId: targetSlot };
+    snapshot.saveMeta.safeSave = { status: "committed", savedAt, slotId: targetSlot, storage: FMG.incrementalSavePipeline ? "dual-write" : "localStorage" };
     const persistable = FMG.Core?.diagnostics?.persistence ? FMG.Core.diagnostics.persistence.wrap(snapshot) : snapshot;
     const asyncSave = FMG.incrementalSavePipeline ? FMG.incrementalSavePipeline.enqueue(targetSlot, snapshot) : null;
     const payload = JSON.stringify(persistable);
@@ -81,6 +122,14 @@
     localStorage.setItem(key, localStorage.getItem(tempKey));
     localStorage.removeItem?.(tempKey);
     localStorage.setItem(FMG.STORAGE_KEY, payload);
+    localStorage.setItem(persistenceMetaKey(targetSlot), JSON.stringify({
+      schema: "dual-write-v1",
+      slotId: targetSlot,
+      savedAt,
+      localStorageBytes: payload.length,
+      indexedDBQueued: Boolean(asyncSave),
+      compatibilityPayload: true
+    }));
 
     const teamName = state.userClub?.name || "Sin club";
     const index = readIndex().filter((slot) => slot.slotId !== targetSlot);
@@ -112,7 +161,7 @@
 
   FMG.pushSystemError = function (state, message, detail) {
     state.systemErrors = state.systemErrors || [];
-    state.systemErrors.unshift({ id: FMG.uid("err"), week: state.currentWeek || 1, message, detail: detail || "", createdAt: FMG.nowISO ? FMG.nowISO("system-error") : new Date().toISOString() });
+    state.systemErrors.unshift({ id: FMG.uid("err"), week: state.currentWeek || 1, message, detail: detail || "", createdAt: FMG.nowISO ? FMG.nowISO("system-error") : "2025-01-01T12:00:00.000Z" });
     state.systemErrors = state.systemErrors.slice(0, 8);
   };
 
@@ -145,17 +194,12 @@
       const key = slotKey(slotId);
       const raw = slotId === "legacy" ? localStorage.getItem(FMG.STORAGE_KEY) : localStorage.getItem(key);
       if (!raw) return { ok: false, message: "No hay partida en ese slot." };
-      let parsed;
-      try {
-        parsed = JSON.parse(raw);
-      } catch (parseError) {
-        const backup = localStorage.getItem(`${key}.bak`);
-        if (!backup) throw parseError;
-        parsed = JSON.parse(backup);
-      }
+      const parsed = parseSlotPayload(raw, localStorage.getItem(`${key}.bak`));
+      const validation = validateLoadedSave(parsed);
+      if (!validation.ok) throw new Error(validation.errors.join("; "));
       const migrated = FMG.migrateSaveState(parsed);
       migrated.saveMeta.activeSlotId = slotId === "legacy" ? "slot-1" : slotId;
-      migrated.saveMeta.lastLoadedAt = FMG.nowISO ? FMG.nowISO("load") : new Date().toISOString();
+      migrated.saveMeta.lastLoadedAt = FMG.nowISO ? FMG.nowISO("load") : "2025-01-01T12:00:00.000Z";
       FMG.replaceGameState(migrated);
       // Restaurar RNG si hay un liveMatch activo
       if (migrated.liveMatch) {
@@ -166,6 +210,27 @@
       FMG.pushSystemError(FMG.gameState, "No se pudo cargar la partida.", error.message);
       return { ok: false, message: "La partida guardada esta danada." };
     }
+  };
+
+  FMG.loadFromSlotAsync = function (slotId) {
+    if (FMG.incrementalSavePipeline && slotId !== "legacy") {
+      return FMG.incrementalSavePipeline.load(slotId).then((chunked) => {
+        if (!chunked) return FMG.loadFromSlot(slotId);
+        const validation = validateLoadedSave(chunked);
+        if (!validation.ok) throw new Error(validation.errors.join("; "));
+        const migrated = FMG.migrateSaveState(chunked);
+        migrated.saveMeta.activeSlotId = slotId;
+        migrated.saveMeta.lastLoadedAt = FMG.nowISO ? FMG.nowISO("load-async") : "2025-01-01T12:00:00.000Z";
+        migrated.saveMeta.loadedFrom = "indexedDB";
+        FMG.replaceGameState(migrated);
+        if (migrated.liveMatch) FMG.restoreRNGFromLiveMatch(migrated.liveMatch);
+        return { ok: true, message: `Partida cargada desde ${slotId}.`, storage: "indexedDB" };
+      }).catch((error) => {
+        FMG.pushSystemError(FMG.gameState, "No se pudo cargar la partida incremental.", error.message);
+        return FMG.loadFromSlot(slotId);
+      });
+    }
+    return Promise.resolve(FMG.loadFromSlot(slotId));
   };
 
   FMG.autosaveIfNeeded = function (state, reason) {
@@ -180,7 +245,7 @@
 
   FMG.exportSave = function (state) {
     FMG.ensureSettingsState(state);
-    return JSON.stringify({ exportedAt: new Date().toISOString(), game: state }, null, 2);
+    return JSON.stringify({ exportedAt: FMG.nowISO ? FMG.nowISO("export-save") : "2025-01-01T12:00:00.000Z", game: state }, null, 2);
   };
 
   FMG.importSave = function (payload, targetSlotId = "slot-1") {

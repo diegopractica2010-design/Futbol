@@ -8,6 +8,7 @@
   // ============================================================
 
   const C = window.FMG.Phase16.C;
+  function rng() { return window.FMG && window.FMG.randomFloat ? window.FMG.randomFloat("phase16-ball") : 0.5; }
 
   function BallSystem() {
     this.ball = this._make();
@@ -26,8 +27,8 @@
     options = options || {};
     const error = options.error || 0;
     if (error) {
-      vx += (Math.random() - 0.5) * error;
-      vy += (Math.random() - 0.5) * error;
+      vx += (rng() - 0.5) * error;
+      vy += (rng() - 0.5) * error;
     }
     this.ball.vx = vx;
     this.ball.vy = vy;

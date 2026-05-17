@@ -3,6 +3,7 @@
 
   window.FMG = window.FMG || {};
   window.FMG.Phase23 = window.FMG.Phase23 || {};
+  function rng() { return window.FMG && window.FMG.randomFloat ? window.FMG.randomFloat("phase23-audio") : 0.5; }
 
   function StadiumAudio() {
     var AudioCtor = window.AudioContext || window.webkitAudioContext;
@@ -227,7 +228,7 @@
     var stopped = false;
     function schedule() {
       if (stopped) return;
-      var note = notes[Math.floor(Math.random() * notes.length)];
+      var note = notes[Math.floor(rng() * notes.length)];
       self._tone(note, gainValue, step * 0.62, type, 0);
       setTimeout(schedule, step * 1000);
     }
@@ -253,7 +254,7 @@
     var length = Math.floor(ctx.sampleRate * seconds);
     var buffer = ctx.createBuffer(1, length, ctx.sampleRate);
     var data = buffer.getChannelData(0);
-    for (var i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+    for (var i = 0; i < length; i++) data[i] = rng() * 2 - 1;
     return buffer;
   }
 

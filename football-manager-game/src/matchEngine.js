@@ -33,7 +33,7 @@
   // - Usar FMG.gameState como referencia, nunca como destino
 
   function ratingFromSquad(players) {
-    const starters = [...players].sort((left, right) => right.overall - left.overall).slice(0, 11);
+    const starters = (FMG.deterministicSort || ((items, comparator) => [...items].sort(comparator)))(players, (left, right) => right.overall - left.overall).slice(0, 11);
     const quality = FMG.average(starters.map((player) => player.overall));
     const morale = FMG.average(starters.map((player) => player.morale));
     const energy = FMG.average(starters.map((player) => player.energy));
@@ -397,15 +397,15 @@
       awayTeamId: awayTeam.id,
       homeGoals,
       awayGoals,
-      homeEvents: homeEvents.sort((left, right) => left.minute - right.minute),
-      awayEvents: awayEvents.sort((left, right) => left.minute - right.minute),
+      homeEvents: (FMG.deterministicSort || ((items, comparator) => items.sort(comparator)))(homeEvents, (left, right) => left.minute - right.minute),
+      awayEvents: (FMG.deterministicSort || ((items, comparator) => items.sort(comparator)))(awayEvents, (left, right) => left.minute - right.minute),
       stats: {
         home: { ...homeStats, xg: Number(homeStats.xg.toFixed(2)) },
         away: { ...awayStats, xg: Number(awayStats.xg.toFixed(2)) }
       },
       cards,
       injuries,
-      timeline: timeline.sort((left, right) => left.minute - right.minute),
+      timeline: (FMG.deterministicSort || ((items, comparator) => items.sort(comparator)))(timeline, (left, right) => left.minute - right.minute),
       summary: createSummary(homeTeam, awayTeam, homeGoals, awayGoals, homeStats, awayStats)
     };
   };
@@ -487,9 +487,9 @@
 
     liveMatch.result.stats.home.xg = Number(liveMatch.result.stats.home.xg.toFixed(2));
     liveMatch.result.stats.away.xg = Number(liveMatch.result.stats.away.xg.toFixed(2));
-    liveMatch.result.homeEvents.sort((left, right) => left.minute - right.minute);
-    liveMatch.result.awayEvents.sort((left, right) => left.minute - right.minute);
-    liveMatch.result.timeline.sort((left, right) => left.minute - right.minute);
+    liveMatch.result.homeEvents = (FMG.deterministicSort || ((items, comparator) => items.sort(comparator)))(liveMatch.result.homeEvents, (left, right) => left.minute - right.minute);
+    liveMatch.result.awayEvents = (FMG.deterministicSort || ((items, comparator) => items.sort(comparator)))(liveMatch.result.awayEvents, (left, right) => left.minute - right.minute);
+    liveMatch.result.timeline = (FMG.deterministicSort || ((items, comparator) => items.sort(comparator)))(liveMatch.result.timeline, (left, right) => left.minute - right.minute);
 
     if (liveMatch.minute >= 90) {
       liveMatch.completed = true;

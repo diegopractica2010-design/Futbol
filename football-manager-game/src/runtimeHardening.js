@@ -27,6 +27,54 @@
     return chunks;
   }
 
+  function deterministicNow() {
+    if (FMG.simulationClock && typeof FMG.simulationClock.now === "function") return FMG.simulationClock.now();
+    if (FMG.nowMs) return FMG.nowMs();
+    return Date.UTC(2025, 0, 1, 12, 0, 0);
+  }
+
+  function deterministicTick(label) {
+    if (FMG.simulationClock && typeof FMG.simulationClock.tick === "function") return FMG.simulationClock.tick(label || "runtime");
+    if (FMG.tickMs) return FMG.tickMs(label || "runtime");
+    return deterministicNow();
+  }
+
+  function deterministicISO(label) {
+    return new Date(deterministicTick(label || "time")).toISOString();
+  }
+
+  function deterministicRandom(label) {
+    let value;
+    if (FMG.deterministicRNG && typeof FMG.deterministicRNG.next === "function") value = FMG.deterministicRNG.next();
+    else if (FMG.rng) value = FMG.rng();
+    else value = 0.5;
+    if (FMG.runtimeRandomnessAudit && typeof FMG.runtimeRandomnessAudit.record === "function") {
+      FMG.runtimeRandomnessAudit.record(label || "rng", value);
+    }
+    return value;
+  }
+
+  function stableEntityKey(entity, fallbackIndex) {
+    if (entity && typeof entity === "object") {
+      const id = entity.id || entity.playerId || entity.teamId || entity.fixtureId || entity.stateId || entity.name;
+      if (id !== undefined && id !== null) return String(id);
+      if (entity.homeTeamId || entity.awayTeamId || entity.week) {
+        return [entity.week || 0, entity.homeTeamId || "", entity.awayTeamId || ""].join(":");
+      }
+    }
+    return String(fallbackIndex || 0);
+  }
+
+  function deterministicSort(items, comparator) {
+    return (items || []).map((item, index) => ({ item, index })).sort((left, right) => {
+      const result = comparator ? comparator(left.item, right.item) : 0;
+      if (result) return result;
+      const leftKey = stableEntityKey(left.item, left.index);
+      const rightKey = stableEntityKey(right.item, right.index);
+      return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : left.index - right.index;
+    }).map((entry) => entry.item);
+  }
+
   class SimulationClock {
     constructor(config) {
       config = config || {};
@@ -100,11 +148,159 @@
     }
   }
 
+  class RNGStateSerializer {
+    serialize(rng) {
+      const target = rng || FMG.deterministicRNG;
+      const snapshot = target && typeof target.snapshot === "function"
+        ? target.snapshot()
+        : { seed: FMG._currentSeed || 1, state: FMG._fallbackRngState || 1, counter: 0 };
+      const payload = {
+        schema: "fmg-rng-state",
+        version: 1,
+        snapshot,
+        checksum: hashString(stableStringify(snapshot))
+      };
+      return payload;
+    }
+
+    restore(payload, rng) {
+      if (!payload || !payload.snapshot) throw new Error("RNG snapshot required");
+      const checksum = hashString(stableStringify(payload.snapshot));
+      if (payload.checksum && payload.checksum !== checksum) throw new Error("RNG snapshot checksum mismatch");
+      const target = rng || FMG.deterministicRNG || new DeterministicRNGEngine(payload.snapshot.seed || 1);
+      if (typeof target.restore === "function") target.restore(payload.snapshot);
+      if (!FMG.deterministicRNG) FMG.deterministicRNG = target;
+      return target.snapshot ? target.snapshot() : payload.snapshot;
+    }
+
+    clone(rng) {
+      const serialized = this.serialize(rng);
+      const clone = new DeterministicRNGEngine(serialized.snapshot.seed || 1);
+      clone.restore(serialized.snapshot);
+      return clone;
+    }
+
+    compare(left, right) {
+      const leftState = this.serialize(left).snapshot;
+      const rightState = this.serialize(right).snapshot;
+      const leftHash = hashString(stableStringify(leftState));
+      const rightHash = hashString(stableStringify(rightState));
+      return { equal: leftHash === rightHash, leftHash, rightHash };
+    }
+  }
+
+  class ReplayHashEngine {
+    constructor() {
+      this.history = [];
+    }
+
+    canonicalize(value, options) {
+      options = options || {};
+      if (value === null || typeof value !== "object") return value;
+      if (Array.isArray(value)) {
+        const mapped = value.map((entry) => this.canonicalize(entry, options));
+        if (options.sortEntityArrays && mapped.every((entry) => entry && typeof entry === "object" && !Array.isArray(entry))) {
+          return deterministicSort(mapped);
+        }
+        return mapped;
+      }
+      const out = {};
+      Object.keys(value).sort().forEach((key) => {
+        if (typeof value[key] !== "function" && key !== "__fmgRuntimePath" && key !== "__runtimeOwnership") {
+          out[key] = this.canonicalize(value[key], options);
+        }
+      });
+      return out;
+    }
+
+    hash(value, options) {
+      const canonical = this.canonicalize(value, options || {});
+      return hashString(stableStringify(canonical));
+    }
+
+    hashState(state) {
+      if (state && typeof state._calculateChecksum === "function") return state._calculateChecksum();
+      return this.hash(state || null, { sortEntityArrays: true });
+    }
+
+    hashReplay(ticks) {
+      return this.hash(ticks || [], { sortEntityArrays: false });
+    }
+
+    record(label, value, options) {
+      const entry = {
+        label: label || "hash",
+        hash: this.hash(value, options || {}),
+        at: deterministicNow()
+      };
+      this.history.unshift(entry);
+      this.history = this.history.slice(0, 100);
+      return entry;
+    }
+
+    compare(left, right, options) {
+      const leftHash = this.hash(left, options || {});
+      const rightHash = this.hash(right, options || {});
+      return { equal: leftHash === rightHash, leftHash, rightHash };
+    }
+  }
+
+  class RuntimeRandomnessAudit {
+    constructor() {
+      this.calls = [];
+      this.unsafeSources = [];
+    }
+
+    record(label, value) {
+      const entry = { label: label || "rng", counter: FMG.deterministicRNG ? FMG.deterministicRNG.counter : null, value };
+      this.calls.unshift(entry);
+      this.calls = this.calls.slice(0, 200);
+      return entry;
+    }
+
+    flag(source, detail) {
+      const entry = { source, detail: detail || "", at: deterministicNow() };
+      this.unsafeSources.unshift(entry);
+      this.unsafeSources = this.unsafeSources.slice(0, 100);
+      return entry;
+    }
+
+    report() {
+      return {
+        rngCalls: this.calls.slice(0, 100),
+        unsafeSources: this.unsafeSources.slice(0, 100),
+        rngState: FMG.rngStateSerializer ? FMG.rngStateSerializer.serialize(FMG.deterministicRNG) : null,
+        clock: FMG.simulationClock && FMG.simulationClock.snapshot ? FMG.simulationClock.snapshot() : null
+      };
+    }
+  }
+
   class RuntimeAuthorityManager {
     constructor() {
       this.systems = new Map();
       this.authority = "FMG.Core";
+      this.runtimeId = "fmg-runtime-" + hashString("runtime:" + deterministicNow() + ":" + (FMG.deterministicRNG ? FMG.deterministicRNG.counter : 0));
+      this.status = "created";
+      this.authoritativeState = null;
+      this.authoritativeChecksum = null;
+      this.authoritativeGeneration = 0;
+      this.metadataByPath = new Map();
+      this.divergences = [];
+      this.stateWrites = [];
+      this.lifecycle = [];
       this.migrationReport = { migratedSystems: [], remainingLegacyDependencies: [], unsafeLegacyCalls: [] };
+      this.declareOwnership("FMG.Core", "FMG.Core", "authoritative-runtime");
+      [
+        "teams", "players", "fixtures", "currentWeek", "totalWeeks", "completedWeeks",
+        "seasonComplete", "champion", "seasonNumber", "seasonHistory", "userTeamId",
+        "userClub", "currentMatch", "liveMatch", "lastResults", "standings",
+        "market", "tactics", "competitions", "finances", "career"
+      ].forEach((path) => this.declareOwnership(path, "FMG.Core", "core-gameplay-state"));
+      [
+        "route", "selectionMode", "squadView", "rivalAI", "worldNews", "ui", "settings",
+        "saveMeta", "systemErrors", "eventsLog", "notifications", "notificationLog",
+        "seasonLog", "managerProfile"
+      ].forEach((path) => this.declareOwnership(path, "legacy-compatibility-facade", "legacy-ui-compatibility"));
     }
 
     declare(system, config) {
@@ -121,19 +317,115 @@
       return entry;
     }
 
+    declareOwnership(path, owner, reason) {
+      const entry = {
+        path: String(path || "$"),
+        owner: owner || this.authority,
+        reason: reason || "runtime",
+        declaredAt: deterministicNow()
+      };
+      this.metadataByPath.set(entry.path, entry);
+      return entry;
+    }
+
+    ownershipFor(path) {
+      const parts = String(path || "$").split(".");
+      while (parts.length) {
+        const candidate = parts.join(".");
+        if (this.metadataByPath.has(candidate)) return this.metadataByPath.get(candidate);
+        parts.pop();
+      }
+      return this.metadataByPath.get("FMG.Core") || { owner: this.authority, path: "$" };
+    }
+
     isAuthoritative(system) {
       const entry = this.systems.get(system);
       return !entry || entry.owner === this.authority;
+    }
+
+    start(reason) {
+      this.status = "running";
+      this.lifecycle.push({ type: "startup", reason: reason || "install", at: deterministicNow() });
+      return this.status;
+    }
+
+    shutdown(reason) {
+      this.status = "stopped";
+      this.lifecycle.push({ type: "shutdown", reason: reason || "manual", at: deterministicNow() });
+      if (FMG.masterRuntimeLoop && FMG.masterRuntimeLoop.stop) FMG.masterRuntimeLoop.stop();
+      return this.status;
+    }
+
+    setAuthoritativeState(coreState, reason) {
+      if (!coreState) return null;
+      this.authoritativeState = coreState;
+      this.authoritativeChecksum = typeof coreState._calculateChecksum === "function" ? coreState._calculateChecksum() : hashString(stableStringify(coreState));
+      this.authoritativeGeneration = coreState.generation || this.authoritativeGeneration;
+      this.stateWrites.push({
+        source: this.authority,
+        reason: reason || "core-state",
+        checksum: this.authoritativeChecksum,
+        generation: this.authoritativeGeneration
+      });
+      this.stateWrites = this.stateWrites.slice(-100);
+      return this.authoritativeState;
+    }
+
+    captureCoreStateFromLegacy(reason) {
+      if (!FMG.Core || !FMG.Core.Adapters || !FMG.Core.Adapters.legacyAdapter || !FMG.gameState || !FMG.gameState.teams) return null;
+      try {
+        return this.setAuthoritativeState(FMG.Core.Adapters.legacyAdapter.toCore(), reason || "legacy-projection");
+      } catch (error) {
+        this.migrationReport.unsafeLegacyCalls.push("capture-core-state:" + error.message);
+        return null;
+      }
+    }
+
+    validateNoDivergence(coreState, legacyState, validator) {
+      const state = coreState || this.authoritativeState;
+      if (!validator || !state || !legacyState) return { valid: true, skipped: true };
+      const result = validator.validate(state, legacyState);
+      if (!result.valid) {
+        this.divergences.push({
+          at: deterministicNow(),
+          errors: result.errors.slice(),
+          coreChecksum: typeof state._calculateChecksum === "function" ? state._calculateChecksum() : hashString(stableStringify(state)),
+          legacyChecksum: hashString(stableStringify(legacyState))
+        });
+        this.divergences = this.divergences.slice(-50);
+      }
+      return result;
+    }
+
+    reports() {
+      const authority = this.report();
+      return {
+        runtimeAuthorityReport: authority,
+        remainingLegacyDependencyReport: {
+          dependencies: authority.remainingLegacyDependencies,
+          unsafeLegacyCalls: authority.unsafeLegacyCalls,
+          stranglerStage: authority.remainingLegacyDependencies.length ? "compatibility-facade-active" : "core-only"
+        },
+        unsafeMutationReport: FMG.runtimeMutationGuard ? FMG.runtimeMutationGuard.report() : null
+      };
     }
 
     report() {
       const unique = (items) => Array.from(new Set(items));
       return {
         authority: this.authority,
+        runtimeId: this.runtimeId,
+        status: this.status,
+        authoritativeChecksum: this.authoritativeChecksum,
+        authoritativeGeneration: this.authoritativeGeneration,
         systems: Array.from(this.systems.values()),
+        ownership: Array.from(this.metadataByPath.values()),
         migratedSystems: unique(this.migrationReport.migratedSystems),
         remainingLegacyDependencies: unique(this.migrationReport.remainingLegacyDependencies),
-        unsafeLegacyCalls: unique(this.migrationReport.unsafeLegacyCalls)
+        unsafeLegacyCalls: unique(this.migrationReport.unsafeLegacyCalls),
+        lifecycle: this.lifecycle.slice(-20),
+        stateWrites: this.stateWrites.slice(-25),
+        divergences: this.divergences.slice(-25)
       };
     }
   }
@@ -144,59 +436,209 @@
       this.current = null;
       this.history = [];
       this.violations = [];
+      this.hiddenMutations = [];
+      this.invalidStateWrites = [];
+      this.duplicateWrites = [];
+      this.suppressionDepth = 0;
+      this.legacyProxy = null;
+      this.rawToProxy = typeof WeakMap !== "undefined" ? new WeakMap() : null;
+      this.proxyToRaw = typeof WeakMap !== "undefined" ? new WeakMap() : null;
     }
 
-    begin(system) {
-      this.current = { system, writes: new Set(), startedAt: FMG.simulationClock ? FMG.simulationClock.now() : Date.now() };
+    checksum(value) {
+      return hashString(stableStringify(value || null));
+    }
+
+    begin(system, context) {
+      const beforeState = FMG.gameState ? this.checksum(FMG.gameState) : null;
+      this.current = {
+        system,
+        context: context || {},
+        writes: new Set(),
+        startedAt: deterministicNow(),
+        beforeState
+      };
       return this.current;
     }
 
-    record(path) {
-      if (!this.current) return;
+    record(path, options) {
+      options = options || {};
       const key = String(path || "unknown");
-      if (this.current.writes.has(key)) {
-        this.violations.push({ type: "duplicate-write", system: this.current.system, path: key });
+      const system = options.system || (this.current && this.current.system) || "legacy-runtime";
+      const owner = this.authorityManager.ownershipFor(key);
+      const suppressed = this.suppressionDepth > 0 || options.suppressed;
+      if (this.current && this.current.writes.has(key)) {
+        const violation = { type: "duplicate-write", system, path: key, owner: owner.owner };
+        this.duplicateWrites.push(violation);
+        this.violations.push(violation);
       }
-      if (!this.authorityManager.isAuthoritative(this.current.system)) {
-        this.violations.push({ type: "legacy-write", system: this.current.system, path: key });
-        this.authorityManager.migrationReport.unsafeLegacyCalls.push(this.current.system + ":" + key);
+      if (!this.authorityManager.isAuthoritative(system)) {
+        const violation = { type: "legacy-write", system, path: key, owner: owner.owner, suppressed };
+        this.violations.push(violation);
+        if (!suppressed) this.authorityManager.migrationReport.unsafeLegacyCalls.push(system + ":" + key);
       }
-      this.current.writes.add(key);
+      if (owner.owner === this.authorityManager.authority && system !== this.authorityManager.authority && !suppressed) {
+        const violation = { type: "invalid-state-write", system, path: key, owner: owner.owner };
+        this.invalidStateWrites.push(violation);
+        this.violations.push(violation);
+      }
+      if (this.current) this.current.writes.add(key);
+      this.violations = this.violations.slice(-250);
+      this.invalidStateWrites = this.invalidStateWrites.slice(-250);
+      this.duplicateWrites = this.duplicateWrites.slice(-250);
+    }
+
+    suppress(label, fn) {
+      this.suppressionDepth += 1;
+      try {
+        return fn();
+      } finally {
+        this.suppressionDepth -= 1;
+      }
+    }
+
+    wrapLegacyState(state) {
+      if (!state || typeof state !== "object" || !this.rawToProxy) return state;
+      if (this.proxyToRaw.has(state)) return state;
+      if (this.rawToProxy.has(state)) return this.rawToProxy.get(state);
+      const self = this;
+      const proxy = new Proxy(state, {
+        get(target, prop, receiver) {
+          const value = Reflect.get(target, prop, receiver);
+          if (!value || typeof value !== "object" || typeof prop === "symbol") return value;
+          const prefix = target.__fmgRuntimePath || "";
+          const childPath = prefix ? prefix + "." + String(prop) : String(prop);
+          try {
+            if (!Object.prototype.hasOwnProperty.call(value, "__fmgRuntimePath")) {
+              Object.defineProperty(value, "__fmgRuntimePath", { value: childPath, configurable: true, enumerable: false, writable: true });
+            }
+          } catch (error) {}
+          return self.wrapLegacyState(value);
+        },
+        set(target, prop, value, receiver) {
+          const prefix = target.__fmgRuntimePath || "";
+          const path = prefix ? prefix + "." + String(prop) : String(prop);
+          self.record(path, { system: self.suppressionDepth ? "legacy-compatibility-facade" : "legacy-runtime", suppressed: self.suppressionDepth > 0 });
+          return Reflect.set(target, prop, value, receiver);
+        },
+        deleteProperty(target, prop) {
+          const prefix = target.__fmgRuntimePath || "";
+          const path = prefix ? prefix + "." + String(prop) : String(prop);
+          self.record(path, { system: self.suppressionDepth ? "legacy-compatibility-facade" : "legacy-runtime", suppressed: self.suppressionDepth > 0 });
+          return Reflect.deleteProperty(target, prop);
+        }
+      });
+      try {
+        Object.defineProperty(state, "__fmgRuntimePath", { value: state.__fmgRuntimePath || "", configurable: true, enumerable: false, writable: true });
+      } catch (error) {}
+      this.rawToProxy.set(state, proxy);
+      this.proxyToRaw.set(proxy, state);
+      return proxy;
+    }
+
+    installLegacyObserver() {
+      if (!FMG.gameState || this.legacyProxy === FMG.gameState) return FMG.gameState;
+      try {
+        Object.defineProperty(FMG.gameState, "__runtimeOwnership", {
+          value: {
+            authority: this.authorityManager.authority,
+            role: "legacy-compatibility-facade",
+            runtimeId: this.authorityManager.runtimeId
+          },
+          configurable: true,
+          enumerable: false,
+          writable: true
+        });
+      } catch (error) {}
+      this.legacyProxy = this.wrapLegacyState(FMG.gameState);
+      FMG.gameState = this.legacyProxy;
+      return FMG.gameState;
     }
 
     end() {
       if (!this.current) return null;
-      const result = { system: this.current.system, writes: Array.from(this.current.writes) };
+      const afterState = FMG.gameState ? this.checksum(FMG.gameState) : null;
+      if (this.current.beforeState && afterState && this.current.beforeState !== afterState && this.current.writes.size === 0) {
+        const violation = { type: "hidden-state-mutation", system: this.current.system, before: this.current.beforeState, after: afterState };
+        this.hiddenMutations.push(violation);
+        this.violations.push(violation);
+      }
+      const result = {
+        system: this.current.system,
+        context: this.current.context,
+        writes: Array.from(this.current.writes),
+        beforeState: this.current.beforeState,
+        afterState
+      };
       this.history.push(result);
       this.current = null;
       return result;
     }
 
     report() {
-      return { recentTransactions: this.history.slice(-50), violations: this.violations.slice(-100) };
+      return {
+        recentTransactions: this.history.slice(-50),
+        violations: this.violations.slice(-100),
+        duplicateWrites: this.duplicateWrites.slice(-100),
+        hiddenMutations: this.hiddenMutations.slice(-100),
+        invalidStateWrites: this.invalidStateWrites.slice(-100)
+      };
     }
   }
 
   class LegacyCompatibilityFacade {
     constructor(authorityManager) {
       this.authorityManager = authorityManager;
+      this.syncLog = [];
     }
 
     toCore() {
       if (!FMG.Core || !FMG.Core.Adapters || !FMG.Core.Adapters.legacyAdapter) return null;
-      return FMG.Core.Adapters.legacyAdapter.toCore();
+      const coreState = FMG.Core.Adapters.legacyAdapter.toCore();
+      this.authorityManager.setAuthoritativeState(coreState, "legacy-read-projection");
+      return coreState;
     }
 
     syncFromCore(coreState) {
       if (!FMG.Core || !FMG.Core.Adapters || !FMG.Core.Adapters.legacyAdapter) return null;
       this.authorityManager.declare("legacy-compatibility-facade", { owner: "legacy", stateAuthority: "FMG.Core", mode: "facade" });
-      return FMG.Core.Adapters.legacyAdapter.syncFromCore(coreState);
+      this.authorityManager.setAuthoritativeState(coreState, "core-to-legacy-sync");
+      const sync = () => FMG.Core.Adapters.legacyAdapter.syncFromCore(coreState);
+      const result = FMG.runtimeMutationGuard ? FMG.runtimeMutationGuard.suppress("core-to-legacy-sync", sync) : sync();
+      if (FMG.runtimeMutationGuard) FMG.runtimeMutationGuard.installLegacyObserver();
+      this.syncLog.unshift({
+        direction: "core-to-legacy",
+        checksum: this.authorityManager.authoritativeChecksum,
+        generation: coreState && coreState.generation,
+        at: deterministicNow()
+      });
+      this.syncLog = this.syncLog.slice(0, 50);
+      this.authorityManager.validateNoDivergence(coreState, FMG.gameState, FMG.runtimeOwnershipValidator);
+      return result;
+    }
+
+    refreshAuthoritativeState(reason) {
+      const coreState = this.toCore();
+      this.syncLog.unshift({
+        direction: "legacy-to-core-projection",
+        checksum: this.authorityManager.authoritativeChecksum,
+        generation: coreState && coreState.generation,
+        reason: reason || "refresh",
+        at: deterministicNow()
+      });
+      this.syncLog = this.syncLog.slice(0, 50);
+      return coreState;
+    }
+
+    report() {
+      return { syncLog: this.syncLog.slice(0, 50), mode: "compatibility-facade", authority: this.authorityManager.authority };
     }
   }
 
   class RuntimeOwnershipValidator {
     constructor(authorityManager) {
       this.authorityManager = authorityManager;
+      this.lastResult = null;
     }
 
     validate(coreState, legacyState) {
@@ -207,7 +649,32 @@
       if ((coreState.clubs || []).length !== (legacyState.teams || []).length) errors.push("Core/legacy club count divergence");
       const corePlayers = (coreState.clubs || []).reduce((sum, club) => sum + ((club.squad || []).length), 0);
       if (corePlayers !== (legacyState.players || []).length) errors.push("Core/legacy player count divergence");
-      return { valid: errors.length === 0, errors, authority: this.authorityManager.authority };
+      const duplicatePlayers = {};
+      (legacyState.players || []).forEach((player) => {
+        if (player && player.id) duplicatePlayers[player.id] = (duplicatePlayers[player.id] || 0) + 1;
+      });
+      Object.keys(duplicatePlayers).forEach((id) => {
+        if (duplicatePlayers[id] > 1) errors.push("Duplicate player id in legacy facade: " + id);
+      });
+      const ownershipErrors = [];
+      Array.from(this.authorityManager.metadataByPath.values()).forEach((entry) => {
+        if (entry.owner !== this.authorityManager.authority && entry.reason === "core-gameplay-state") {
+          ownershipErrors.push("Invalid ownership for " + entry.path);
+        }
+      });
+      errors.push.apply(errors, ownershipErrors);
+      this.lastResult = {
+        valid: errors.length === 0,
+        errors,
+        authority: this.authorityManager.authority,
+        coreChecksum: typeof coreState._calculateChecksum === "function" ? coreState._calculateChecksum() : hashString(stableStringify(coreState)),
+        legacyChecksum: hashString(stableStringify(legacyState))
+      };
+      return this.lastResult;
+    }
+
+    report() {
+      return this.lastResult || { valid: true, skipped: true, authority: this.authorityManager.authority };
     }
   }
 
@@ -223,13 +690,14 @@
   }
 
   class TickReplayInspector {
-    constructor() {
+    constructor(hashEngine) {
       this.ticks = [];
+      this.hashEngine = hashEngine || new ReplayHashEngine();
     }
 
     record(tick, state, context) {
-      const checksum = state && typeof state._calculateChecksum === "function" ? state._calculateChecksum() : hashString(stableStringify(state));
-      this.ticks.push({ tick, checksum, context: context || null });
+      const checksum = this.hashEngine.hashState(state);
+      this.ticks.push({ tick, checksum, context: context || null, rng: FMG.rngStateSerializer ? FMG.rngStateSerializer.serialize(FMG.deterministicRNG).snapshot : null });
       return checksum;
     }
 
@@ -240,11 +708,25 @@
       }
       return -1;
     }
+
+    divergenceReport(otherTicks) {
+      const index = this.firstDivergence(otherTicks || []);
+      return {
+        ok: index === -1,
+        divergenceTick: index,
+        left: index >= 0 ? this.ticks[index] || null : null,
+        right: index >= 0 ? (otherTicks || [])[index] || null : null,
+        leftHash: this.hashEngine.hashReplay(this.ticks),
+        rightHash: this.hashEngine.hashReplay(otherTicks || [])
+      };
+    }
   }
 
   class DeterministicReplayValidator {
     constructor() {
       this.diffEngine = new ReplayDiffEngine();
+      this.hashEngine = new ReplayHashEngine();
+      this.divergenceReports = [];
       this.lastReport = null;
     }
 
@@ -262,6 +744,59 @@
         errors: result.errors || []
       };
       return this.lastReport;
+    }
+
+    validateReplayLoop(replayEngine, snapshotId, actions, loops) {
+      if (!replayEngine || !snapshotId) return { ok: false, skipped: true, reason: "missing replay engine or snapshot" };
+      const count = Math.max(2, loops || 2);
+      const runs = [];
+      for (let index = 0; index < count; index += 1) {
+        const result = replayEngine.replay(snapshotId, actions || []);
+        const finalHash = this.hashEngine.hashState(result.finalState);
+        runs.push({ index, finalHash, actionsProcessed: result.actionsProcessed });
+      }
+      const expected = runs[0].finalHash;
+      const divergent = runs.filter((run) => run.finalHash !== expected);
+      this.lastReport = {
+        ok: divergent.length === 0,
+        snapshotId,
+        actionCount: (actions || []).length,
+        loops: count,
+        expectedHash: expected,
+        runs,
+        divergent
+      };
+      if (divergent.length) this.divergenceReports.unshift(this.lastReport);
+      this.divergenceReports = this.divergenceReports.slice(0, 50);
+      return this.lastReport;
+    }
+
+    validateSaveLoadCycle(state, serialize, deserialize) {
+      const beforeHash = this.hashEngine.hash(state, { sortEntityArrays: true });
+      const payload = serialize ? serialize(state) : JSON.stringify(state);
+      const restored = deserialize ? deserialize(payload) : JSON.parse(payload);
+      const afterHash = this.hashEngine.hash(restored, { sortEntityArrays: true });
+      return {
+        ok: beforeHash === afterHash,
+        beforeHash,
+        afterHash,
+        diff: beforeHash === afterHash ? null : this.diffEngine.diff(state, restored)
+      };
+    }
+
+    validateRollback(snapshotStore, snapshotId, expectedState) {
+      if (!snapshotStore || !snapshotId) return { ok: false, skipped: true, reason: "missing snapshot store or snapshot" };
+      const restored = snapshotStore.load(snapshotId);
+      const restoredHash = this.hashEngine.hashState(restored);
+      const expectedHash = this.hashEngine.hashState(expectedState || restored);
+      return { ok: restoredHash === expectedHash, snapshotId, restoredHash, expectedHash };
+    }
+
+    report() {
+      return {
+        lastReport: this.lastReport,
+        divergenceReports: this.divergenceReports.slice(0, 25)
+      };
     }
   }
 
@@ -318,7 +853,7 @@
     }
 
     record(consequence) {
-      this.consequences.push({ ...consequence, recordedAt: FMG.nowISO ? FMG.nowISO("consequence") : new Date().toISOString() });
+      this.consequences.push({ ...consequence, recordedAt: FMG.nowISO ? FMG.nowISO("consequence") : deterministicISO("consequence") });
     }
 
     report() {
@@ -392,6 +927,10 @@
       this.previousByScope = new Map();
     }
 
+    serialize(scope, state) {
+      return this.diff(scope, state);
+    }
+
     diff(scope, state) {
       const current = JSON.parse(JSON.stringify(state || {}));
       const previous = this.previousByScope.get(scope) || {};
@@ -402,18 +941,68 @@
       this.previousByScope.set(scope, current);
       return { scope, checksum: hashString(stableStringify(current)), changedKeys: Object.keys(delta), delta };
     }
+
+    apply(base, deltaRecord) {
+      const next = JSON.parse(JSON.stringify(base || {}));
+      const delta = deltaRecord && deltaRecord.delta ? deltaRecord.delta : {};
+      Object.keys(delta).forEach((key) => {
+        next[key] = delta[key];
+      });
+      return next;
+    }
   }
 
   class HistoricalArchiveSystem {
+    stateFor(entity, context) {
+      context = context || {};
+      if (!entity || typeof entity !== "object") return "background";
+      if (entity.persistenceState && ["active", "visible", "background", "archived"].includes(entity.persistenceState)) {
+        return entity.persistenceState;
+      }
+      if (entity.isRetired || entity.retired || entity.age >= 38) return "archived";
+      if (entity.teamId && entity.teamId === context.userTeamId) return "active";
+      if (entity.inLineup || entity.inLiveMatch || entity.isSelected) return "active";
+      if (entity.overall >= 78 || entity.mediaRelevance || entity.relationshipProximity) return "visible";
+      return "background";
+    }
+
     classify(state) {
       const players = state && state.players ? state.players : [];
       const activePlayers = [];
+      const visiblePlayers = [];
+      const backgroundPlayers = [];
       const archivedPlayers = [];
+      const context = { userTeamId: state && state.userTeamId };
       players.forEach((player) => {
-        if (player.isRetired || player.age >= 38) archivedPlayers.push({ id: player.id, name: player.name, age: player.age, lastTeamId: player.teamId, overall: player.overall });
-        else activePlayers.push(player);
+        const persistenceState = this.stateFor(player, context);
+        if (persistenceState === "archived") {
+          archivedPlayers.push({
+            id: player.id,
+            name: player.name,
+            age: player.age,
+            lastTeamId: player.teamId,
+            overall: player.overall,
+            persistenceState
+          });
+        } else {
+          const decorated = { ...player, persistenceState };
+          if (persistenceState === "active") activePlayers.push(decorated);
+          else if (persistenceState === "visible") visiblePlayers.push(decorated);
+          else backgroundPlayers.push(decorated);
+        }
       });
-      return { activePlayers, archivedPlayers };
+      return {
+        activePlayers,
+        visiblePlayers,
+        backgroundPlayers,
+        archivedPlayers,
+        counts: {
+          active: activePlayers.length,
+          visible: visiblePlayers.length,
+          background: backgroundPlayers.length,
+          archived: archivedPlayers.length
+        }
+      };
     }
   }
 
@@ -461,6 +1050,24 @@
       });
     }
 
+    putMany(records) {
+      records = records || [];
+      return this.open().then((db) => {
+        if (!db) {
+          records.forEach((entry) => this.memoryStore.set(entry.storeName + ":" + entry.record.id, entry.record));
+          return records.map((entry) => entry.record);
+        }
+        return new Promise((resolve, reject) => {
+          const stores = Array.from(new Set(records.map((entry) => entry.storeName)));
+          const tx = db.transaction(stores, "readwrite");
+          records.forEach((entry) => tx.objectStore(entry.storeName).put(entry.record));
+          tx.oncomplete = () => resolve(records.map((entry) => entry.record));
+          tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error || new Error("IndexedDB transaction aborted"));
+        });
+      });
+    }
+
     get(storeName, id) {
       return this.open().then((db) => {
         if (!db) return this.memoryStore.get(storeName + ":" + id) || null;
@@ -469,6 +1076,47 @@
           const request = tx.objectStore(storeName).get(id);
           request.onsuccess = () => resolve(request.result || null);
           request.onerror = () => reject(request.error);
+        });
+      });
+    }
+
+    getAllByPrefix(storeName, prefix) {
+      return this.open().then((db) => {
+        if (!db) {
+          const needle = storeName + ":" + prefix;
+          return Array.from(this.memoryStore.entries())
+            .filter((entry) => entry[0].startsWith(needle))
+            .map((entry) => entry[1]);
+        }
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(storeName, "readonly");
+          const request = tx.objectStore(storeName).openCursor();
+          const records = [];
+          request.onsuccess = (event) => {
+            const cursor = event.target.result;
+            if (!cursor) {
+              resolve(records);
+              return;
+            }
+            if (String(cursor.value.id || "").startsWith(prefix)) records.push(cursor.value);
+            cursor.continue();
+          };
+          request.onerror = () => reject(request.error);
+        });
+      });
+    }
+
+    delete(storeName, id) {
+      return this.open().then((db) => {
+        if (!db) {
+          this.memoryStore.delete(storeName + ":" + id);
+          return true;
+        }
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(storeName, "readwrite");
+          tx.objectStore(storeName).delete(id);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(tx.error);
         });
       });
     }
@@ -482,10 +1130,12 @@
       this.queue = [];
       this.processing = false;
       this.lastManifest = null;
+      this.lastError = null;
+      this.chunkSize = 250000;
     }
 
     enqueue(slotId, state) {
-      const job = { slotId, state: JSON.parse(JSON.stringify(state || {})), enqueuedAt: FMG.nowISO ? FMG.nowISO("save-enqueue") : new Date().toISOString() };
+      const job = { slotId, state: JSON.parse(JSON.stringify(state || {})), enqueuedAt: FMG.nowISO ? FMG.nowISO("save-enqueue") : deterministicISO("save-enqueue") };
       this.queue.push(job);
       this._pump();
       return { queued: true, queueLength: this.queue.length };
@@ -509,30 +1159,81 @@
       const archive = this.archiveSystem.classify(job.state);
       const checkpoint = {
         ...job.state,
-        players: archive.activePlayers,
+        players: archive.activePlayers.concat(archive.visiblePlayers, archive.backgroundPlayers),
+        persistenceMeta: {
+          schema: "incremental-v1",
+          entityStates: archive.counts,
+          savedFromSlot: job.slotId
+        },
         archiveSummary: { archivedPlayers: archive.archivedPlayers.length }
       };
       const serialized = JSON.stringify(checkpoint);
-      const chunks = splitChunks(serialized, 250000);
+      const chunks = splitChunks(serialized, this.chunkSize);
+      const delta = this.deltaSerializer.diff(job.slotId, checkpoint);
       const manifest = {
         id: job.slotId,
         slotId: job.slotId,
         version: FMG.CURRENT_VERSION || "0.1.0",
-        savedAt: FMG.nowISO ? FMG.nowISO("save-manifest") : new Date().toISOString(),
+        savedAt: FMG.nowISO ? FMG.nowISO("save-manifest") : deterministicISO("save-manifest"),
+        status: "committed",
+        schema: "incremental-v1",
         chunkCount: chunks.length,
+        byteLength: serialized.length,
         checksum: hashString(serialized),
-        delta: this.deltaSerializer.diff(job.slotId, checkpoint),
-        archivedPlayers: archive.archivedPlayers.length
+        deltaId: job.slotId + ":" + hashString(delta.checksum + ":" + job.enqueuedAt),
+        archivedPlayers: archive.archivedPlayers.length,
+        entityStates: archive.counts
       };
       this.lastManifest = manifest;
-      const writes = [this.engine.put("manifests", manifest)];
-      chunks.forEach((chunk, index) => writes.push(this.engine.put("chunks", { id: job.slotId + ":" + index, slotId: job.slotId, index, data: chunk })));
-      if (archive.archivedPlayers.length) writes.push(this.engine.put("archives", { id: job.slotId + ":players", slotId: job.slotId, players: archive.archivedPlayers }));
-      return Promise.all(writes).then(() => this._processNext());
+      const pendingManifest = { ...manifest, status: "pending" };
+      const records = [{ storeName: "manifests", record: pendingManifest }];
+      chunks.forEach((chunk, index) => {
+        records.push({ storeName: "chunks", record: { id: job.slotId + ":" + index, slotId: job.slotId, index, checksum: hashString(chunk), data: chunk } });
+      });
+      records.push({ storeName: "deltas", record: { id: manifest.deltaId, slotId: job.slotId, savedAt: manifest.savedAt, ...delta } });
+      if (archive.archivedPlayers.length) records.push({ storeName: "archives", record: { id: job.slotId + ":players", slotId: job.slotId, players: archive.archivedPlayers } });
+      records.push({ storeName: "manifests", record: manifest });
+      return this.engine.putMany(records)
+        .then(() => this._processNext())
+        .catch((error) => {
+          this.lastError = error && error.message ? error.message : String(error);
+          this.processing = false;
+          throw error;
+        });
+    }
+
+    load(slotId) {
+      return this.engine.get("manifests", slotId).then((manifest) => {
+        if (!manifest || manifest.status !== "committed") return null;
+        return this.engine.getAllByPrefix("chunks", slotId + ":").then((chunks) => {
+          const ordered = chunks.slice().sort((left, right) => left.index - right.index);
+          const integrity = this.validateManifest(manifest, ordered);
+          if (!integrity.ok) {
+            const error = new Error("Incomplete incremental save: " + integrity.errors.join("; "));
+            error.validation = integrity;
+            throw error;
+          }
+          return JSON.parse(ordered.map((chunk) => chunk.data).join(""));
+        });
+      });
+    }
+
+    validateManifest(manifest, chunks) {
+      const errors = [];
+      if (!manifest) errors.push("manifest missing");
+      if (manifest && manifest.status !== "committed") errors.push("manifest not committed");
+      if (manifest && chunks.length !== manifest.chunkCount) errors.push("chunk count mismatch");
+      chunks.forEach((chunk, index) => {
+        if (chunk.index !== index) errors.push("chunk index gap at " + index);
+        if (chunk.checksum && chunk.checksum !== hashString(chunk.data || "")) errors.push("chunk checksum mismatch at " + index);
+      });
+      const serialized = chunks.map((chunk) => chunk.data).join("");
+      if (manifest && serialized && hashString(serialized) !== manifest.checksum) errors.push("manifest checksum mismatch");
+      return { ok: errors.length === 0, errors, chunkCount: chunks.length };
     }
 
     report() {
-      return { queueLength: this.queue.length, processing: this.processing, lastManifest: this.lastManifest };
+      return { queueLength: this.queue.length, processing: this.processing, lastManifest: this.lastManifest, lastError: this.lastError };
     }
   }
 
@@ -542,8 +1243,29 @@
     }
 
     saveReplay(id, events) {
-      const payload = { id, checksum: hashString(stableStringify(events || [])), events: events || [] };
+      const payload = { id, savedAt: FMG.nowISO ? FMG.nowISO("replay-save") : deterministicISO("replay-save"), checksum: hashString(stableStringify(events || [])), events: events || [] };
       return this.engine.put("replays", payload);
+    }
+
+    loadReplay(id) {
+      return this.engine.get("replays", id).then((payload) => {
+        if (!payload) return null;
+        const validation = this.validate(payload);
+        if (!validation.ok) {
+          const error = new Error("Replay persistence integrity failed: " + validation.errors.join("; "));
+          error.validation = validation;
+          throw error;
+        }
+        return payload.events || [];
+      });
+    }
+
+    validate(payload) {
+      const errors = [];
+      if (!payload || typeof payload !== "object") errors.push("replay payload missing");
+      if (payload && !Array.isArray(payload.events)) errors.push("replay events missing");
+      if (payload && payload.checksum !== hashString(stableStringify(payload.events || []))) errors.push("replay checksum mismatch");
+      return { ok: errors.length === 0, errors };
     }
   }
 
@@ -553,8 +1275,18 @@
       if (!state || typeof state !== "object") errors.push("Save payload missing");
       if (state && !Array.isArray(state.teams)) errors.push("Save teams missing");
       if (state && !Array.isArray(state.players)) errors.push("Save players missing");
+      if (state && !Array.isArray(state.fixtures)) errors.push("Save fixtures missing");
       if (state && !state.seasonNumber) errors.push("Save season number missing");
-      return { valid: errors.length === 0, errors, checksum: hashString(stableStringify(state || {})) };
+      if (state && state.persistenceMeta && state.persistenceMeta.schema !== "incremental-v1") errors.push("Unknown persistence schema");
+      return { valid: errors.length === 0, ok: errors.length === 0, errors, checksum: hashString(stableStringify(state || {})) };
+    }
+
+    validateEnvelope(envelope) {
+      const errors = [];
+      if (!envelope || typeof envelope !== "object") errors.push("Save envelope missing");
+      if (envelope && envelope.__fmgPersistence === "incremental-v1" && !envelope.slotId) errors.push("Incremental envelope slot missing");
+      if (envelope && envelope.__fmgPersistence === "incremental-v1" && !envelope.checksum) errors.push("Incremental envelope checksum missing");
+      return { ok: errors.length === 0, valid: errors.length === 0, errors };
     }
   }
 
@@ -820,7 +1552,7 @@
     }
 
     sample() {
-      const sample = { listeners: this.registry.count(), at: FMG.simulationClock ? FMG.simulationClock.tick("listener-sample") : Date.now() };
+      const sample = { listeners: this.registry.count(), at: deterministicTick("listener-sample") };
       this.samples.push(sample);
       return sample;
     }
@@ -950,26 +1682,39 @@
   function installDeterminism(seed) {
     FMG.simulationClock = FMG.simulationClock || new SimulationClock();
     FMG.deterministicRNG = FMG.deterministicRNG || new DeterministicRNGEngine(seed || FMG.gameState?.seed || 1);
-    FMG.rng = () => FMG.deterministicRNG.next();
-    FMG.randomInt = (min, max) => FMG.deterministicRNG.int(min, max);
-    FMG.sample = (items) => FMG.deterministicRNG.choice(items);
-    FMG.uid = (prefix) => (prefix || "id") + "-" + hashString([prefix, FMG.deterministicRNG.counter, FMG.deterministicRNG.next()].join(":"));
+    FMG.rng = () => deterministicRandom("FMG.rng");
+    FMG.randomFloat = (label) => deterministicRandom(label || "random-float");
+    FMG.randomInt = (min, max) => Math.floor(FMG.randomFloat("random-int") * (max - min + 1)) + min;
+    FMG.sample = (items) => {
+      if (!items || !items.length) return null;
+      return items[FMG.randomInt(0, items.length - 1)];
+    };
+    FMG.uid = (prefix) => (prefix || "id") + "-" + hashString([prefix, FMG.deterministicRNG.counter, FMG.randomFloat("uid")].join(":"));
+    FMG.nowMs = () => FMG.simulationClock.now();
+    FMG.tickMs = (label) => FMG.simulationClock.tick(label || "runtime");
     FMG.nowISO = (label) => {
       FMG.simulationClock.tick(label || "time");
       return FMG.simulationClock.iso();
     };
+    FMG.deterministicSort = deterministicSort;
+    FMG.stableEntityKey = stableEntityKey;
     return { clock: FMG.simulationClock.snapshot(), rng: FMG.deterministicRNG.snapshot() };
   }
 
   function install() {
     installDeterminism();
+    FMG.rngStateSerializer = FMG.rngStateSerializer || new RNGStateSerializer();
+    FMG.replayHashEngine = FMG.replayHashEngine || new ReplayHashEngine();
+    FMG.runtimeRandomnessAudit = FMG.runtimeRandomnessAudit || new RuntimeRandomnessAudit();
     FMG.runtimeAuthorityManager = FMG.runtimeAuthorityManager || new RuntimeAuthorityManager();
+    FMG.runtimeAuthorityManager.start("hardening-install");
     FMG.runtimeAuthorityManager.declare("FMG.Core", { owner: "FMG.Core", stateAuthority: "FMG.Core" });
     FMG.runtimeAuthorityManager.declare("legacy-runtime", { owner: "legacy", stateAuthority: "FMG.Core", mode: "facade" });
     FMG.legacyCompatibilityFacade = FMG.legacyCompatibilityFacade || new LegacyCompatibilityFacade(FMG.runtimeAuthorityManager);
     FMG.runtimeMutationGuard = FMG.runtimeMutationGuard || new RuntimeMutationGuard(FMG.runtimeAuthorityManager);
     FMG.runtimeOwnershipValidator = FMG.runtimeOwnershipValidator || new RuntimeOwnershipValidator(FMG.runtimeAuthorityManager);
     FMG.deterministicReplayValidator = FMG.deterministicReplayValidator || new DeterministicReplayValidator();
+    FMG.tickReplayInspector = FMG.tickReplayInspector || new TickReplayInspector(FMG.replayHashEngine);
     FMG.causalReplayEngine = FMG.causalReplayEngine || new CausalReplayEngine();
     FMG.historicalConsequenceTracker = FMG.historicalConsequenceTracker || new HistoricalConsequenceTracker();
     FMG.worldMemoryGraph = FMG.worldMemoryGraph || new WorldMemoryGraph();
@@ -1002,6 +1747,75 @@
     FMG.runtimeOverlay = FMG.runtimeOverlay || new RuntimeOverlay();
     FMG.runtimeDiagnosticsPanel = FMG.runtimeDiagnosticsPanel || new RuntimeDiagnosticsPanel(FMG.runtimeOverlay);
     FMG.adaptivePerformanceScaler.apply();
+    FMG.runtimeMutationGuard.installLegacyObserver();
+    if (FMG.gameState && FMG.gameState.teams && FMG.gameState.teams.length) {
+      FMG.runtimeAuthorityManager.captureCoreStateFromLegacy("install-existing-state");
+    }
+    FMG.generateRuntimeAuthorityReport = () => FMG.runtimeAuthorityManager.reports().runtimeAuthorityReport;
+    FMG.generateRemainingLegacyDependencyReport = () => FMG.runtimeAuthorityManager.reports().remainingLegacyDependencyReport;
+    FMG.generateUnsafeMutationReport = () => FMG.runtimeAuthorityManager.reports().unsafeMutationReport;
+    FMG.generateRuntimeHardeningReports = () => FMG.runtimeAuthorityManager.reports();
+    FMG.generateDeterministicIntegrityReport = () => ({
+      clock: FMG.simulationClock && FMG.simulationClock.snapshot(),
+      rng: FMG.rngStateSerializer && FMG.rngStateSerializer.serialize(FMG.deterministicRNG),
+      replayHashHistory: FMG.replayHashEngine && FMG.replayHashEngine.history.slice(0, 50),
+      replay: FMG.deterministicReplayValidator && FMG.deterministicReplayValidator.report()
+    });
+    FMG.generateReplayDivergenceReport = () => ({
+      validator: FMG.deterministicReplayValidator && FMG.deterministicReplayValidator.report(),
+      tickInspector: FMG.tickReplayInspector && FMG.tickReplayInspector.divergenceReport(FMG.tickReplayInspector.ticks)
+    });
+    FMG.generatePersistenceIntegrityReport = () => {
+      const pipeline = FMG.incrementalSavePipeline && FMG.incrementalSavePipeline.report();
+      const stateValidation = FMG.saveIntegrityValidator && FMG.saveIntegrityValidator.validate(FMG.gameState || {});
+      const manifest = pipeline && pipeline.lastManifest;
+      return {
+        ok: Boolean((!stateValidation || stateValidation.ok) && (!pipeline || !pipeline.lastError)),
+        stateValidation,
+        lastManifest: manifest || null,
+        replayStorage: FMG.replayDeltaStorage ? "available" : "missing",
+        compatibility: {
+          localStorageSlots: Boolean(root.localStorage),
+          indexedDB: Boolean(root.indexedDB),
+          legacyLoadPath: typeof FMG.loadFromSlot === "function"
+        }
+      };
+    };
+    FMG.generateScalabilityReport = () => {
+      const manifest = FMG.incrementalSavePipeline && FMG.incrementalSavePipeline.report().lastManifest;
+      const layerPlan = FMG.layeredWorldSimulator ? FMG.layeredWorldSimulator.plan(FMG.gameState || {}) : null;
+      return {
+        chunkedPersistence: Boolean(manifest && manifest.chunkCount >= 1),
+        chunkCount: manifest ? manifest.chunkCount : 0,
+        byteLength: manifest ? manifest.byteLength : 0,
+        entityStates: manifest ? manifest.entityStates : null,
+        layers: layerPlan,
+        localStorageRisk: manifest && manifest.byteLength > 4000000 ? "high" : "managed"
+      };
+    };
+    FMG.generateMigrationRiskReport = () => ({
+      strategy: "dual-write localStorage compatibility with IndexedDB chunk mirror",
+      backwardsCompatible: typeof FMG.migrateSaveState === "function" && typeof FMG.loadFromSlot === "function",
+      risks: [
+        "Synchronous UI load path still depends on localStorage compatibility payload",
+        "IndexedDB availability varies in private browsing and older embedded browsers",
+        "Large archived worlds need periodic compaction policy"
+      ],
+      mitigations: [
+        "Legacy slot payload remains readable",
+        "Committed manifests reject incomplete chunk sets",
+        "Backup localStorage key remains available for parse recovery"
+      ]
+    });
+    FMG.generateRemainingPersistenceRisks = () => ({
+      risks: [
+        "Existing UI load action is synchronous, so full IndexedDB-first loading needs a future async UI flow",
+        "Replay frame persistence is available but live match systems do not yet auto-flush every buffer",
+        "Archive retention limits are not yet configurable per career length"
+      ]
+    });
+    FMG.generateRuntimeRandomnessAudit = () => FMG.runtimeRandomnessAudit && FMG.runtimeRandomnessAudit.report();
+    FMG.shutdownRuntimeAuthority = (reason) => FMG.runtimeAuthorityManager.shutdown(reason);
     return FMG.Hardening.report();
   }
 
@@ -1012,12 +1826,22 @@
     return {
       deterministic: {
         clock: FMG.simulationClock && FMG.simulationClock.snapshot(),
-        rng: FMG.deterministicRNG && FMG.deterministicRNG.snapshot()
+        rng: FMG.rngStateSerializer ? FMG.rngStateSerializer.serialize(FMG.deterministicRNG) : (FMG.deterministicRNG && FMG.deterministicRNG.snapshot()),
+        integrity: FMG.generateDeterministicIntegrityReport && FMG.generateDeterministicIntegrityReport(),
+        randomnessAudit: FMG.generateRuntimeRandomnessAudit && FMG.generateRuntimeRandomnessAudit()
       },
       authority: FMG.runtimeAuthorityManager && FMG.runtimeAuthorityManager.report(),
       mutationGuard: FMG.runtimeMutationGuard && FMG.runtimeMutationGuard.report(),
-      replay: FMG.deterministicReplayValidator && FMG.deterministicReplayValidator.lastReport,
+      ownership: FMG.runtimeOwnershipValidator && FMG.runtimeOwnershipValidator.report(),
+      legacyFacade: FMG.legacyCompatibilityFacade && FMG.legacyCompatibilityFacade.report(),
+      generatedReports: FMG.runtimeAuthorityManager && FMG.runtimeAuthorityManager.reports(),
+      replay: FMG.deterministicReplayValidator && FMG.deterministicReplayValidator.report(),
+      replayDivergence: FMG.generateReplayDivergenceReport && FMG.generateReplayDivergenceReport(),
       persistence: FMG.incrementalSavePipeline && FMG.incrementalSavePipeline.report(),
+      persistenceIntegrity: FMG.generatePersistenceIntegrityReport && FMG.generatePersistenceIntegrityReport(),
+      scalability: FMG.generateScalabilityReport && FMG.generateScalabilityReport(),
+      migrationRisk: FMG.generateMigrationRiskReport && FMG.generateMigrationRiskReport(),
+      remainingPersistenceRisks: FMG.generateRemainingPersistenceRisks && FMG.generateRemainingPersistenceRisks(),
       layers: layerPlan,
       memory,
       causalReplay: FMG.causalReplayEngine && FMG.causalReplayEngine.report(),
@@ -1028,6 +1852,9 @@
 
   Hardening.SimulationClock = SimulationClock;
   Hardening.DeterministicRNGEngine = DeterministicRNGEngine;
+  Hardening.RNGStateSerializer = RNGStateSerializer;
+  Hardening.ReplayHashEngine = ReplayHashEngine;
+  Hardening.RuntimeRandomnessAudit = RuntimeRandomnessAudit;
   Hardening.RuntimeAuthorityManager = RuntimeAuthorityManager;
   Hardening.LegacyCompatibilityFacade = LegacyCompatibilityFacade;
   Hardening.RuntimeOwnershipValidator = RuntimeOwnershipValidator;
@@ -1070,6 +1897,8 @@
   Hardening.RuntimeDiagnosticsPanel = RuntimeDiagnosticsPanel;
   Hardening.stableStringify = stableStringify;
   Hardening.hashString = hashString;
+  Hardening.deterministicSort = deterministicSort;
+  Hardening.stableEntityKey = stableEntityKey;
   Hardening.installDeterminism = installDeterminism;
   Hardening.install = install;
   Hardening.report = report;

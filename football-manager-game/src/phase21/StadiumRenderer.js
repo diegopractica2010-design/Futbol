@@ -157,7 +157,7 @@
     return c;
   }
 
-  // RNG determinista simple (evita Math.random para resultados consistentes)
+  // RNG determinista simple para resultados consistentes.
   function _seededRng(seed) {
     var s = seed;
     return function () {

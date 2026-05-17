@@ -20,6 +20,7 @@
   var DECISION_NEAR = 1;
   var DECISION_MID  = 6;
   var DECISION_FAR  = 18;
+  function rng() { return window.FMG && window.FMG.randomFloat ? window.FMG.randomFloat("phase18-team-brain") : 0.5; }
 
   function TeamBrain(teamIndex, attackingRight) {
     this.teamIndex      = teamIndex;      // 0=usuario, 1=IA
@@ -145,13 +146,13 @@
     // Solo tirar si el balon esta cerca y no tiene mucha velocidad
     if (ball.distTo(player) > 28 || ballSpeed > 4) return;
     var accuracy = player._shootAccuracy || 0.65;
-    if (Math.random() > 0.035 + accuracy * 0.04) return;
+    if (rng() > 0.035 + accuracy * 0.04) return;
 
     var dx  = decision.targetX - ball.ball.x;
     var dy  = decision.targetY - ball.ball.y;
     var len = Math.hypot(dx, dy) || 1;
     // Agregar imprecision realista desde atributos, moral y cansancio.
-    var spread = (Math.random() - 0.5) * (1.15 - accuracy) * 0.7;
+    var spread = (rng() - 0.5) * (1.15 - accuracy) * 0.7;
     ball.applyImpulse(
       (dx / len + spread) * C.SHOOT_POWER * 0.88,
       (dy / len + spread) * C.SHOOT_POWER * 0.88,
@@ -163,7 +164,7 @@
   TeamBrain.prototype._executePass = function (player, decision, ball, teammates) {
     if (ball.distTo(player) > 28) return;
     var accuracy = player._passAccuracy || 0.82;
-    if (Math.random() > 0.025 + accuracy * 0.04) return;
+    if (rng() > 0.025 + accuracy * 0.04) return;
 
     var dx  = decision.targetX - ball.ball.x;
     var dy  = decision.targetY - ball.ball.y;

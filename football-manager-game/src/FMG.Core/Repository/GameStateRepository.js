@@ -134,25 +134,97 @@
     return Promise.resolve(results);
   };
 
-  // --- IndexedDB implementation (stubbed) ---
+  // --- IndexedDB implementation ---
+  const DB_NAME = "FMG_GAME_DB";
+  const DB_VERSION = 1;
+  const STORE_NAME = "gamestates";
+
+  GameStateRepository.prototype._openIndexedDB = function () {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: "id" });
+        }
+      };
+
+      request.onsuccess = (event) => {
+        resolve(event.target.result);
+      };
+
+      request.onerror = (event) => {
+        console.error("IndexedDB error:", event.target.errorCode);
+        reject(event.target.errorCode);
+      };
+    });
+  };
   GameStateRepository.prototype._saveToIndexedDB = function (data) {
-    // TODO: Implement IndexedDB persistence
-    return Promise.resolve(data);
+    return this._openIndexedDB().then((db) => {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], "readwrite");
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.put(data);
+
+        request.onsuccess = () => resolve(data);
+        request.onerror = (event) => reject(event.target.error);
+      });
+    });
   };
 
   GameStateRepository.prototype._loadFromIndexedDB = function (id) {
-    // TODO: Implement IndexedDB retrieval
-    return Promise.resolve(null);
+    return this._openIndexedDB().then((db) => {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], "readonly");
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.get(id);
+
+        request.onsuccess = (event) => {
+          const data = event.target.result;
+          resolve(data ? data.gameState : null);
+        };
+        request.onerror = (event) => reject(event.target.error);
+      });
+    });
   };
 
   GameStateRepository.prototype._deleteFromIndexedDB = function (id) {
-    // TODO: Implement IndexedDB deletion
-    return Promise.resolve(true);
+    return this._openIndexedDB().then((db) => {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], "readwrite");
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.delete(id);
+
+        request.onsuccess = () => resolve(true);
+        request.onerror = (event) => reject(event.target.error);
+      });
+    });
   };
 
   GameStateRepository.prototype._listFromIndexedDB = function () {
-    // TODO: Implement IndexedDB listing
-    return Promise.resolve([]);
+    return this._openIndexedDB().then((db) => {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], "readonly");
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.openCursor();
+        const results = [];
+
+        request.onsuccess = (event) => {
+          const cursor = event.target.result;
+          if (cursor) {
+            results.push({
+              id: cursor.value.id,
+              timestamp: cursor.value.timestamp
+            });
+            cursor.continue();
+          } else {
+            resolve(results);
+          }
+        };
+        request.onerror = (event) => reject(event.target.error);
+      });
+    });
   };
 
   FMG.Core.Repository.GameStateRepository = GameStateRepository;

@@ -10,6 +10,7 @@
 
   window.FMG = window.FMG || {};
   window.FMG.Phase20 = window.FMG.Phase20 || {};
+  function rng() { return window.FMG && window.FMG.randomFloat ? window.FMG.randomFloat("phase20-camera") : 0.5; }
 
   var MODES = {
     BROADCAST:  "broadcast",   // vista lateral completa
@@ -54,8 +55,8 @@
 
     // Shake
     if (this.shakeMag > 0.1) {
-      this.shakeX   = (Math.random() - 0.5) * this.shakeMag;
-      this.shakeY   = (Math.random() - 0.5) * this.shakeMag;
+      this.shakeX   = (rng() - 0.5) * this.shakeMag;
+      this.shakeY   = (rng() - 0.5) * this.shakeMag;
       this.shakeMag *= this.shakeDecay;
     } else {
       this.shakeX = 0;

@@ -38,6 +38,9 @@
     if (!action || !action.type) {
       throw new Error("Action with type required");
     }
+    if (FMG.runtimeMutationGuard) {
+      FMG.runtimeMutationGuard.record("FMG.Core.action." + action.type, { system: "FMG.Core" });
+    }
 
     // Apply action to current state
     const Reducers = FMG.Core.Engine.Reducers;

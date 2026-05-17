@@ -96,9 +96,10 @@
   }
 
   function getNextUnplayedFixture(state) {
-    return state.fixtures
-      .filter((fixture) => !fixture.played)
-      .sort((left, right) => left.week - right.week)[0] || null;
+    return (FMG.deterministicSort || ((items, comparator) => [...items].sort(comparator)))(
+      state.fixtures.filter((fixture) => !fixture.played),
+      (left, right) => left.week - right.week
+    )[0] || null;
   }
 
   function getChampion(state) {
@@ -166,25 +167,25 @@
     ensureCompetitions(state);
     const activePlayers = state.players.filter((player) => !player.retired);
     state.competitions.rankings = {
-      scorers: [...activePlayers].sort((left, right) => (right.seasonStats?.goals || 0) - (left.seasonStats?.goals || 0)).slice(0, 10).map((player) => ({
+      scorers: (FMG.deterministicSort || ((items, comparator) => [...items].sort(comparator)))(activePlayers, (left, right) => (right.seasonStats?.goals || 0) - (left.seasonStats?.goals || 0)).slice(0, 10).map((player) => ({
         playerId: player.id,
         name: player.name,
         teamName: state.teams.find((team) => team.id === player.teamId)?.name || "Libre",
         value: player.seasonStats?.goals || 0
       })),
-      shooters: [...activePlayers].sort((left, right) => (right.seasonStats?.shots || 0) - (left.seasonStats?.shots || 0)).slice(0, 10).map((player) => ({
+      shooters: (FMG.deterministicSort || ((items, comparator) => [...items].sort(comparator)))(activePlayers, (left, right) => (right.seasonStats?.shots || 0) - (left.seasonStats?.shots || 0)).slice(0, 10).map((player) => ({
         playerId: player.id,
         name: player.name,
         teamName: state.teams.find((team) => team.id === player.teamId)?.name || "Libre",
         value: player.seasonStats?.shots || 0
       })),
-      cards: [...activePlayers].sort((left, right) => (right.seasonStats?.cards || 0) - (left.seasonStats?.cards || 0)).slice(0, 10).map((player) => ({
+      cards: (FMG.deterministicSort || ((items, comparator) => [...items].sort(comparator)))(activePlayers, (left, right) => (right.seasonStats?.cards || 0) - (left.seasonStats?.cards || 0)).slice(0, 10).map((player) => ({
         playerId: player.id,
         name: player.name,
         teamName: state.teams.find((team) => team.id === player.teamId)?.name || "Libre",
         value: player.seasonStats?.cards || 0
       })),
-      keepers: [...activePlayers].filter((player) => player.position === "POR").sort((left, right) => (right.seasonStats?.appearances || 0) - (left.seasonStats?.appearances || 0)).slice(0, 8).map((player) => ({
+      keepers: (FMG.deterministicSort || ((items, comparator) => [...items].sort(comparator)))(activePlayers.filter((player) => player.position === "POR"), (left, right) => (right.seasonStats?.appearances || 0) - (left.seasonStats?.appearances || 0)).slice(0, 8).map((player) => ({
         playerId: player.id,
         name: player.name,
         teamName: state.teams.find((team) => team.id === player.teamId)?.name || "Libre",
@@ -202,7 +203,7 @@
   function completeSeasonCompetitions(state) {
     ensureCompetitions(state);
     const sorted = FMG.sortStandings(state.standings);
-    const cupEntrants = [...state.teams].sort((left, right) => right.form - left.form).slice(0, 8);
+    const cupEntrants = (FMG.deterministicSort || ((items, comparator) => [...items].sort(comparator)))(state.teams, (left, right) => right.form - left.form).slice(0, 8);
     const nationalCup = simulateKnockout(state, cupEntrants, "Copa Chile");
     state.competitions.nationalCup = { seasonNumber: state.seasonNumber, ...nationalCup };
 
@@ -262,7 +263,7 @@
       userTeamName: state.userClub ? state.userClub.name : "Sin club",
       userPosition: state.standings.findIndex((entry) => entry.teamId === state.userTeamId) + 1,
       userPoints: userStanding ? userStanding.points : 0,
-      completedAt: new Date().toISOString()
+      completedAt: FMG.nowISO ? FMG.nowISO("season-record") : "2025-01-01T12:00:00.000Z"
     };
   }
 
@@ -449,6 +450,16 @@
   }
 
   FMG.initializeGame = function (teams, players) {
+    if (FMG.runtimeMutationGuard && !FMG._initializingGame) {
+      return FMG.runtimeMutationGuard.suppress("initialize-game", () => {
+        FMG._initializingGame = true;
+        try {
+          return FMG.initializeGame(teams, players);
+        } finally {
+          FMG._initializingGame = false;
+        }
+      });
+    }
     FMG.validateSeedData(teams, players);
     const expandedTeams = typeof document !== "undefined" ? ensureTeamDepth(teams) : teams.map(FMG.cloneTeam);
     const fixtures = buildSeasonFixtures(expandedTeams);
@@ -546,9 +557,22 @@
       FMG.ImmersionIntegration.registerImmersionJobs(FMG.simulationScheduler);
     }
     if (FMG.ensureSeparatedState) FMG.ensureSeparatedState(FMG.gameState);
+    if (FMG.legacyCompatibilityFacade) {
+      FMG.legacyCompatibilityFacade.refreshAuthoritativeState("initialize-game");
+    }
   };
 
   FMG.selectClub = function (teamId) {
+    if (FMG.runtimeMutationGuard && !FMG._selectingClub) {
+      return FMG.runtimeMutationGuard.suppress("select-club", () => {
+        FMG._selectingClub = true;
+        try {
+          return FMG.selectClub(teamId);
+        } finally {
+          FMG._selectingClub = false;
+        }
+      });
+    }
     const team = FMG.gameState.teams.find((item) => item.id === teamId);
     if (!team) return;
     FMG.gameState.userTeamId = team.id;
@@ -586,6 +610,9 @@
       });
     }
     FMG.autosaveIfNeeded(FMG.gameState, "select-club");
+    if (FMG.legacyCompatibilityFacade) {
+      FMG.legacyCompatibilityFacade.refreshAuthoritativeState("select-club");
+    }
   };
 
   FMG.advanceWeek = function () {
@@ -594,44 +621,46 @@
     if (state.seasonComplete) return { ok: false, message: "La temporada ya termino." };
     if (state.liveMatch && !state.liveMatch.completed) return { ok: false, message: "Hay un partido en vivo pendiente." };
 
-    // MIGRATION: Route through FMG.Core if initialized
-    if (FMG.Core && FMG.Core.isInitialized && FMG.Core.isInitialized()) {
-      console.log("[advanceWeek] Routing through FMG.Core");
-      try {
-        const weekSeed = FMG.deriveSeed(
-          state._startSeed || FMG.gameState.season?.startSeed || 12345,
-          state.currentWeek,
-          (state.seasonNumber || 1) * 1000 + (state.completedWeeks || 0)
-        );
-        const coreResult = FMG.Core.advanceWeekFromLegacy(weekSeed);
-        console.log("[advanceWeek] Core execution: " + coreResult.executionMs + "ms");
-        FMG.autosaveIfNeeded(FMG.gameState, "advance-week");
-        return { ok: true, message: "Semana completada.", coreResult };
-      } catch (err) {
-        console.error("[advanceWeek] Core error, falling back to legacy:", err);
-        // Fall through to legacy code below
+    if (FMG.Core && FMG.Core.initialize && (!FMG.Core.isInitialized || !FMG.Core.isInitialized())) {
+      FMG.Core.initialize({ diagnostics: { scaling: { profile: "low-end" } } });
+    }
+    if (!FMG.Core || !FMG.Core.advanceWeekFromLegacy) {
+      if (FMG.runtimeAuthorityManager) {
+        return { ok: false, message: "FMG.Core no esta disponible. La simulacion legacy queda solo como fachada de compatibilidad." };
       }
+      const currentFixture = getCurrentFixture(state);
+      if (!currentFixture) {
+        state.seasonComplete = true;
+        state.champion = getChampion(state);
+        return { ok: false, message: "No quedan fechas por disputar." };
+      }
+      prepareWeek(state, currentFixture);
+      const results = currentFixture.matches.map((match) => {
+        const homeTeam = state.teams.find((team) => team.id === match.homeTeamId);
+        const awayTeam = state.teams.find((team) => team.id === match.awayTeamId);
+        const result = FMG.simulateMatch({ homeTeam, awayTeam, players: state.players, state });
+        result.week = currentFixture.week;
+        return result;
+      });
+      const finished = finishFixture(state, currentFixture, results);
+      FMG.autosaveIfNeeded(state, "advance-week");
+      return finished;
     }
-
-    // LEGACY FALLBACK: Use old implementation if Core not available
-    const currentFixture = getCurrentFixture(state);
-    if (!currentFixture) {
-      state.seasonComplete = true;
-      state.champion = getChampion(state);
-      return { ok: false, message: "No quedan fechas por disputar." };
+    try {
+      const weekSeed = FMG.deriveSeed(
+        state._startSeed || FMG.gameState.season?.startSeed || 12345,
+        state.currentWeek,
+        (state.seasonNumber || 1) * 1000 + (state.completedWeeks || 0)
+      );
+      const coreResult = FMG.Core.advanceWeekFromLegacy(weekSeed);
+      FMG.autosaveIfNeeded(FMG.gameState, "advance-week");
+      return { ok: true, message: "Semana completada.", coreResult };
+    } catch (err) {
+      console.error("[advanceWeek] Core authority error:", err);
+      FMG.runtimeAuthorityManager?.migrationReport?.unsafeLegacyCalls.push("blocked-legacy-week-fallback:" + err.message);
+      FMG.pushSystemError?.(state, "FMG.Core detuvo la simulacion para evitar doble escritura runtime.", err.message);
+      return { ok: false, message: "FMG.Core detuvo la simulacion para evitar doble escritura runtime.", error: err.message };
     }
-    prepareWeek(state, currentFixture);
-
-    const results = currentFixture.matches.map((match) => {
-      const homeTeam = state.teams.find((team) => team.id === match.homeTeamId);
-      const awayTeam = state.teams.find((team) => team.id === match.awayTeamId);
-      const result = FMG.simulateMatch({ homeTeam, awayTeam, players: state.players, state });
-      result.week = currentFixture.week;
-      return result;
-    });
-    const finished = finishFixture(state, currentFixture, results);
-    FMG.autosaveIfNeeded(state, "advance-week");
-    return finished;
   };
 
   FMG.startLiveUserMatch = function () {
@@ -846,7 +875,7 @@
     const state = FMG.gameState;
     const upcoming = state.fixtures
       .filter((fixture) => !fixture.played)
-      .sort((left, right) => left.week - right.week)
+      .sort((left, right) => left.week - right.week || String(left.week).localeCompare(String(right.week)))
       .find((fixture) => fixture.matches.some((item) => item.homeTeamId === state.userTeamId || item.awayTeamId === state.userTeamId));
     if (!upcoming) return null;
     const match = upcoming.matches.find((item) => item.homeTeamId === state.userTeamId || item.awayTeamId === state.userTeamId);
@@ -870,7 +899,7 @@
     if (FMG.NotificationManager) {
       return FMG.NotificationManager.push(FMG.gameState, message, type);
     }
-    const notification = { id: FMG.uid("note"), message, type, createdAt: FMG.nowISO ? FMG.nowISO("notification") : new Date().toISOString() };
+    const notification = { id: FMG.uid("note"), message, type, createdAt: FMG.nowISO ? FMG.nowISO("notification") : "2025-01-01T12:00:00.000Z" };
     FMG.gameState.notifications = FMG.gameState.notifications || [];
     FMG.gameState.notificationLog = FMG.gameState.notificationLog || [];
     FMG.gameState.notifications.push(notification);

@@ -40,7 +40,7 @@
     }
     this._log = this._log.slice(0, 80);
     if (state.simulationState) {
-      state.simulationState.lastRunAt = FMG.nowISO ? FMG.nowISO("simulation-scheduler") : new Date().toISOString();
+      state.simulationState.lastRunAt = FMG.nowISO ? FMG.nowISO("simulation-scheduler") : "2025-01-01T12:00:00.000Z";
       state.simulationState.completedJobs = this._log.slice(0, 20);
     }
     return executed;
@@ -52,7 +52,7 @@
 
   function nowMs() {
     if (typeof performance !== "undefined" && performance.now) return performance.now();
-    return Date.now();
+    return FMG.nowMs ? FMG.nowMs() : Date.UTC(2025, 0, 1, 12, 0, 0);
   }
 
   FMG.createDefaultSimulationScheduler = function () {

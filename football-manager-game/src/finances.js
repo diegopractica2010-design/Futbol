@@ -68,7 +68,7 @@
   };
 
   FMG.registerFinanceEntry = function (finances, type, label, amount, budgetKey) {
-    const entry = { type, label, amount, budgetKey: budgetKey || null, date: new Date().toISOString() };
+    const entry = { type, label, amount, budgetKey: budgetKey || null, date: FMG.nowISO ? FMG.nowISO("finance-entry") : "2025-01-01T12:00:00.000Z" };
 
     if (amount > 0) finances.incomeHistory.unshift(entry);
     else if (amount < 0) finances.expenseHistory.unshift(entry);

@@ -16,6 +16,7 @@
   window.FMG.Phase19 = window.FMG.Phase19 || {};
 
   var C = null;
+  function rng() { return window.FMG && window.FMG.randomFloat ? window.FMG.randomFloat("phase19-goalkeeper") : 0.5; }
 
   // Zona de peligro: distancia al arco en la que el portero actua
   var DANGER_DIST   = 160;  // px — zona donde el portero sale
@@ -166,7 +167,7 @@
 
         // Tras atajar: decidir saque
         if (saved) {
-          this.state = Math.random() < 0.6 ? GK_STATE.THROW : GK_STATE.PUNT;
+          this.state = rng() < 0.6 ? GK_STATE.THROW : GK_STATE.PUNT;
           this.stateTimer = 0;
         }
         return { x: gkPlayer.x, y: gkPlayer.y, speed: 0, state: this.state, saveZone: zone };

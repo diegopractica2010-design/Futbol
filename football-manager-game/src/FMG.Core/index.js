@@ -86,24 +86,41 @@
     }
 
     // Convert legacy → Core
-    const coreState = FMG.Core.adapter.toCore();
+    const guard = FMG.runtimeMutationGuard;
+    if (guard) guard.begin("FMG.Core", { operation: "advance-week" });
+
+    try {
+      const coreState = FMG.legacyCompatibilityFacade
+        ? FMG.legacyCompatibilityFacade.toCore()
+        : FMG.Core.adapter.toCore();
 
     // Execute week simulation
-    const result = FMG.Core.engine.advanceWeek(coreState, { weekSeed });
+      const result = FMG.Core.engine.advanceWeek(coreState, { weekSeed });
 
     // Convert Core → legacy and sync
-    FMG.Core.adapter.syncFromCore(result.gameState);
+      if (FMG.legacyCompatibilityFacade) {
+        FMG.legacyCompatibilityFacade.syncFromCore(result.gameState);
+      } else {
+        FMG.Core.adapter.syncFromCore(result.gameState);
+      }
+      if (FMG.runtimeAuthorityManager) {
+        FMG.runtimeAuthorityManager.setAuthoritativeState(result.gameState, "advance-week");
+        FMG.runtimeAuthorityManager.validateNoDivergence(result.gameState, FMG.gameState, FMG.runtimeOwnershipValidator);
+      }
 
     // Emit legacy-compatible event
-    if (FMG.emitGameEvent) {
-      FMG.emitGameEvent("CORE_WEEK_ADVANCED", {
-        week: coreState.season.week,
-        events: result.events,
-        executionMs: result.executionMs
-      });
-    }
+      if (FMG.emitGameEvent) {
+        FMG.emitGameEvent("CORE_WEEK_ADVANCED", {
+          week: coreState.season.week,
+          events: result.events,
+          executionMs: result.executionMs
+        });
+      }
 
-    return result;
+      return result;
+    } finally {
+      if (guard) guard.end();
+    }
   };
 
   /**

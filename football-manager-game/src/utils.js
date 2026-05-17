@@ -30,6 +30,52 @@
   // RNG global del juego. El fallback inicial es determinista; runtimeHardening
   // sustituye esto por un motor serializable cuando termina de cargar.
   FMG.rng = FMG.mulberry32(1);
+  FMG._deterministicClock = FMG._deterministicClock || {
+    epochMs: Date.UTC(2025, 0, 1, 12, 0, 0),
+    tickMs: 60000,
+    tickIndex: 0
+  };
+
+  FMG.randomFloat = function () {
+    return FMG.rng();
+  };
+
+  FMG.nowMs = function () {
+    if (FMG.simulationClock && typeof FMG.simulationClock.now === "function") return FMG.simulationClock.now();
+    return FMG._deterministicClock.epochMs + FMG._deterministicClock.tickIndex * FMG._deterministicClock.tickMs;
+  };
+
+  FMG.tickMs = function () {
+    if (FMG.simulationClock && typeof FMG.simulationClock.tick === "function") return FMG.simulationClock.tick("runtime");
+    FMG._deterministicClock.tickIndex += 1;
+    return FMG.nowMs();
+  };
+
+  FMG.nowISO = FMG.nowISO || function () {
+    return new Date(FMG.tickMs()).toISOString();
+  };
+
+  FMG.stableEntityKey = function (entity, fallbackIndex) {
+    if (entity && typeof entity === "object") {
+      const id = entity.id || entity.playerId || entity.teamId || entity.fixtureId || entity.stateId || entity.name;
+      if (id !== undefined && id !== null) return String(id);
+    }
+    return String(fallbackIndex || 0);
+  };
+
+  FMG.deterministicCompare = function (left, right, fallbackLeft, fallbackRight) {
+    const leftKey = FMG.stableEntityKey(left, fallbackLeft);
+    const rightKey = FMG.stableEntityKey(right, fallbackRight);
+    return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+  };
+
+  FMG.deterministicSort = function (items, comparator) {
+    return (items || []).map((item, index) => ({ item, index })).sort((left, right) => {
+      const result = comparator ? comparator(left.item, right.item) : 0;
+      if (result) return result;
+      return FMG.deterministicCompare(left.item, right.item, left.index, right.index);
+    }).map((entry) => entry.item);
+  };
 
   // Inicializar RNG con seed
   FMG.initRNG = function (seed) {
@@ -67,11 +113,11 @@
   };
 
   FMG.randomInt = function (min, max) {
-    return Math.floor(FMG.rng() * (max - min + 1)) + min;
+    return Math.floor(FMG.randomFloat() * (max - min + 1)) + min;
   };
 
   FMG.sample = function (list) {
-    return list[Math.floor(FMG.rng() * list.length)];
+    return list[Math.floor(FMG.randomFloat() * list.length)];
   };
 
   FMG.currency = function (value) {
@@ -89,7 +135,7 @@
 
   FMG.uid = function (prefix) {
     const safePrefix = prefix || "id";
-    return `${safePrefix}-${FMG.rng().toString(36).slice(2, 10)}`;
+    return `${safePrefix}-${FMG.randomFloat().toString(36).slice(2, 10)}`;
   };
 
   FMG.average = function (values) {

@@ -51,7 +51,7 @@
       id: FMG.uid ? FMG.uid("evt") : "evt-0",
       type,
       payload,
-      createdAt: FMG.nowISO ? FMG.nowISO("event") : new Date().toISOString()
+      createdAt: FMG.nowISO ? FMG.nowISO("event") : "2025-01-01T12:00:00.000Z"
     };
     this._queue.push(event);
     if (!this._dispatching) this.flush();

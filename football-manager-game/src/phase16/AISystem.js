@@ -10,6 +10,7 @@
   // ============================================================
 
   const C = window.FMG.Phase16.C;
+  function rng() { return window.FMG && window.FMG.randomFloat ? window.FMG.randomFloat("phase16-ai") : 0.5; }
 
   function AISystem() {}
 
@@ -42,7 +43,7 @@
       match.movePlayer(p, ddx / len, ddy / len, C.AI_SPEED);
 
       // Tiro si esta muy cerca del balon
-      if (bd < C.PLAYER_R + C.BALL_R + 4 && Math.random() < 0.04) {
+      if (bd < C.PLAYER_R + C.BALL_R + 4 && rng() < 0.04) {
         var sx = goalX - b.x;
         var sy = goalY - b.y;
         var sl = Math.hypot(sx, sy) || 1;

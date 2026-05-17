@@ -3,10 +3,39 @@
 
   var FMG = window.FMG = window.FMG || {};
   FMG.Performance = FMG.Performance || {};
+  FMG._deterministicClock = FMG._deterministicClock || {
+    epochMs: Date.UTC(2025, 0, 1, 12, 0, 0),
+    tickMs: 60000,
+    tickIndex: 0
+  };
+  FMG._fallbackRngState = FMG._fallbackRngState || 1;
+
+  if (!FMG.rng) {
+    FMG.rng = function () {
+      FMG._fallbackRngState = (FMG._fallbackRngState + 0x6D2B79F5) >>> 0;
+      var t = FMG._fallbackRngState;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  FMG.randomFloat = FMG.randomFloat || function () {
+    return FMG.rng();
+  };
+  FMG.nowMs = FMG.nowMs || function () {
+    return FMG._deterministicClock.epochMs + FMG._deterministicClock.tickIndex * FMG._deterministicClock.tickMs;
+  };
+  FMG.tickMs = FMG.tickMs || function () {
+    FMG._deterministicClock.tickIndex += 1;
+    return FMG.nowMs();
+  };
+  FMG.nowISO = FMG.nowISO || function () {
+    return new Date(FMG.tickMs()).toISOString();
+  };
 
   function nowMs() {
     if (typeof performance !== "undefined" && performance.now) return performance.now();
-    return Date.now();
+    return FMG.nowMs();
   }
 
   function Profiler(options) {

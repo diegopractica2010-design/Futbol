@@ -24,6 +24,7 @@
   function add(a, b) { return vec(a.x + b.x, a.y + b.y); }
   function scale(v, s) { return vec(v.x * s, v.y * s); }
   function sub(a, b) { return vec(a.x - b.x, a.y - b.y); }
+  function rng() { return window.FMG && window.FMG.randomFloat ? window.FMG.randomFloat("phase15") : 0.5; }
 
   function makePlayer(id, x, y, isUser) {
     return { id, x, y, vx: 0, vy: 0, isUser, hasBall: false, team: isUser ? 0 : 1 };
@@ -175,8 +176,8 @@
         const dir = norm(sub(target, state.ball));
         const longPass = k[" "] || k["l"];
         const error = longPass ? 0.35 : 0.12;
-        state.ball.vx = (dir.x + (Math.random() - 0.5) * error) * PASS_POWER * (longPass ? 1.45 : 1);
-        state.ball.vy = (dir.y + (Math.random() - 0.5) * error) * PASS_POWER * (longPass ? 1.45 : 1);
+        state.ball.vx = (dir.x + (rng() - 0.5) * error) * PASS_POWER * (longPass ? 1.45 : 1);
+        state.ball.vy = (dir.y + (rng() - 0.5) * error) * PASS_POWER * (longPass ? 1.45 : 1);
         state.ball.owner = null;
       }
     }
@@ -233,7 +234,7 @@
       movePlayer(p, dir.x, dir.y, AI_SPEED * 0.6);
 
       // Si está muy cerca del balón, chuta hacia el arco usuario
-      if (ballDist < PLAYER_R + BALL_R + 4 && Math.random() < 0.04) {
+      if (ballDist < PLAYER_R + BALL_R + 4 && rng() < 0.04) {
         const shootDir = norm(sub(vec(goalX, goalY), ball));
         ball.vx = shootDir.x * SHOOT_POWER * 0.85;
         ball.vy = shootDir.y * SHOOT_POWER * 0.85;

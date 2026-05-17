@@ -13,6 +13,7 @@
   window.FMG.Phase19 = window.FMG.Phase19 || {};
 
   var C = null;
+  function rng() { return window.FMG && window.FMG.randomFloat ? window.FMG.randomFloat("phase19-save") : 0.5; }
 
   var MAGNET_DIST    = 90;
   var MIN_SHOT_SPEED = 3.5;
@@ -44,7 +45,7 @@
 
     var zoneDiff = _zoneDifficulty(zone);
     var saveProb = Math.max(0.08, Math.min(0.96, attribute * (1 - zoneDiff * 0.35)));
-    var saved    = Math.random() < saveProb;
+    var saved    = rng() < saveProb;
 
     this._cooldown = SAVE_COOLDOWN;
 
@@ -85,8 +86,8 @@
     var dy  = best.y - b.y;
     var len = Math.hypot(dx, dy) || 1;
     ball.applyImpulse(
-      (dx / len + (Math.random() - 0.5) * 0.15) * C.PASS_POWER * 0.85,
-      (dy / len + (Math.random() - 0.5) * 0.15) * C.PASS_POWER * 0.85
+      (dx / len + (rng() - 0.5) * 0.15) * C.PASS_POWER * 0.85,
+      (dy / len + (rng() - 0.5) * 0.15) * C.PASS_POWER * 0.85
     );
   };
 
@@ -94,7 +95,7 @@
     if (!C) C = window.FMG.Phase16.C;
     var b       = ball.ball;
     var targetX = attackingRight ? C.FIELD_W * 0.65 : C.FIELD_W * 0.35;
-    var targetY = C.FIELD_H / 2 + (Math.random() - 0.5) * 120;
+    var targetY = C.FIELD_H / 2 + (rng() - 0.5) * 120;
     var dx      = targetX - b.x;
     var dy      = targetY - b.y;
     var len     = Math.hypot(dx, dy) || 1;

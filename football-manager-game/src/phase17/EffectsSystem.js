@@ -10,6 +10,7 @@
   window.FMG.Phase17 = window.FMG.Phase17 || {};
 
   var POOL_SIZE = 80;
+  function rng() { return window.FMG && window.FMG.randomFloat ? window.FMG.randomFloat("phase17-effects") : 0.5; }
 
   function Particle() {
     this.active = false;
@@ -52,15 +53,15 @@
     if (speed < 1.5) return;
     var count = speed > 2.5 ? 2 : 1;
     for (var i = 0; i < count; i++) {
-      var angle = Math.random() * Math.PI * 2;
-      var mag   = Math.random() * 0.6 + 0.2;
+      var angle = rng() * Math.PI * 2;
+      var mag   = rng() * 0.6 + 0.2;
       this._spawn(
-        x + (Math.random() - 0.5) * 6,
-        y + 8 + Math.random() * 3,
+        x + (rng() - 0.5) * 6,
+        y + 8 + rng() * 3,
         Math.cos(angle) * mag,
         Math.sin(angle) * mag - 0.3,
-        12 + Math.random() * 8,
-        1.5 + Math.random() * 1.5,
+        12 + rng() * 8,
+        1.5 + rng() * 1.5,
         "rgba(180,160,120,0.5)",
         "dust"
       );
@@ -71,14 +72,14 @@
   EffectsSystem.prototype.spawnKickSparks = function (x, y, power) {
     var count = Math.round(power * 0.8);
     for (var i = 0; i < count; i++) {
-      var angle = Math.random() * Math.PI * 2;
-      var mag   = Math.random() * power * 0.25 + 0.5;
+      var angle = rng() * Math.PI * 2;
+      var mag   = rng() * power * 0.25 + 0.5;
       this._spawn(
         x, y,
         Math.cos(angle) * mag,
         Math.sin(angle) * mag,
-        8 + Math.random() * 6,
-        1 + Math.random() * 1.5,
+        8 + rng() * 6,
+        1 + rng() * 1.5,
         "rgba(255,220,80,0.8)",
         "spark"
       );
@@ -96,10 +97,10 @@
       var angle = (i / 16) * Math.PI * 2;
       this._spawn(
         x, y,
-        Math.cos(angle) * (3 + Math.random() * 3),
-        Math.sin(angle) * (3 + Math.random() * 3),
-        25 + Math.random() * 15,
-        2 + Math.random() * 2,
+        Math.cos(angle) * (3 + rng() * 3),
+        Math.sin(angle) * (3 + rng() * 3),
+        25 + rng() * 15,
+        2 + rng() * 2,
         "rgba(255,220,50,0.9)",
         "spark"
       );

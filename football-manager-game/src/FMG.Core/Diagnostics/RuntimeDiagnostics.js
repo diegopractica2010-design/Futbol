@@ -7,7 +7,7 @@
 
   function nowMs() {
     if (typeof performance !== "undefined" && performance.now) return performance.now();
-    return Date.now();
+    return FMG.nowMs ? FMG.nowMs() : Date.UTC(2025, 0, 1, 12, 0, 0);
   }
 
   function stableStringify(value) {
@@ -278,7 +278,7 @@
 
   BrowserRuntimeSafetyLayer.prototype.capture = function (error, source) {
     const message = error && error.message ? error.message : String(error);
-    const record = { source, message, at: new Date().toISOString() };
+    const record = { source, message, at: FMG.nowISO ? FMG.nowISO("runtime-error") : "2025-01-01T12:00:00.000Z" };
     this.errors.unshift(record);
     this.errors = this.errors.slice(0, 20);
     if (FMG.gameState && FMG.pushSystemError) FMG.pushSystemError(FMG.gameState, "Error de runtime capturado.", message);
@@ -500,7 +500,7 @@
       schema: "fmg-save",
       version: payload.version,
       checksum: hashString(stableStringify(payload)),
-      createdAt: new Date().toISOString()
+      createdAt: FMG.nowISO ? FMG.nowISO("persistence-wrap") : "2025-01-01T12:00:00.000Z"
     };
     return payload;
   };

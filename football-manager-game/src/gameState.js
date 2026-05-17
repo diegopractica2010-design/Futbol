@@ -57,8 +57,25 @@
 
   FMG.replaceGameState = function (nextState) {
     if (FMG.ensureSeparatedState) FMG.ensureSeparatedState(nextState);
-    Object.keys(FMG.gameState).forEach((key) => { delete FMG.gameState[key]; });
-    Object.assign(FMG.gameState, nextState);
-    if (FMG.syncLegacyStateFacets) FMG.syncLegacyStateFacets(FMG.gameState);
+    const applyReplacement = function () {
+      Object.keys(FMG.gameState).forEach((key) => { delete FMG.gameState[key]; });
+      Object.assign(FMG.gameState, nextState);
+    };
+    if (FMG.runtimeMutationGuard) {
+      FMG.runtimeMutationGuard.suppress("replace-game-state", applyReplacement);
+      FMG.runtimeMutationGuard.installLegacyObserver();
+    } else {
+      applyReplacement();
+    }
+    if (FMG.syncLegacyStateFacets) {
+      if (FMG.runtimeMutationGuard) {
+        FMG.runtimeMutationGuard.suppress("sync-legacy-state-facets", () => FMG.syncLegacyStateFacets(FMG.gameState));
+      } else {
+        FMG.syncLegacyStateFacets(FMG.gameState);
+      }
+    }
+    if (FMG.legacyCompatibilityFacade && FMG.gameState.teams && FMG.gameState.teams.length) {
+      FMG.legacyCompatibilityFacade.refreshAuthoritativeState("replace-game-state");
+    }
   };
 })();
