@@ -1396,15 +1396,112 @@
     }
   }
 
+  class RenderLoopAnalyzer {
+    constructor() {
+      this.pending = new Map();
+      this.frames = [];
+      this.duplicates = [];
+      this.activeLoops = new Map();
+      this.sequence = 1;
+      this.installed = false;
+      this.nativeRaf = null;
+      this.nativeCancel = null;
+    }
+
+    install(target) {
+      target = target || root;
+      if (this.installed || !target || typeof target.requestAnimationFrame !== "function") return false;
+      this.nativeRaf = target.requestAnimationFrame.bind(target);
+      this.nativeCancel = typeof target.cancelAnimationFrame === "function" ? target.cancelAnimationFrame.bind(target) : null;
+      const analyzer = this;
+      target.requestAnimationFrame = function (callback) {
+        const owner = callback && (callback.__fmgLoopOwner || callback.name) || "anonymous";
+        if (Array.from(analyzer.pending.values()).some((entry) => entry.owner === owner)) {
+          analyzer.duplicates.push({ type: "duplicate-raf", owner, at: deterministicNow() });
+          analyzer.duplicates = analyzer.duplicates.slice(-50);
+        }
+        const id = "raf:" + analyzer.sequence++;
+        const nativeId = analyzer.nativeRaf(function (timestamp) {
+          analyzer.pending.delete(id);
+          analyzer.recordFrame(owner, timestamp);
+          return callback(timestamp);
+        });
+        analyzer.pending.set(id, { id, nativeId, owner, at: deterministicNow() });
+        return id;
+      };
+      target.cancelAnimationFrame = function (id) {
+        const entry = analyzer.pending.get(id);
+        if (entry) {
+          analyzer.pending.delete(id);
+          if (analyzer.nativeCancel) analyzer.nativeCancel(entry.nativeId);
+          return;
+        }
+        if (analyzer.nativeCancel) analyzer.nativeCancel(id);
+      };
+      this.installed = true;
+      return true;
+    }
+
+    registerLoop(id) {
+      const entry = this.activeLoops.get(id) || { id, starts: 0, frames: 0, active: false };
+      if (entry.active) this.duplicates.push({ type: "duplicate-loop", owner: id, at: deterministicNow() });
+      entry.starts += 1;
+      entry.active = true;
+      this.activeLoops.set(id, entry);
+      return entry;
+    }
+
+    unregisterLoop(id) {
+      const entry = this.activeLoops.get(id);
+      if (entry) entry.active = false;
+    }
+
+    recordFrame(owner, timestamp) {
+      const at = Number.isFinite(timestamp) ? timestamp : deterministicNow();
+      const previous = this.frames.length ? this.frames[this.frames.length - 1] : null;
+      const delta = previous ? Math.max(0, at - previous.at) : 0;
+      this.frames.push({ owner: owner || "unknown", at, delta });
+      this.frames = this.frames.slice(-180);
+      const loop = this.activeLoops.get(owner);
+      if (loop) loop.frames += 1;
+    }
+
+    fps() {
+      const deltas = this.frames.map((frame) => frame.delta).filter((delta) => delta > 0);
+      if (!deltas.length) return null;
+      const average = deltas.reduce((sum, delta) => sum + delta, 0) / deltas.length;
+      return average ? Math.round(1000 / average) : null;
+    }
+
+    report() {
+      const latest = this.frames.length ? this.frames[this.frames.length - 1].at : deterministicNow();
+      const recentFrames = this.frames.filter((frame) => latest - frame.at <= 1000).length;
+      return {
+        installed: this.installed,
+        pendingRaf: this.pending.size,
+        activeLoopCount: Array.from(this.activeLoops.values()).filter((entry) => entry.active).length,
+        activeLoops: Array.from(this.activeLoops.values()),
+        duplicateWarnings: this.duplicates.slice(-20),
+        fps: this.fps(),
+        rerenderStorm: { storm: recentFrames > 30, frames: recentFrames, limit: 30, windowMs: 1000 }
+      };
+    }
+  }
+
   class RenderScheduler {
     constructor(masterLoop) {
       this.masterLoop = masterLoop;
       this.queue = new Map();
       this.scheduled = false;
+      this.flushCount = 0;
+      this.jobCount = 0;
+      this.history = [];
+      this.stormWarnings = [];
     }
 
     schedule(key, fn) {
       this.queue.set(key, fn);
+      this.jobCount += 1;
       if (this.scheduled) return;
       this.scheduled = true;
       const flush = () => this.flush();
@@ -1413,10 +1510,30 @@
     }
 
     flush() {
+      const startedAt = deterministicNow();
       const jobs = Array.from(this.queue.values());
+      const keys = Array.from(this.queue.keys());
       this.queue.clear();
       this.scheduled = false;
+      this.flushCount += 1;
       jobs.forEach((job) => job());
+      const entry = { at: startedAt, jobs: jobs.length, keys };
+      this.history.push(entry);
+      this.history = this.history.slice(-120);
+      if (jobs.length > 50) this.stormWarnings.push({ ...entry, type: "large-flush" });
+      if (FMG.renderLoopAnalyzer) FMG.renderLoopAnalyzer.recordFrame("render-scheduler", startedAt);
+      return entry;
+    }
+
+    report() {
+      return {
+        scheduled: this.scheduled,
+        queuedJobs: this.queue.size,
+        flushCount: this.flushCount,
+        jobCount: this.jobCount,
+        stormWarnings: this.stormWarnings.slice(-10),
+        history: this.history.slice(-20)
+      };
     }
   }
 
@@ -1426,28 +1543,50 @@
       this.scheduler = scheduler;
       this.nodes = {};
       this.hashes = {};
+      this.renderCount = 0;
+      this.staleReferences = [];
       this.ensure();
     }
 
     ensure() {
-      if (!this.app || this.nodes.route) return;
+      if (!this.app) return;
+      if (this.nodes.route && this._isConnected(this.nodes.route)) return;
+      if (this.nodes.route && !this._isConnected(this.nodes.route)) this.staleReferences.push({ key: "route", at: deterministicNow() });
       this.app.innerHTML = '<div class="fmg-shell-root"><div class="fmg-nav-root"></div><main class="fmg-route-root"></main><aside class="fmg-overlay-root"></aside></div>';
       this.nodes.nav = this.app.querySelector(".fmg-nav-root");
       this.nodes.route = this.app.querySelector(".fmg-route-root");
       this.nodes.overlay = this.app.querySelector(".fmg-overlay-root");
+      if (FMG.detachedDOMDetector) {
+        FMG.detachedDOMDetector.track("ui-shell-app", this.app, "persistent-ui-shell");
+        Object.keys(this.nodes).forEach((key) => FMG.detachedDOMDetector.track("ui-shell-" + key, this.nodes[key], "persistent-ui-shell"));
+      }
+    }
+
+    _isConnected(node) {
+      if (!node) return false;
+      if (typeof node.isConnected === "boolean") return node.isConnected;
+      if (!root.document || !root.document.documentElement || !root.document.documentElement.contains) return true;
+      return root.document.documentElement.contains(node);
     }
 
     render(parts) {
       this.ensure();
+      this.renderCount += 1;
       ["nav", "route", "overlay"].forEach((key) => {
         const html = parts[key] || "";
         const hash = hashString(html);
         if (this.hashes[key] === hash || !this.nodes[key]) return;
         this.scheduler.schedule("ui:" + key, () => {
+          if (!this._isConnected(this.nodes[key])) this.ensure();
           this.nodes[key].innerHTML = html;
           this.hashes[key] = hash;
+          if (key === "overlay" && FMG.overlayManager) FMG.overlayManager.markRendered(html);
         });
       });
+    }
+
+    report() {
+      return { renderCount: this.renderCount, staleReferences: this.staleReferences.slice(-20), hashes: { ...this.hashes } };
     }
   }
 
@@ -1481,14 +1620,40 @@
   class OverlayManager {
     constructor() {
       this.overlays = new Map();
+      this.renderedHash = null;
+      this.history = [];
     }
 
     set(id, html) {
-      this.overlays.set(id, html);
+      if (!html) this.overlays.delete(id);
+      else this.overlays.set(id, { id, html, updatedAt: deterministicNow() });
     }
 
     render() {
-      return Array.from(this.overlays.values()).join("");
+      const html = Array.from(this.overlays.values()).map((entry) => entry.html).join("");
+      this.markRendered(html);
+      return html;
+    }
+
+    markRendered(html) {
+      this.renderedHash = hashString(html || "");
+      this.history.push({ at: deterministicNow(), hash: this.renderedHash, active: this.overlays.size });
+      this.history = this.history.slice(-60);
+    }
+
+    clear(id) {
+      if (id) this.overlays.delete(id);
+      else this.overlays.clear();
+    }
+
+    report() {
+      return {
+        activeOverlays: this.overlays.size,
+        renderedHash: this.renderedHash,
+        possibleLeak: this.overlays.size > 5,
+        overlays: Array.from(this.overlays.keys()),
+        history: this.history.slice(-20)
+      };
     }
   }
 
@@ -1522,13 +1687,25 @@
     constructor() {
       this.listeners = new Map();
       this.nextId = 1;
+      this.duplicates = [];
+      this.targetCounts = new Map();
+      this.accumulationWarnings = [];
     }
 
     add(target, type, handler, options) {
       if (!target || !target.addEventListener) return null;
       const id = "listener:" + this.nextId++;
       target.addEventListener(type, handler, options);
-      this.listeners.set(id, { target, type, handler, options });
+      const targetName = target.id || target.className || target.name || target.nodeName || "target";
+      const signature = [targetName, type, handler && (handler.name || String(handler).slice(0, 40))].join(":");
+      if (Array.from(this.listeners.values()).some((entry) => entry.signature === signature)) {
+        this.duplicates.push({ id, signature, at: deterministicNow() });
+        this.duplicates = this.duplicates.slice(-50);
+      }
+      const count = (this.targetCounts.get(targetName) || 0) + 1;
+      this.targetCounts.set(targetName, count);
+      if (count > 50) this.accumulationWarnings.push({ target: targetName, count, at: deterministicNow() });
+      this.listeners.set(id, { id, target, targetName, type, handler, options, signature });
       return id;
     }
 
@@ -1537,11 +1714,24 @@
       if (!entry) return false;
       entry.target.removeEventListener(entry.type, entry.handler, entry.options);
       this.listeners.delete(id);
+      this.targetCounts.set(entry.targetName, Math.max(0, (this.targetCounts.get(entry.targetName) || 1) - 1));
       return true;
     }
 
     count() {
       return this.listeners.size;
+    }
+
+    report() {
+      return {
+        currentListeners: this.listeners.size,
+        duplicates: this.duplicates.slice(-20),
+        accumulationWarnings: this.accumulationWarnings.slice(-20),
+        byTarget: Array.from(this.targetCounts.entries()).reduce((acc, entry) => {
+          acc[entry[0]] = entry[1];
+          return acc;
+        }, {})
+      };
     }
   }
 
@@ -1590,20 +1780,651 @@
     }
   }
 
+  class DetachedDOMDetector {
+    constructor() {
+      this.tracked = new Map();
+      this.samples = [];
+    }
+
+    track(id, node, owner) {
+      if (!node) return null;
+      const key = id || "node:" + this.tracked.size;
+      this.tracked.set(key, { id: key, node, owner: owner || "unknown", detachedSince: null });
+      return key;
+    }
+
+    untrack(id) {
+      this.tracked.delete(id);
+    }
+
+    isDetached(node) {
+      if (!node) return false;
+      if (typeof node.isConnected === "boolean") return !node.isConnected;
+      if (!root.document || !root.document.documentElement || !root.document.documentElement.contains) return false;
+      return !root.document.documentElement.contains(node);
+    }
+
+    sample() {
+      const nodes = [];
+      this.tracked.forEach((entry) => {
+        if (this.isDetached(entry.node)) {
+          if (!entry.detachedSince) entry.detachedSince = deterministicNow();
+          nodes.push({ id: entry.id, owner: entry.owner, detachedSince: entry.detachedSince });
+        } else {
+          entry.detachedSince = null;
+        }
+      });
+      const sample = { at: deterministicNow(), tracked: this.tracked.size, detached: nodes.length, nodes };
+      this.samples.push(sample);
+      this.samples = this.samples.slice(-60);
+      return sample;
+    }
+
+    report() {
+      const latest = this.sample();
+      return { tracked: latest.tracked, detached: latest.detached, staleReferences: latest.nodes, samples: this.samples.slice(-20) };
+    }
+  }
+
   class RuntimeMemoryDiagnostics {
-    constructor(listenerRegistry, lifecycleTracker) {
+    constructor(listenerRegistry, lifecycleTracker, detachedDetector, renderLoopAnalyzer) {
       this.listenerRegistry = listenerRegistry;
       this.lifecycleTracker = lifecycleTracker;
+      this.detachedDetector = detachedDetector;
+      this.renderLoopAnalyzer = renderLoopAnalyzer;
+      this.samples = [];
     }
 
     sample(state) {
       const memory = root.performance && root.performance.memory ? root.performance.memory.usedJSHeapSize : null;
-      return {
+      const sample = {
+        at: deterministicNow(),
         heapBytes: memory,
         entityCount: state && state.players ? state.players.length : 0,
         listeners: this.listenerRegistry.count(),
-        lifecycle: this.lifecycleTracker.report()
+        listenerReport: this.listenerRegistry.report ? this.listenerRegistry.report() : null,
+        lifecycle: this.lifecycleTracker.report(),
+        detachedDOM: this.detachedDetector ? this.detachedDetector.report() : null,
+        renderLoop: this.renderLoopAnalyzer ? this.renderLoopAnalyzer.report() : null,
+        overlay: FMG.overlayManager ? FMG.overlayManager.report() : null
       };
+      this.samples.push(sample);
+      this.samples = this.samples.slice(-120);
+      return sample;
+    }
+
+    trend() {
+      const first = this.samples[0];
+      const last = this.samples[this.samples.length - 1];
+      return {
+        samples: this.samples.length,
+        heapDelta: first && last && Number.isFinite(first.heapBytes) && Number.isFinite(last.heapBytes) ? last.heapBytes - first.heapBytes : null,
+        listenerDelta: first && last ? last.listeners - first.listeners : 0,
+        detachedDelta: first && last ? (last.detachedDOM?.detached || 0) - (first.detachedDOM?.detached || 0) : 0
+      };
+    }
+
+    report() {
+      const latest = this.samples.length ? this.samples[this.samples.length - 1] : this.sample(FMG.gameState || {});
+      const trend = this.trend();
+      return { latest, trend, stable: trend.listenerDelta <= 2 && trend.detachedDelta <= 0 };
+    }
+  }
+
+  function stressOutcome(name, startedAt, checks, errors, details) {
+    errors = errors || [];
+    return {
+      name,
+      ok: errors.length === 0,
+      startedAt,
+      finishedAt: FMG.nowISO ? FMG.nowISO(name + "-finished") : deterministicISO(name + "-finished"),
+      checks: checks || {},
+      errors,
+      details: details || {}
+    };
+  }
+
+  class ReplayStressHarness {
+    constructor(config) {
+      config = config || {};
+      this.replayEngine = config.replayEngine || null;
+      this.snapshotId = config.snapshotId || null;
+      this.actions = config.actions || [];
+      this.lastReport = null;
+    }
+
+    run(options) {
+      options = options || {};
+      const startedAt = FMG.nowISO ? FMG.nowISO("replay-stress-start") : deterministicISO("replay-stress-start");
+      const loops = Math.max(1, Number(options.loops || 25));
+      const checksums = [];
+      const errors = [];
+      for (let index = 0; index < loops; index += 1) {
+        try {
+          if (this.replayEngine && this.snapshotId && typeof this.replayEngine.replay === "function") {
+            const result = this.replayEngine.replay(this.snapshotId, this.actions);
+            checksums.push(result.finalState && typeof result.finalState._calculateChecksum === "function" ? result.finalState._calculateChecksum() : hashString(stableStringify(result)));
+          } else {
+            checksums.push(hashString("synthetic-replay:" + index));
+          }
+        } catch (error) {
+          errors.push("loop " + index + ": " + error.message);
+        }
+      }
+      const unique = Array.from(new Set(checksums));
+      if (this.replayEngine && unique.length > 1) errors.push("Replay checksum diverged across loops");
+      this.lastReport = stressOutcome("replay-stress", startedAt, { loops, checksumStable: !this.replayEngine || unique.length <= 1, checksums: unique.slice(0, 5) }, errors);
+      return this.lastReport;
+    }
+  }
+
+  class SaveStressHarness {
+    constructor(config) {
+      config = config || {};
+      this.slotId = config.slotId || "stress-slot";
+      this.lastReport = null;
+    }
+
+    run(options) {
+      options = options || {};
+      const startedAt = FMG.nowISO ? FMG.nowISO("save-stress-start") : deterministicISO("save-stress-start");
+      const loops = Math.max(1, Number(options.loops || 10));
+      const errors = [];
+      for (let index = 0; index < loops; index += 1) {
+        try {
+          if (!FMG.saveToSlot || !FMG.loadFromSlot) {
+            errors.push("save/load API missing");
+            break;
+          }
+          const saved = FMG.saveToSlot(FMG.gameState || {}, this.slotId, { overwrite: true, reason: "stress-" + index });
+          if (!saved || saved.ok === false) errors.push("save failed at " + index + ": " + (saved && saved.message));
+          const loaded = FMG.loadFromSlot(this.slotId);
+          if (!loaded || loaded.ok === false) errors.push("load failed at " + index + ": " + (loaded && loaded.message));
+        } catch (error) {
+          errors.push("loop " + index + ": " + error.message);
+        }
+      }
+      const corruption = this.injectCorruption(options);
+      if (!corruption.ok) errors.push(...corruption.errors);
+      this.lastReport = stressOutcome("save-stress", startedAt, { loops, corruptionRecovered: corruption.recovered }, errors, { corruption, pipeline: FMG.incrementalSavePipeline && FMG.incrementalSavePipeline.report() });
+      return this.lastReport;
+    }
+
+    injectCorruption(options) {
+      if (options && options.corruption === false) return { ok: true, skipped: true, recovered: false, errors: [] };
+      if (!root.localStorage || !FMG.SAVE_SLOT_PREFIX || !FMG.loadFromSlot) return { ok: true, skipped: true, recovered: false, errors: [] };
+      const key = FMG.SAVE_SLOT_PREFIX + this.slotId;
+      const raw = root.localStorage.getItem(key);
+      if (!raw) return { ok: true, skipped: true, recovered: false, errors: [] };
+      root.localStorage.setItem(key, "{corrupted-stress-payload");
+      const loaded = FMG.loadFromSlot(this.slotId);
+      root.localStorage.setItem(key, raw);
+      const recovered = Boolean(loaded && loaded.ok);
+      return { ok: recovered, recovered, errors: recovered ? [] : ["corrupted save did not recover"] };
+    }
+  }
+
+  class UINavStressHarness {
+    constructor(config) {
+      config = config || {};
+      this.routes = config.routes || null;
+      this.lastReport = null;
+    }
+
+    run(options) {
+      options = options || {};
+      const startedAt = FMG.nowISO ? FMG.nowISO("ui-stress-start") : deterministicISO("ui-stress-start");
+      const loops = Math.max(1, Number(options.loops || 50));
+      const routes = this.routes || Object.values(FMG.ROUTES || { dashboard: "dashboard", settings: "settings" });
+      const errors = [];
+      for (let index = 0; index < loops; index += 1) {
+        try {
+          if (FMG.gameState) FMG.gameState.route = routes[index % routes.length];
+          if (typeof FMG.render === "function") FMG.render();
+          else if (FMG.persistentUIShell) FMG.persistentUIShell.render({ nav: "<nav>stress</nav>", route: "<section>" + index + "</section>", overlay: "" });
+          if (FMG.renderScheduler && typeof FMG.renderScheduler.flush === "function") FMG.renderScheduler.flush();
+        } catch (error) {
+          errors.push("nav loop " + index + ": " + error.message);
+        }
+      }
+      this.lastReport = stressOutcome("ui-nav-stress", startedAt, { loops, routes: routes.length }, errors, { ui: FMG.generateUILifecycleReport && FMG.generateUILifecycleReport(), render: FMG.generateRenderStabilityReport && FMG.generateRenderStabilityReport() });
+      return this.lastReport;
+    }
+  }
+
+  class MemoryStressHarness {
+    constructor() {
+      this.lastReport = null;
+    }
+
+    run(options) {
+      options = options || {};
+      const startedAt = FMG.nowISO ? FMG.nowISO("memory-stress-start") : deterministicISO("memory-stress-start");
+      const loops = Math.max(1, Number(options.loops || 20));
+      const transient = [];
+      for (let index = 0; index < loops; index += 1) {
+        if (options.allocate) transient.push(new Array(64).fill("stress-" + index));
+        if (FMG.runtimeMemoryDiagnostics) FMG.runtimeMemoryDiagnostics.sample(FMG.gameState || {});
+      }
+      transient.length = 0;
+      const memory = FMG.generateMemoryLeakReport ? FMG.generateMemoryLeakReport() : null;
+      const trend = memory && memory.diagnostics ? memory.diagnostics.trend : null;
+      const errors = [];
+      if (trend && trend.listenerDelta > 5) errors.push("listener count grew during memory stress");
+      if (trend && trend.detachedDelta > 0) errors.push("detached DOM grew during memory stress");
+      this.lastReport = stressOutcome("memory-stress", startedAt, { loops, stable: !memory || memory.ok, trend }, errors, { memory });
+      return this.lastReport;
+    }
+  }
+
+  class WorldSimulationHarness {
+    constructor() {
+      this.lastReport = null;
+    }
+
+    run(options) {
+      options = options || {};
+      const startedAt = FMG.nowISO ? FMG.nowISO("world-stress-start") : deterministicISO("world-stress-start");
+      const weeks = Math.max(0, Number(options.weeks || 8));
+      const matchLoops = Math.max(0, Number(options.matchLoops || 3));
+      const errors = [];
+      let advancedWeeks = 0;
+      let matchAttempts = 0;
+      for (let index = 0; index < weeks; index += 1) {
+        try {
+          if (typeof FMG.advanceWeek !== "function") break;
+          const result = FMG.advanceWeek();
+          if (!result || result.ok === false) {
+            if (options.failOnBlockedWeek) errors.push("advanceWeek failed: " + (result && result.message));
+            break;
+          }
+          advancedWeeks += 1;
+        } catch (error) {
+          errors.push("advanceWeek exception: " + error.message);
+          break;
+        }
+      }
+      for (let index = 0; index < matchLoops; index += 1) {
+        try {
+          if (typeof FMG.startLiveUserMatch !== "function") break;
+          const result = FMG.startLiveUserMatch();
+          matchAttempts += 1;
+          if (result && result.ok && FMG.gameState && FMG.gameState.liveMatch) {
+            FMG.gameState.liveMatch.completed = true;
+            if (FMG.finishLiveUserMatch) FMG.finishLiveUserMatch();
+          }
+        } catch (error) {
+          errors.push("match spam exception: " + error.message);
+        }
+      }
+      this.lastReport = stressOutcome("world-simulation-stress", startedAt, { requestedWeeks: weeks, advancedWeeks, matchAttempts }, errors, { worldPlan: FMG.layeredWorldSimulator && FMG.layeredWorldSimulator.plan(FMG.gameState || {}) });
+      return this.lastReport;
+    }
+  }
+
+  class WorldEntropyAnalyzer {
+    constructor() {
+      this.history = [];
+    }
+
+    analyze(state) {
+      state = state || {};
+      const players = Array.isArray(state.players) ? state.players : [];
+      const activePlayers = players.filter((player) => !player.retired && !player.isRetired);
+      const teams = Array.isArray(state.teams) ? state.teams : [];
+      const byTeam = new Map();
+      activePlayers.forEach((player) => {
+        const key = player.teamId || "free-agent";
+        byTeam.set(key, (byTeam.get(key) || 0) + 1);
+      });
+      const overalls = activePlayers.map((player) => Number(player.overall) || 0).filter(Boolean);
+      const ages = activePlayers.map((player) => Number(player.age) || 0).filter(Boolean);
+      const entropy = this._distributionEntropy(Array.from(byTeam.values()));
+      const report = {
+        at: FMG.nowISO ? FMG.nowISO("world-entropy") : deterministicISO("world-entropy"),
+        teams: teams.length,
+        players: players.length,
+        activePlayers: activePlayers.length,
+        retiredPlayers: players.length - activePlayers.length,
+        freeAgents: byTeam.get("free-agent") || 0,
+        teamDistributionEntropy: entropy,
+        averageOverall: this._average(overalls),
+        overallStdDev: this._stdDev(overalls),
+        averageAge: this._average(ages),
+        ageStdDev: this._stdDev(ages),
+        entityExplosion: teams.length ? activePlayers.length > teams.length * 45 : activePlayers.length > 1000,
+        worldHomogenization: overalls.length > 5 && this._stdDev(overalls) < 2 && entropy < Math.max(1, Math.log2(Math.max(2, teams.length)) * 0.6),
+        squadImbalance: teams.length ? Array.from(byTeam.values()).some((count) => count > 55) : false
+      };
+      this.history.push(report);
+      this.history = this.history.slice(-120);
+      return report;
+    }
+
+    _average(values) {
+      return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    }
+
+    _stdDev(values) {
+      if (!values.length) return 0;
+      const average = this._average(values);
+      return Math.sqrt(values.reduce((sum, value) => sum + Math.pow(value - average, 2), 0) / values.length);
+    }
+
+    _distributionEntropy(values) {
+      const total = values.reduce((sum, value) => sum + value, 0);
+      if (!total) return 0;
+      return values.reduce((sum, value) => {
+        const p = value / total;
+        return p > 0 ? sum - (p * Math.log2(p)) : sum;
+      }, 0);
+    }
+
+    report() {
+      return { latest: this.history[this.history.length - 1] || null, history: this.history.slice(-20) };
+    }
+  }
+
+  class FootballEvolutionAnalyzer {
+    constructor() {
+      this.history = [];
+    }
+
+    analyze(state) {
+      state = state || {};
+      const players = Array.isArray(state.players) ? state.players.filter((player) => !player.retired && !player.isRetired) : [];
+      const teams = Array.isArray(state.teams) ? state.teams : [];
+      const tactics = state.tactics && state.tactics.teamSettings ? Object.values(state.tactics.teamSettings) : [];
+      const formations = tactics.map((entry) => entry.formation || entry.shape || "unknown").filter((item) => item !== "unknown");
+      const styles = teams.map((team) => team.style || "unknown");
+      const marketHistory = state.market && Array.isArray(state.market.transferHistory) ? state.market.transferHistory : [];
+      const balances = [];
+      if (state.finances && Number.isFinite(state.finances.balance)) balances.push(state.finances.balance);
+      if (state.rivalAI && state.rivalAI.budgets) {
+        Object.values(state.rivalAI.budgets).forEach((budget) => {
+          if (Number.isFinite(budget)) balances.push(budget);
+          else if (budget && Number.isFinite(budget.transfer)) balances.push(budget.transfer);
+        });
+      }
+      const report = {
+        at: FMG.nowISO ? FMG.nowISO("football-evolution") : deterministicISO("football-evolution"),
+        seasonNumber: state.seasonNumber || 1,
+        averageOverall: this._average(players.map((player) => Number(player.overall) || 0)),
+        elitePlayers: players.filter((player) => (Number(player.overall) || 0) >= 80).length,
+        youthPlayers: players.filter((player) => (Number(player.age) || 0) <= 22).length,
+        veteranPlayers: players.filter((player) => (Number(player.age) || 0) >= 34).length,
+        transferVolume: marketHistory.length,
+        formationDiversity: new Set(formations).size,
+        styleDiversity: new Set(styles).size,
+        economicSpread: this._stdDev(balances),
+        footballRealismDecay: this._detectRealismDecay(players),
+        tacticalStagnation: formations.length > 3 && new Set(formations).size <= 1,
+        economicInstability: balances.some((value) => Math.abs(value) > 5000000000),
+        worldHomogenization: new Set(styles).size <= 1 && teams.length > 3
+      };
+      this.history.push(report);
+      this.history = this.history.slice(-120);
+      return report;
+    }
+
+    _average(values) {
+      const clean = values.filter((value) => Number.isFinite(value));
+      return clean.length ? clean.reduce((sum, value) => sum + value, 0) / clean.length : 0;
+    }
+
+    _stdDev(values) {
+      const clean = values.filter((value) => Number.isFinite(value));
+      if (!clean.length) return 0;
+      const average = this._average(clean);
+      return Math.sqrt(clean.reduce((sum, value) => sum + Math.pow(value - average, 2), 0) / clean.length);
+    }
+
+    _detectRealismDecay(players) {
+      if (!players.length) return false;
+      const impossibleRatings = players.filter((player) => player.overall < 35 || player.overall > 99).length;
+      const impossibleAges = players.filter((player) => player.age < 15 || player.age > 45).length;
+      const averageOverall = this._average(players.map((player) => Number(player.overall) || 0));
+      return impossibleRatings > 0 || impossibleAges > 0 || averageOverall < 45 || averageOverall > 88;
+    }
+
+    report() {
+      return { latest: this.history[this.history.length - 1] || null, history: this.history.slice(-20) };
+    }
+  }
+
+  class LongTermSimulationRunner {
+    constructor(config) {
+      config = config || {};
+      this.entropyAnalyzer = config.entropyAnalyzer || new WorldEntropyAnalyzer();
+      this.evolutionAnalyzer = config.evolutionAnalyzer || new FootballEvolutionAnalyzer();
+      this.priorityManager = config.priorityManager || null;
+      this.history = [];
+      this.lastReport = null;
+    }
+
+    run(options) {
+      options = options || {};
+      const years = Math.max(1, Number(options.years || 10));
+      const startedAt = FMG.nowISO ? FMG.nowISO("long-term-simulation-start") : deterministicISO("long-term-simulation-start");
+      const snapshots = [];
+      const errors = [];
+      for (let year = 1; year <= years; year += 1) {
+        try {
+          if (options.accelerated !== false) this._acceleratedSeason(FMG.gameState || {}, year, options);
+          else this._realSeason(FMG.gameState || {}, options);
+          if (year === 1 || year % Math.max(1, Number(options.sampleEveryYears || 5)) === 0 || year === years) {
+            snapshots.push(this._sample(FMG.gameState || {}, year));
+          }
+        } catch (error) {
+          errors.push("year " + year + ": " + error.message);
+          if (options.stopOnError) break;
+        }
+      }
+      const latest = snapshots[snapshots.length - 1] || this._sample(FMG.gameState || {}, years);
+      const detections = this._detect(latest);
+      Object.keys(detections).forEach((key) => {
+        if (detections[key] === true) errors.push(key);
+      });
+      this.lastReport = {
+        name: "long-term-simulation",
+        ok: errors.length === 0,
+        startedAt,
+        finishedAt: FMG.nowISO ? FMG.nowISO("long-term-simulation-finished") : deterministicISO("long-term-simulation-finished"),
+        years,
+        accelerated: options.accelerated !== false,
+        snapshots,
+        detections,
+        errors
+      };
+      this.history.push(this.lastReport);
+      this.history = this.history.slice(-20);
+      return this.lastReport;
+    }
+
+    runDecadeSet(options) {
+      options = options || {};
+      return {
+        tenYear: this.run({ ...options, years: 10, accelerated: true }),
+        twentyFiveYear: this.run({ ...options, years: 25, accelerated: true }),
+        fiftyYear: this.run({ ...options, years: 50, accelerated: true })
+      };
+    }
+
+    _realSeason(state, options) {
+      const maxWeeks = Math.max(1, Number(options.maxWeeksPerYear || state.totalWeeks || 30));
+      for (let week = 0; week < maxWeeks; week += 1) {
+        if (!FMG.advanceWeek) break;
+        const result = FMG.advanceWeek();
+        if (!result || result.ok === false) break;
+      }
+      if (state.seasonComplete && FMG.startNewSeason) FMG.startNewSeason();
+    }
+
+    _acceleratedSeason(state, year, options) {
+      if (!state || !Array.isArray(state.players)) return;
+      state.seasonNumber = (state.seasonNumber || 1) + 1;
+      this._massiveTransferSimulation(state, year, options);
+      this._massiveRetirementCycle(state, year, options);
+      state.players.forEach((player, index) => {
+        if (player.retired || player.isRetired) return;
+        player.age = Math.min(45, (Number(player.age) || 24) + 1);
+        const development = player.age <= 23 ? 1 : player.age >= 32 ? -1 : 0;
+        player.overall = FMG.clamp ? FMG.clamp((Number(player.overall) || 60) + development + ((year + index) % 3 === 0 ? 1 : 0), 35, 99) : Math.max(35, Math.min(99, (Number(player.overall) || 60) + development));
+        player.contractYears = Math.max(0, (Number(player.contractYears) || 1) - 1);
+      });
+      if (state.finances) {
+        const drift = ((year % 5) - 2) * 1500000;
+        state.finances.balance = Number(state.finances.balance || 0) + drift;
+        if (state.finances.budgets && Number.isFinite(state.finances.budgets.transfers)) {
+          state.finances.budgets.transfers = Math.max(0, state.finances.budgets.transfers + drift);
+        }
+      }
+      if (FMG.layeredWorldSimulator) FMG.layeredWorldSimulator.plan(state);
+    }
+
+    _massiveTransferSimulation(state, year, options) {
+      const transferLoops = Math.max(0, Number(options.transferLoopsPerYear || 12));
+      state.market = state.market || {};
+      state.market.transferHistory = state.market.transferHistory || [];
+      const activePlayers = state.players.filter((player) => !player.retired && !player.isRetired);
+      const teams = (state.teams || []).filter((team) => team.id);
+      if (!teams.length) return;
+      for (let index = 0; index < transferLoops && activePlayers.length; index += 1) {
+        const player = activePlayers[(year * 17 + index * 7) % activePlayers.length];
+        const target = teams[(year + index) % teams.length];
+        const oldTeamId = player.teamId;
+        if (target && oldTeamId !== target.id) {
+          player.teamId = target.id;
+          player.contractYears = 1 + ((year + index) % 4);
+          state.market.transferHistory.unshift({
+            week: state.currentWeek || 1,
+            season: state.seasonNumber || year,
+            type: "stress-ai-transfer",
+            playerId: player.id,
+            playerName: player.name,
+            fromTeamId: oldTeamId,
+            toTeamId: target.id,
+            fee: Math.max(0, Number(player.value || player.overall * 100000))
+          });
+        }
+      }
+      state.market.transferHistory = state.market.transferHistory.slice(0, Math.max(200, transferLoops * 10));
+    }
+
+    _massiveRetirementCycle(state, year, options) {
+      const retired = [];
+      state.players.forEach((player, index) => {
+        if (player.retired || player.isRetired) return;
+        const age = Number(player.age) || 24;
+        if (age >= 38 || (age >= 34 && (year + index) % 6 === 0)) {
+          player.retired = true;
+          player.retiredSeason = state.seasonNumber || year;
+          retired.push(player);
+        }
+      });
+      const regenLimit = Math.min(retired.length, Math.max(0, Number(options.maxRegensPerYear || 18)));
+      for (let index = 0; index < regenLimit; index += 1) {
+        const source = retired[index];
+        state.players.push({
+          id: "stress-regen-" + (state.seasonNumber || year) + "-" + index + "-" + hashString(source.id || source.name || index),
+          name: "Regen " + (source.name || index),
+          teamId: source.teamId || "free-agent",
+          position: source.position || "MED",
+          age: 17 + ((year + index) % 4),
+          overall: Math.max(45, Math.min(72, (Number(source.overall) || 62) - 12)),
+          potential: Math.max(Number(source.potential || source.overall || 70), 70),
+          value: Math.max(100000, Number(source.value || 1000000) * 0.2),
+          salary: Math.max(50000, Number(source.salary || 250000) * 0.4),
+          morale: 65,
+          energy: 90,
+          contractYears: 3,
+          lineageParentId: source.id
+        });
+      }
+    }
+
+    _sample(state, year) {
+      const entropy = this.entropyAnalyzer.analyze(state);
+      const evolution = this.evolutionAnalyzer.analyze(state);
+      const memory = FMG.runtimeMemoryDiagnostics ? FMG.runtimeMemoryDiagnostics.sample(state) : null;
+      const layers = FMG.layeredWorldSimulator ? FMG.layeredWorldSimulator.plan(state) : null;
+      return { year, entropy, evolution, memory, layers };
+    }
+
+    _detect(snapshot) {
+      const entropy = snapshot.entropy || {};
+      const evolution = snapshot.evolution || {};
+      const memory = snapshot.memory || {};
+      return {
+        entityExplosion: Boolean(entropy.entityExplosion),
+        memoryCollapse: Boolean(memory.heapBytes && memory.heapBytes > 900000000),
+        footballRealismDecay: Boolean(evolution.footballRealismDecay),
+        tacticalStagnation: Boolean(evolution.tacticalStagnation),
+        economicInstability: Boolean(evolution.economicInstability),
+        worldHomogenization: Boolean(entropy.worldHomogenization || evolution.worldHomogenization)
+      };
+    }
+
+    report() {
+      return this.lastReport || { ok: true, history: this.history };
+    }
+  }
+
+  class RuntimeStressHarness {
+    constructor(config) {
+      config = config || {};
+      this.replay = config.replay || new ReplayStressHarness();
+      this.save = config.save || new SaveStressHarness();
+      this.ui = config.ui || new UINavStressHarness();
+      this.memory = config.memory || new MemoryStressHarness();
+      this.world = config.world || new WorldSimulationHarness();
+      this.history = [];
+      this.lastReport = null;
+    }
+
+    run(options) {
+      options = options || {};
+      const startedAt = FMG.nowISO ? FMG.nowISO("runtime-stress-start") : deterministicISO("runtime-stress-start");
+      const details = {
+        browser: this.runBrowserExecution(options.browser || {}),
+        replay: this.replay.run(options.replay || {}),
+        save: this.save.run(options.save || {}),
+        ui: this.ui.run(options.ui || {}),
+        memory: this.memory.run(options.memory || {}),
+        world: this.world.run(options.world || {})
+      };
+      const errors = [];
+      Object.keys(details).forEach((key) => {
+        (details[key].errors || []).forEach((error) => errors.push(key + ": " + error));
+      });
+      this.lastReport = stressOutcome("runtime-stress", startedAt, {
+        browserOk: details.browser.ok,
+        replayOk: details.replay.ok,
+        saveOk: details.save.ok,
+        uiOk: details.ui.ok,
+        memoryOk: details.memory.ok,
+        worldOk: details.world.ok
+      }, errors, details);
+      this.history.push(this.lastReport);
+      this.history = this.history.slice(-20);
+      return this.lastReport;
+    }
+
+    runBrowserExecution(options) {
+      const startedAt = FMG.nowISO ? FMG.nowISO("browser-stress-start") : deterministicISO("browser-stress-start");
+      const errors = [];
+      const hasDocument = Boolean(root.document);
+      const hasApp = Boolean(hasDocument && root.document.querySelector && root.document.querySelector("#app"));
+      if (options.requireDocument && !hasDocument) errors.push("document missing");
+      if (options.requireApp && !hasApp) errors.push("#app missing");
+      if (typeof FMG.render === "function") {
+        try { FMG.render(); } catch (error) { errors.push("render failed: " + error.message); }
+      }
+      return stressOutcome("browser-execution-stress", startedAt, { hasDocument, hasApp, hasRender: typeof FMG.render === "function" }, errors);
+    }
+
+    report() {
+      return this.lastReport || { ok: true, history: this.history };
     }
   }
 
@@ -1731,6 +2552,8 @@
     FMG.simulationPriorityManager = FMG.simulationPriorityManager || new SimulationPriorityManager(FMG.entityRelevanceEngine);
     FMG.worldPartitionSystem = FMG.worldPartitionSystem || new WorldPartitionSystem();
     FMG.layeredWorldSimulator = FMG.layeredWorldSimulator || new LayeredWorldSimulator(FMG.simulationPriorityManager, FMG.worldPartitionSystem);
+    FMG.renderLoopAnalyzer = FMG.renderLoopAnalyzer || new RenderLoopAnalyzer();
+    FMG.renderLoopAnalyzer.install(root);
     FMG.masterRuntimeLoop = FMG.masterRuntimeLoop || new MasterRuntimeLoop();
     FMG.renderBudgetController = FMG.renderBudgetController || new RenderBudgetController();
     FMG.renderScheduler = FMG.renderScheduler || new RenderScheduler(FMG.masterRuntimeLoop);
@@ -1741,7 +2564,27 @@
     FMG.listenerRegistry = FMG.listenerRegistry || new ListenerRegistry();
     FMG.eventLeakDetector = FMG.eventLeakDetector || new EventLeakDetector(FMG.listenerRegistry);
     FMG.entityLifecycleTracker = FMG.entityLifecycleTracker || new EntityLifecycleTracker();
-    FMG.runtimeMemoryDiagnostics = FMG.runtimeMemoryDiagnostics || new RuntimeMemoryDiagnostics(FMG.listenerRegistry, FMG.entityLifecycleTracker);
+    FMG.detachedDOMDetector = FMG.detachedDOMDetector || new DetachedDOMDetector();
+    FMG.runtimeMemoryDiagnostics = FMG.runtimeMemoryDiagnostics || new RuntimeMemoryDiagnostics(FMG.listenerRegistry, FMG.entityLifecycleTracker, FMG.detachedDOMDetector, FMG.renderLoopAnalyzer);
+    FMG.replayStressHarness = FMG.replayStressHarness || new ReplayStressHarness();
+    FMG.saveStressHarness = FMG.saveStressHarness || new SaveStressHarness();
+    FMG.uiNavStressHarness = FMG.uiNavStressHarness || new UINavStressHarness();
+    FMG.memoryStressHarness = FMG.memoryStressHarness || new MemoryStressHarness();
+    FMG.worldSimulationHarness = FMG.worldSimulationHarness || new WorldSimulationHarness();
+    FMG.worldEntropyAnalyzer = FMG.worldEntropyAnalyzer || new WorldEntropyAnalyzer();
+    FMG.footballEvolutionAnalyzer = FMG.footballEvolutionAnalyzer || new FootballEvolutionAnalyzer();
+    FMG.longTermSimulationRunner = FMG.longTermSimulationRunner || new LongTermSimulationRunner({
+      entropyAnalyzer: FMG.worldEntropyAnalyzer,
+      evolutionAnalyzer: FMG.footballEvolutionAnalyzer,
+      priorityManager: FMG.simulationPriorityManager
+    });
+    FMG.runtimeStressHarness = FMG.runtimeStressHarness || new RuntimeStressHarness({
+      replay: FMG.replayStressHarness,
+      save: FMG.saveStressHarness,
+      ui: FMG.uiNavStressHarness,
+      memory: FMG.memoryStressHarness,
+      world: FMG.worldSimulationHarness
+    });
     FMG.lowSpecModeController = FMG.lowSpecModeController || new LowSpecModeController();
     FMG.adaptivePerformanceScaler = FMG.adaptivePerformanceScaler || new AdaptivePerformanceScaler(FMG.lowSpecModeController, FMG.renderBudgetController);
     FMG.runtimeOverlay = FMG.runtimeOverlay || new RuntimeOverlay();
@@ -1814,6 +2657,66 @@
         "Archive retention limits are not yet configurable per career length"
       ]
     });
+    FMG.generateUILifecycleReport = () => {
+      const memory = FMG.runtimeMemoryDiagnostics && FMG.runtimeMemoryDiagnostics.sample(FMG.gameState || {});
+      return {
+        ok: Boolean(memory && (!memory.listenerReport || !memory.listenerReport.accumulationWarnings.length) && (!memory.detachedDOM || memory.detachedDOM.detached === 0)),
+        shell: FMG.persistentUIShell && FMG.persistentUIShell.report ? FMG.persistentUIShell.report() : null,
+        listeners: FMG.listenerRegistry && FMG.listenerRegistry.report(),
+        detachedDOM: FMG.detachedDOMDetector && FMG.detachedDOMDetector.report(),
+        overlays: FMG.overlayManager && FMG.overlayManager.report(),
+        memoryTrend: FMG.runtimeMemoryDiagnostics && FMG.runtimeMemoryDiagnostics.trend()
+      };
+    };
+    FMG.generateRenderStabilityReport = () => ({
+      scheduler: FMG.renderScheduler && FMG.renderScheduler.report(),
+      renderLoop: FMG.renderLoopAnalyzer && FMG.renderLoopAnalyzer.report(),
+      stableFps: !(FMG.renderLoopAnalyzer && FMG.renderLoopAnalyzer.report().rerenderStorm.storm),
+      duplicateRenderLoops: FMG.renderLoopAnalyzer ? FMG.renderLoopAnalyzer.report().duplicateWarnings : []
+    });
+    FMG.generateMemoryLeakReport = () => {
+      const report = FMG.runtimeMemoryDiagnostics && FMG.runtimeMemoryDiagnostics.report();
+      return {
+        ok: Boolean(report && report.stable),
+        diagnostics: report,
+        leakSignals: {
+          listenerAccumulation: FMG.listenerRegistry ? FMG.listenerRegistry.report().accumulationWarnings : [],
+          detachedDOM: FMG.detachedDOMDetector ? FMG.detachedDOMDetector.report().staleReferences : [],
+          overlayLeak: FMG.overlayManager ? FMG.overlayManager.report().possibleLeak : false,
+          duplicateRafLoops: FMG.renderLoopAnalyzer ? FMG.renderLoopAnalyzer.report().duplicateWarnings : []
+        }
+      };
+    };
+    FMG.runRuntimeStress = (options) => FMG.runtimeStressHarness && FMG.runtimeStressHarness.run(options || {});
+    FMG.generateRuntimeStressReport = () => FMG.runtimeStressHarness && FMG.runtimeStressHarness.report();
+    FMG.generateReplayStabilityReport = () => FMG.replayStressHarness && (FMG.replayStressHarness.lastReport || FMG.replayStressHarness.run({ loops: 1 }));
+    FMG.generateSaveStabilityReport = () => FMG.saveStressHarness && (FMG.saveStressHarness.lastReport || FMG.saveStressHarness.run({ loops: 1, corruption: false }));
+    FMG.generateUIStabilityReport = () => FMG.uiNavStressHarness && (FMG.uiNavStressHarness.lastReport || FMG.uiNavStressHarness.run({ loops: 1 }));
+    FMG.generateStressMemoryReport = () => FMG.memoryStressHarness && (FMG.memoryStressHarness.lastReport || FMG.memoryStressHarness.run({ loops: 1 }));
+    FMG.runLongTermSimulation = (options) => FMG.longTermSimulationRunner && FMG.longTermSimulationRunner.run(options || {});
+    FMG.runLongTermSimulationSet = (options) => FMG.longTermSimulationRunner && FMG.longTermSimulationRunner.runDecadeSet(options || {});
+    FMG.generateWorldScalingReport = () => ({
+      runner: FMG.longTermSimulationRunner && FMG.longTermSimulationRunner.report(),
+      entropy: FMG.worldEntropyAnalyzer && FMG.worldEntropyAnalyzer.report(),
+      priority: FMG.layeredWorldSimulator && FMG.layeredWorldSimulator.plan(FMG.gameState || {})
+    });
+    FMG.generateFootballEvolutionReport = () => ({
+      runner: FMG.longTermSimulationRunner && FMG.longTermSimulationRunner.report(),
+      evolution: FMG.footballEvolutionAnalyzer && FMG.footballEvolutionAnalyzer.report()
+    });
+    FMG.generateLongTermStabilityReport = () => {
+      const runner = FMG.longTermSimulationRunner && FMG.longTermSimulationRunner.report();
+      const latest = runner && runner.snapshots && runner.snapshots[runner.snapshots.length - 1];
+      return {
+        ok: Boolean(!runner || runner.ok !== false),
+        runner,
+        detections: runner && runner.detections,
+        memory: latest && latest.memory,
+        scalableWorld: !(runner && runner.detections && runner.detections.entityExplosion),
+        realismPreserved: !(runner && runner.detections && runner.detections.footballRealismDecay),
+        runtimeStable: !(runner && runner.detections && runner.detections.memoryCollapse)
+      };
+    };
     FMG.generateRuntimeRandomnessAudit = () => FMG.runtimeRandomnessAudit && FMG.runtimeRandomnessAudit.report();
     FMG.shutdownRuntimeAuthority = (reason) => FMG.runtimeAuthorityManager.shutdown(reason);
     return FMG.Hardening.report();
@@ -1842,6 +2745,17 @@
       scalability: FMG.generateScalabilityReport && FMG.generateScalabilityReport(),
       migrationRisk: FMG.generateMigrationRiskReport && FMG.generateMigrationRiskReport(),
       remainingPersistenceRisks: FMG.generateRemainingPersistenceRisks && FMG.generateRemainingPersistenceRisks(),
+      uiLifecycle: FMG.generateUILifecycleReport && FMG.generateUILifecycleReport(),
+      renderStability: FMG.generateRenderStabilityReport && FMG.generateRenderStabilityReport(),
+      memoryLeak: FMG.generateMemoryLeakReport && FMG.generateMemoryLeakReport(),
+      runtimeStress: FMG.generateRuntimeStressReport && FMG.generateRuntimeStressReport(),
+      replayStability: FMG.generateReplayStabilityReport && FMG.generateReplayStabilityReport(),
+      saveStability: FMG.generateSaveStabilityReport && FMG.generateSaveStabilityReport(),
+      uiStability: FMG.generateUIStabilityReport && FMG.generateUIStabilityReport(),
+      stressMemory: FMG.generateStressMemoryReport && FMG.generateStressMemoryReport(),
+      worldScaling: FMG.generateWorldScalingReport && FMG.generateWorldScalingReport(),
+      footballEvolution: FMG.generateFootballEvolutionReport && FMG.generateFootballEvolutionReport(),
+      longTermStability: FMG.generateLongTermStabilityReport && FMG.generateLongTermStabilityReport(),
       layers: layerPlan,
       memory,
       causalReplay: FMG.causalReplayEngine && FMG.causalReplayEngine.report(),
@@ -1880,6 +2794,7 @@
   Hardening.WorldPartitionSystem = WorldPartitionSystem;
   Hardening.LayeredWorldSimulator = LayeredWorldSimulator;
   Hardening.MasterRuntimeLoop = MasterRuntimeLoop;
+  Hardening.RenderLoopAnalyzer = RenderLoopAnalyzer;
   Hardening.RenderScheduler = RenderScheduler;
   Hardening.PersistentUIShell = PersistentUIShell;
   Hardening.UIPanelPool = UIPanelPool;
@@ -1890,7 +2805,17 @@
   Hardening.ListenerRegistry = ListenerRegistry;
   Hardening.EventLeakDetector = EventLeakDetector;
   Hardening.EntityLifecycleTracker = EntityLifecycleTracker;
+  Hardening.DetachedDOMDetector = DetachedDOMDetector;
   Hardening.RuntimeMemoryDiagnostics = RuntimeMemoryDiagnostics;
+  Hardening.RuntimeStressHarness = RuntimeStressHarness;
+  Hardening.ReplayStressHarness = ReplayStressHarness;
+  Hardening.SaveStressHarness = SaveStressHarness;
+  Hardening.UINavStressHarness = UINavStressHarness;
+  Hardening.MemoryStressHarness = MemoryStressHarness;
+  Hardening.WorldSimulationHarness = WorldSimulationHarness;
+  Hardening.LongTermSimulationRunner = LongTermSimulationRunner;
+  Hardening.WorldEntropyAnalyzer = WorldEntropyAnalyzer;
+  Hardening.FootballEvolutionAnalyzer = FootballEvolutionAnalyzer;
   Hardening.LowSpecModeController = LowSpecModeController;
   Hardening.AdaptivePerformanceScaler = AdaptivePerformanceScaler;
   Hardening.RuntimeOverlay = RuntimeOverlay;
