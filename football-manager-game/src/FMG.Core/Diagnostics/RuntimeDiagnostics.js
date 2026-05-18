@@ -10,23 +10,12 @@
     return FMG.nowMs ? FMG.nowMs() : Date.UTC(2025, 0, 1, 12, 0, 0);
   }
 
-  function stableStringify(value) {
-    const seen = [];
-    return JSON.stringify(value, function (key, item) {
-      if (item && typeof item === "object") {
-        if (seen.indexOf(item) >= 0) return "[Circular]";
-        seen.push(item);
-        if (!Array.isArray(item)) {
-          const sorted = {};
-          Object.keys(item).sort().forEach((name) => {
-            if (typeof item[name] !== "function") sorted[name] = item[name];
-          });
-          return sorted;
-        }
-      }
-      return item;
-    });
-  }
+  const stableStringify = FMG.stableStringify || function fallbackStableStringify(value) {
+    if (value === undefined) return "undefined";
+    if (value === null || typeof value !== "object") return JSON.stringify(value);
+    if (Array.isArray(value)) return "[" + value.map(fallbackStableStringify).join(",") + "]";
+    return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + fallbackStableStringify(value[key])).join(",") + "}";
+  };
 
   function hashString(text) {
     let hash = 2166136261;
@@ -278,7 +267,7 @@
 
   BrowserRuntimeSafetyLayer.prototype.capture = function (error, source) {
     const message = error && error.message ? error.message : String(error);
-    const record = { source, message, at: FMG.nowISO ? FMG.nowISO("runtime-error") : "2025-01-01T12:00:00.000Z" };
+    const record = { source, message, at: FMG.nowISO ? FMG.nowISO("runtime-error") : FMG.EPOCH_ISO };
     this.errors.unshift(record);
     this.errors = this.errors.slice(0, 20);
     if (FMG.gameState && FMG.pushSystemError) FMG.pushSystemError(FMG.gameState, "Error de runtime capturado.", message);
@@ -500,7 +489,7 @@
       schema: "fmg-save",
       version: payload.version,
       checksum: hashString(stableStringify(payload)),
-      createdAt: FMG.nowISO ? FMG.nowISO("persistence-wrap") : "2025-01-01T12:00:00.000Z"
+      createdAt: FMG.nowISO ? FMG.nowISO("persistence-wrap") : FMG.EPOCH_ISO
     };
     return payload;
   };

@@ -38,7 +38,7 @@ const players = JSON.parse(fs.readFileSync(path.join(root, "data/players.json"),
 FMG.initializeGame(teams, players);
 FMG.selectClub("colo-colo");
 
-assert.equal(FMG.gameState.version, 13, "fase 13 debe usar estado version 13");
+assert.equal(FMG.gameState.version, FMG.CURRENT_VERSION, "fase 13 debe usar version actual compartida");
 assert.ok(FMG.gameState.settings, "debe tener configuracion");
 assert.ok(FMG.gameState.saveMeta, "debe tener metadata de guardado");
 
@@ -80,7 +80,7 @@ delete legacy.saveMeta;
 delete legacy.worldNews;
 delete legacy.ui;
 const migrated = FMG.migrateSaveState(legacy);
-assert.equal(migrated.version, 13, "migracion debe llevar saves antiguos a version actual");
+assert.equal(migrated.version, FMG.CURRENT_VERSION, "migracion debe llevar saves antiguos a version actual");
 assert.ok(migrated.settings, "migracion debe crear configuracion");
 assert.ok(migrated.saveMeta, "migracion debe crear metadata");
 

@@ -3,40 +3,17 @@
 
   const FMG = (window.FMG = window.FMG || {});
 
-  function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-  }
+  const clamp = FMG.clamp;
 
-  function hashText(value) {
-    const text = String(value || "");
-    let hash = 2166136261;
-    for (let index = 0; index < text.length; index += 1) {
-      hash ^= text.charCodeAt(index);
-      hash = Math.imul(hash, 16777619);
-    }
-    return hash >>> 0;
-  }
+  const hashText = FMG.hashText;
 
-  function pickByHash(list, seed) {
-    if (!list.length) return null;
-    return list[hashText(seed) % list.length];
-  }
+  const pickByHash = FMG.pickByHash;
 
-  function boundedPush(list, item, limit) {
-    list.unshift(item);
-    list.length = Math.min(list.length, limit);
-    return item;
-  }
+  const boundedPush = FMG.boundedPush;
 
-  function deterministicId(prefix, parts) {
-    return `${prefix}-${hashText(parts.join("|")).toString(36)}`;
-  }
+  const deterministicId = FMG.deterministicId;
 
-  function boundedUpsert(list, item, limit) {
-    const existingIndex = list.findIndex((entry) => entry.id === item.id);
-    if (existingIndex >= 0) list.splice(existingIndex, 1);
-    return boundedPush(list, item, limit);
-  }
+  const boundedUpsert = FMG.boundedUpsert;
 
   function teamStanding(state, teamId) {
     const position = (state.standings || []).findIndex((entry) => entry.teamId === teamId) + 1;

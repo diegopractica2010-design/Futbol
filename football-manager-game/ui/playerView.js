@@ -10,6 +10,29 @@
       </div>`).join("");
   }
 
+  function tacticalRoleSummary(player, plan) {
+    const roleKey = plan.playerRoles?.[player.position] || "balanced";
+    const instructionKey = plan.instructions?.[player.id] || "none";
+    const role = FMG.TACTIC_OPTIONS.role[roleKey] || FMG.TACTIC_OPTIONS.role.balanced;
+    const instruction = FMG.INDIVIDUAL_INSTRUCTIONS[instructionKey] || FMG.INDIVIDUAL_INSTRUCTIONS.none;
+    const impact = [
+      ["Ataque", role.attack || 0],
+      ["Defensa", role.defense || 0],
+      ["Riesgo", role.risk || 0],
+      ["Fatiga", role.fatigue || 0]
+    ].map(([label, value]) => `<span class="chip">${label} ${value > 0 ? "+" : ""}${value}</span>`).join("");
+    return `
+      <section class="card">
+        <div class="section-title"><h2>Rol tactico</h2><span class="chip">${FMG.escapeHtml(player.position)}</span></div>
+        <div class="log-item">
+          <strong>${FMG.escapeHtml(role.label)}</strong>
+          <p class="muted">Instruccion individual: ${FMG.escapeHtml(instruction.label)}.</p>
+          <div class="chips" style="margin-top:10px;">${impact}</div>
+        </div>
+      </section>
+    `;
+  }
+
   FMG.renderPlayerDetailView = function (state) {
     const player = state.players.find((item) => item.id === state.squadView?.selectedPlayerId) ||
       state.players.find((item) => item.teamId === state.userTeamId && !item.retired);
@@ -50,6 +73,7 @@
           <div class="section-title"><h2>Atributos</h2></div>
           <div class="attribute-list">${attributeRows(player)}</div>
         </section>
+        ${isOwnPlayer ? tacticalRoleSummary(player, plan) : ""}
         <section class="card">
           <div class="section-title"><h2>Temporada</h2></div>
           <div class="stats-grid">

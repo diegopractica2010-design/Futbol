@@ -14,6 +14,14 @@
     BOARD_OBJECTIVE_UPDATED: "BOARD_OBJECTIVE_UPDATED"
   });
 
+  const RUNTIME_AUTHORITY_CONFIG = Object.freeze({
+    uiDriver: "FMG.gameState",
+    simulationAuthority: "FMG.Core",
+    legacyRole: "primary-browser-ui-state",
+    coreRole: "validation-and-migration-layer",
+    migrationMode: "incremental-domain-migration"
+  });
+
   function EventBus(options = {}) {
     this._handlers = {};
     this._queue = [];
@@ -51,7 +59,7 @@
       id: FMG.uid ? FMG.uid("evt") : "evt-0",
       type,
       payload,
-      createdAt: FMG.nowISO ? FMG.nowISO("event") : "2025-01-01T12:00:00.000Z"
+      createdAt: FMG.nowISO ? FMG.nowISO("event") : FMG.EPOCH_ISO
     };
     this._queue.push(event);
     if (!this._dispatching) this.flush();
@@ -147,12 +155,60 @@
   }
 
   FMG.EventTypes = EVENT_TYPES;
+  FMG.RuntimeAuthorityConfig = FMG.RuntimeAuthorityConfig || RUNTIME_AUTHORITY_CONFIG;
   FMG.EventBus = EventBus;
   FMG.eventBus = FMG.eventBus || new EventBus();
+
+  FMG.getPrimaryUIState = function () {
+    return FMG.gameState || null;
+  };
+
+  FMG.getRuntimeAuthorityConfig = function () {
+    return FMG.RuntimeAuthorityConfig;
+  };
 
   FMG.emitGameEvent = function (type, payload) {
     if (!FMG.eventBus) FMG.eventBus = new EventBus();
     return FMG.eventBus.emit(type, payload || {});
+  };
+
+  FMG.bridgeEventBuses = function () {
+    const legacyBus = FMG.eventBus;
+    const coreBus = FMG.Core && FMG.Core.eventBus;
+    if (!legacyBus || !coreBus || FMG.eventBusBridge?.installed) return false;
+    let forwarding = false;
+    const forwardPayload = (payload, source, id) => Object.assign({}, payload || {}, {
+      __bridgedFrom: source,
+      __sourceEventId: id || null
+    });
+    const offLegacy = legacyBus.on("*", (event) => {
+      if (forwarding || event.payload?.__bridgedFrom === "core") return;
+      forwarding = true;
+      try {
+        coreBus.emit(event.type, forwardPayload(event.payload, "legacy", event.id));
+      } finally {
+        forwarding = false;
+      }
+    });
+    const offCore = coreBus.on("*", (event) => {
+      if (forwarding || event.payload?.__bridgedFrom === "legacy") return;
+      forwarding = true;
+      try {
+        legacyBus.emit(event.type, forwardPayload(event.payload, "core", event.id));
+      } finally {
+        forwarding = false;
+      }
+    });
+    FMG.eventBusBridge = {
+      installed: true,
+      mode: "legacy-core-forwarding",
+      stop() {
+        offLegacy();
+        offCore();
+        FMG.eventBusBridge = null;
+      }
+    };
+    return true;
   };
 
   FMG.createSeparatedState = function () {

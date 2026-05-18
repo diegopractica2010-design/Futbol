@@ -5,9 +5,12 @@
   FMG.SAVE_INDEX_KEY = "football-manager-game-save-index";
   FMG.SAVE_SLOT_PREFIX = "football-manager-game-slot-";
   FMG.SETTINGS_KEY = "football-manager-game-settings";
+  FMG.CORE_STORAGE_PREFIX = "football-manager-game-core-";
+  FMG.EPOCH_ISO = "2025-01-01T12:00:00.000Z";
+  FMG.DEBUG = FMG.DEBUG || (typeof location !== "undefined" && new URLSearchParams(location.search).has("debug"));
   // Version de save: se mantiene en la fase publica mas alta y las migraciones
   // deben aceptar versiones anteriores sin romper partidas guardadas.
-  FMG.CURRENT_VERSION = typeof document === "undefined" ? 13 : 24;
+  FMG.CURRENT_VERSION = 24;
   FMG.DIFFICULTY_MODIFIERS = {
     easy: { matchBonus: 5, marketDiscount: 0.85, boardTrustDecay: 0.5, rivalAILevel: 0.6 },
     normal: { matchBonus: 0, marketDiscount: 1.0, boardTrustDecay: 1.0, rivalAILevel: 1.0 },
@@ -110,6 +113,52 @@
 
   FMG.clamp = function (value, min, max) {
     return Math.max(min, Math.min(max, value));
+  };
+
+  FMG.hashText = function (value) {
+    const text = String(value || "");
+    let hash = 2166136261;
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+  };
+
+  FMG.stableStringify = function stableStringify(value, seen) {
+    if (value === undefined) return "undefined";
+    if (value === null || typeof value !== "object") return JSON.stringify(value);
+    const visited = seen || [];
+    if (visited.indexOf(value) >= 0) return JSON.stringify("[Circular]");
+    visited.push(value);
+    const serialized = Array.isArray(value)
+      ? "[" + value.map((entry) => stableStringify(entry, visited)).join(",") + "]"
+      : "{" + Object.keys(value).sort().map((key) => {
+      if (typeof value[key] === "function") return null;
+      return JSON.stringify(key) + ":" + stableStringify(value[key], visited);
+    }).filter(Boolean).join(",") + "}";
+    visited.pop();
+    return serialized;
+  };
+
+  FMG.deterministicId = function (prefix, parts) {
+    return `${prefix}-${FMG.hashText((parts || []).join("|")).toString(36)}`;
+  };
+
+  FMG.pickByHash = function (list, seed) {
+    return list && list.length ? list[FMG.hashText(seed) % list.length] : null;
+  };
+
+  FMG.boundedPush = function (list, item, limit) {
+    list.unshift(item);
+    list.length = Math.min(list.length, limit);
+    return item;
+  };
+
+  FMG.boundedUpsert = function (list, item, limit) {
+    const index = list.findIndex((entry) => entry.id === item.id);
+    if (index >= 0) list.splice(index, 1);
+    return FMG.boundedPush(list, item, limit);
   };
 
   FMG.randomInt = function (min, max) {

@@ -12,7 +12,8 @@
    */
   function GameStateRepository(config) {
     config = config || {};
-    this.storageKey = config.storageKey || "FMG_GAMESTATE";
+    this.storageKey = config.storageKey || ((FMG.CORE_STORAGE_PREFIX || "football-manager-game-core-") + "gamestate");
+    this.legacyStorageKey = "FMG_GAMESTATE";
     this.useIndexedDB = config.useIndexedDB || false;
     this._memory = {};
   }
@@ -76,6 +77,7 @@
         return this._deleteFromIndexedDB(id);
       } else if (window.localStorage) {
         localStorage.removeItem(this.storageKey + "_" + id);
+        localStorage.removeItem(this.legacyStorageKey + "_" + id);
         return Promise.resolve(true);
       } else {
         delete this._memory[id];
@@ -112,7 +114,7 @@
   };
 
   GameStateRepository.prototype._loadFromLocalStorage = function (id) {
-    const data = localStorage.getItem(this.storageKey + "_" + id);
+    const data = localStorage.getItem(this.storageKey + "_" + id) || localStorage.getItem(this.legacyStorageKey + "_" + id);
     if (!data) return Promise.resolve(null);
     const parsed = JSON.parse(data);
     return Promise.resolve(parsed.gameState);
@@ -120,10 +122,11 @@
 
   GameStateRepository.prototype._listFromLocalStorage = function () {
     const results = [];
-    const prefix = this.storageKey + "_";
+    const prefixes = [this.storageKey + "_", this.legacyStorageKey + "_"];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key.startsWith(prefix)) {
+      const prefix = prefixes.find((candidate) => key.startsWith(candidate));
+      if (prefix) {
         const data = JSON.parse(localStorage.getItem(key));
         results.push({
           id: key.replace(prefix, ""),

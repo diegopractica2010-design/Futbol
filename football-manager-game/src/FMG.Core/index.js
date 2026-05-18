@@ -63,10 +63,11 @@
     FMG.Core.engine = simulationEngine;
     FMG.Core.adapter = new FMG.Core.Adapters.LegacyGameStateAdapter();
     FMG.Core.diagnostics = diagnostics.attachEngine(simulationEngine);
+    FMG.bridgeEventBuses?.();
 
     FMG.Core._initialized = true;
 
-    console.log("✓ FMG.Core initialized");
+    if (FMG.DEBUG) console.log("FMG.Core initialized");
 
     return {
       engine: simulationEngine,
@@ -138,5 +139,5 @@
     return FMG.Core._initialized === true;
   };
 
-  console.log("FMG.Core module loaded (not yet initialized)");
+  if (FMG.DEBUG) console.log("FMG.Core module loaded (not yet initialized)");
 })();

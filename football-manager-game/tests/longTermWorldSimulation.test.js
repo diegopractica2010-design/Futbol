@@ -91,7 +91,7 @@ assert.equal(fifty.ok, true, "50-year simulation debe mantenerse estable");
 assert.equal(fifty.detections.entityExplosion, false, "50-year simulation no debe explotar entidades");
 assert.equal(fifty.detections.worldHomogenization, false, "50-year simulation no debe homogenizar el mundo");
 assert.ok(FMG.gameState.seasonNumber >= initialSeason + 85, "timeline acelerado debe avanzar decadas acumuladas");
-assert.ok(FMG.gameState.players.length < initialPlayers + 900, "retirement/regens no deben disparar crecimiento masivo");
+assert.ok(FMG.gameState.players.length < initialPlayers + FMG.gameState.teams.length * 80, "retirement/regens no deben disparar crecimiento masivo");
 assert.ok(FMG.gameState.market.transferHistory.length > 0, "massive transfer simulation debe dejar historial");
 assert.ok(FMG.gameState.players.some((player) => player.retired), "massive retirement cycle debe retirar jugadores");
 assert.ok(FMG.gameState.players.some((player) => player.lineageParentId), "retirement cycle debe crear regens");

@@ -16,11 +16,15 @@ const types = {
   ".jpeg": "image/jpeg"
 };
 
+const csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'";
+
 function safePath(urlPath) {
   const decoded = decodeURIComponent(urlPath.split("?")[0]);
   const requested = decoded === "/" ? "/index.html" : decoded;
   const resolved = path.resolve(root, "." + requested);
-  return resolved.startsWith(root) ? resolved : null;
+  const relative = path.relative(root, resolved);
+  const insideRoot = relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  return insideRoot ? resolved : null;
 }
 
 http.createServer((req, res) => {
@@ -39,6 +43,7 @@ http.createServer((req, res) => {
     }
     res.writeHead(200, {
       "Content-Type": types[path.extname(filePath).toLowerCase()] || "application/octet-stream",
+      "Content-Security-Policy": csp,
       "Cache-Control": "no-store"
     });
     res.end(data);

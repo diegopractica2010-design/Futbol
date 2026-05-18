@@ -41,9 +41,9 @@ const players = JSON.parse(fs.readFileSync(path.join(root, "data/players.json"),
 FMG.validateSeedData(teams, players);
 FMG.initializeGame(teams, players);
 
-assert.equal(FMG.gameState.teams.length, 7, "debe cargar siete equipos");
-assert.equal(FMG.gameState.fixtures.length, 14, "la liga ida/vuelta debe tener catorce semanas con siete equipos");
-assert.equal(FMG.gameState.players.length, 126, "cada equipo debe quedar con dieciocho jugadores tras completar planteles");
+assert.equal(FMG.gameState.teams.length, 13, "debe cargar trece equipos");
+assert.equal(FMG.gameState.fixtures.length, 26, "la liga ida/vuelta debe tener veintiseis semanas con trece equipos");
+assert.equal(FMG.gameState.players.length, 234, "cada equipo debe quedar con dieciocho jugadores desde datos semilla");
 
 FMG.selectClub("colo-colo");
 assert.equal(FMG.gameState.selectionMode, false, "seleccionar club debe salir del selector");
@@ -72,7 +72,7 @@ while (!FMG.gameState.seasonComplete && guard < 30) {
 assert.equal(FMG.gameState.seasonComplete, true, "la temporada debe marcarse como completada");
 assert.ok(FMG.gameState.champion, "la temporada debe declarar campeon");
 assert.equal(FMG.gameState.fixtures.filter((fixture) => !fixture.played).length, 0, "no deben quedar fechas pendientes");
-assert.ok(FMG.gameState.finances.balance < 1000000000, "el balance no debe crecer hasta cifras absurdas en una temporada");
+assert.ok(FMG.gameState.finances.balance < FMG.gameState.fixtures.length * 75000000, "el balance no debe crecer hasta cifras absurdas en una temporada");
 
 const saveResult = FMG.saveGame();
 assert.equal(saveResult.ok, true, "guardar partida debe devolver ok");

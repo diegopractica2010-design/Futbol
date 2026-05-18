@@ -102,7 +102,7 @@
     const tempKey = `${key}.tmp`;
     const existing = localStorage.getItem(key);
     if (existing && !overwrite) return { ok: false, message: "El slot ya existe. Confirma antes de sobrescribir." };
-    const savedAt = FMG.nowISO ? FMG.nowISO("save") : "2025-01-01T12:00:00.000Z";
+    const savedAt = FMG.nowISO ? FMG.nowISO("save") : FMG.EPOCH_ISO;
     const snapshot = cloneForPersistence(state);
     if (FMG.syncLegacyStateFacets) FMG.syncLegacyStateFacets(snapshot);
     if (FMG.Core?.diagnostics?.validation) {
@@ -117,6 +117,8 @@
     const persistable = FMG.Core?.diagnostics?.persistence ? FMG.Core.diagnostics.persistence.wrap(snapshot) : snapshot;
     const asyncSave = FMG.incrementalSavePipeline ? FMG.incrementalSavePipeline.enqueue(targetSlot, snapshot) : null;
     const payload = JSON.stringify(persistable);
+    // localStorage has no transaction primitive: tmp -> main -> delete reduces
+    // corruption windows, but IndexedDB manifests remain the atomic path.
     if (existing) localStorage.setItem(backupKey, existing);
     localStorage.setItem(tempKey, payload);
     localStorage.setItem(key, localStorage.getItem(tempKey));
@@ -161,7 +163,7 @@
 
   FMG.pushSystemError = function (state, message, detail) {
     state.systemErrors = state.systemErrors || [];
-    state.systemErrors.unshift({ id: FMG.uid("err"), week: state.currentWeek || 1, message, detail: detail || "", createdAt: FMG.nowISO ? FMG.nowISO("system-error") : "2025-01-01T12:00:00.000Z" });
+    state.systemErrors.unshift({ id: FMG.uid("err"), week: state.currentWeek || 1, message, detail: detail || "", createdAt: FMG.nowISO ? FMG.nowISO("system-error") : FMG.EPOCH_ISO });
     state.systemErrors = state.systemErrors.slice(0, 8);
   };
 
@@ -199,7 +201,7 @@
       if (!validation.ok) throw new Error(validation.errors.join("; "));
       const migrated = FMG.migrateSaveState(parsed);
       migrated.saveMeta.activeSlotId = slotId === "legacy" ? "slot-1" : slotId;
-      migrated.saveMeta.lastLoadedAt = FMG.nowISO ? FMG.nowISO("load") : "2025-01-01T12:00:00.000Z";
+      migrated.saveMeta.lastLoadedAt = FMG.nowISO ? FMG.nowISO("load") : FMG.EPOCH_ISO;
       FMG.replaceGameState(migrated);
       // Restaurar RNG si hay un liveMatch activo
       if (migrated.liveMatch) {
@@ -220,7 +222,7 @@
         if (!validation.ok) throw new Error(validation.errors.join("; "));
         const migrated = FMG.migrateSaveState(chunked);
         migrated.saveMeta.activeSlotId = slotId;
-        migrated.saveMeta.lastLoadedAt = FMG.nowISO ? FMG.nowISO("load-async") : "2025-01-01T12:00:00.000Z";
+        migrated.saveMeta.lastLoadedAt = FMG.nowISO ? FMG.nowISO("load-async") : FMG.EPOCH_ISO;
         migrated.saveMeta.loadedFrom = "indexedDB";
         FMG.replaceGameState(migrated);
         if (migrated.liveMatch) FMG.restoreRNGFromLiveMatch(migrated.liveMatch);
@@ -245,7 +247,7 @@
 
   FMG.exportSave = function (state) {
     FMG.ensureSettingsState(state);
-    return JSON.stringify({ exportedAt: FMG.nowISO ? FMG.nowISO("export-save") : "2025-01-01T12:00:00.000Z", game: state }, null, 2);
+    return JSON.stringify({ exportedAt: FMG.nowISO ? FMG.nowISO("export-save") : FMG.EPOCH_ISO, game: state }, null, 2);
   };
 
   FMG.importSave = function (payload, targetSlotId = "slot-1") {

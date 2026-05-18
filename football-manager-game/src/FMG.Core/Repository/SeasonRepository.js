@@ -12,7 +12,8 @@
    */
   function SeasonRepository(config) {
     config = config || {};
-    this.storageKey = config.storageKey || "FMG_SEASON";
+    this.storageKey = config.storageKey || ((FMG.CORE_STORAGE_PREFIX || "football-manager-game-core-") + "season");
+    this.legacyStorageKey = "FMG_SEASON";
   }
 
   /**
@@ -56,7 +57,7 @@
   SeasonRepository.prototype.load = function (seasonId) {
     try {
       if (window.localStorage) {
-        const data = localStorage.getItem(this.storageKey + "_" + seasonId);
+        const data = localStorage.getItem(this.storageKey + "_" + seasonId) || localStorage.getItem(this.legacyStorageKey + "_" + seasonId);
         if (!data) return Promise.resolve(null);
         const parsed = JSON.parse(data);
         return Promise.resolve(parsed.season);

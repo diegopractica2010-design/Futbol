@@ -7,18 +7,18 @@
     "Vicente Alarcon", "Bastian Retamal", "Sebastian Alveal", "Nicolas Chandia", "Franco Cifuentes"
   ];
 
-  const expansionTeams = [
-    { id: "nublense", name: "Nublense", city: "Chillan", stadium: "Nelson Oyarzun", style: "Presion", budget: 76000000, fanBase: 240000, sponsor: 28000000, infrastructureCost: 7600000, form: 9 },
-    { id: "la-serena", name: "Deportes La Serena", city: "La Serena", stadium: "La Portada", style: "Vertical", budget: 74000000, fanBase: 220000, sponsor: 26000000, infrastructureCost: 7300000, form: 8 },
-    { id: "cobresal", name: "Cobresal", city: "El Salvador", stadium: "El Cobre", style: "Posesion", budget: 82000000, fanBase: 210000, sponsor: 30000000, infrastructureCost: 8000000, form: 10 },
-    { id: "ohiggins", name: "O'Higgins", city: "Rancagua", stadium: "El Teniente", style: "Presion", budget: 86000000, fanBase: 310000, sponsor: 34000000, infrastructureCost: 8500000, form: 10 },
-    { id: "everton", name: "Everton", city: "Vina del Mar", stadium: "Sausalito", style: "Posesion", budget: 90000000, fanBase: 330000, sponsor: 36000000, infrastructureCost: 8900000, form: 11 },
-    { id: "deportes-antofagasta", name: "Deportes Antofagasta", city: "Antofagasta", stadium: "Calvo y Bascunan", style: "Vertical", budget: 78000000, fanBase: 230000, sponsor: 27000000, infrastructureCost: 7600000, form: 8 }
-  ];
+  const PRIZE_TABLE = Object.freeze({
+    leagueChampion: 38000000,
+    leagueTopThree: 22000000,
+    leagueTopFive: 12000000,
+    leagueParticipation: 5000000,
+    nationalCupChampion: 18000000,
+    internationalChampion: 26000000,
+    superCupChampion: 9000000
+  });
 
   function ensureTeamDepth(teams) {
-    const ids = new Set(teams.map((team) => team.id));
-    return [...teams.map(FMG.cloneTeam), ...expansionTeams.filter((team) => !ids.has(team.id)).map(FMG.cloneTeam)];
+    return teams.map(FMG.cloneTeam);
   }
 
   function ensureSquadDepth(teams, players) {
@@ -166,6 +166,12 @@
   function updateCompetitionRankings(state) {
     ensureCompetitions(state);
     const activePlayers = state.players.filter((player) => !player.retired);
+    const signature = activePlayers.map((player) => {
+      const stats = player.seasonStats || {};
+      return [player.id, player.teamId, player.position, stats.goals || 0, stats.shots || 0, stats.cards || 0, stats.appearances || 0].join(":");
+    }).join("|");
+    if (state.competitions._rankingsSignature === signature) return;
+    state.competitions._rankingsSignature = signature;
     state.competitions.rankings = {
       scorers: (FMG.deterministicSort || ((items, comparator) => [...items].sort(comparator)))(activePlayers, (left, right) => (right.seasonStats?.goals || 0) - (left.seasonStats?.goals || 0)).slice(0, 10).map((player) => ({
         playerId: player.id,
@@ -228,10 +234,10 @@
     };
 
     const userPosition = sorted.findIndex((entry) => entry.teamId === state.userTeamId) + 1;
-    const leaguePrize = userPosition === 1 ? 38000000 : userPosition <= 3 ? 22000000 : userPosition <= 5 ? 12000000 : 5000000;
+    const leaguePrize = userPosition === 1 ? PRIZE_TABLE.leagueChampion : userPosition <= 3 ? PRIZE_TABLE.leagueTopThree : userPosition <= 5 ? PRIZE_TABLE.leagueTopFive : PRIZE_TABLE.leagueParticipation;
     awardPrize(state, `Premio liga posicion ${userPosition}`, leaguePrize);
-    if (state.competitions.nationalCup.championTeamId === state.userTeamId) awardPrize(state, "Premio campeon Copa Chile", 18000000);
-    if (state.competitions.international.championTeamId === state.userTeamId) awardPrize(state, "Premio campeon internacional", 26000000);
+    if (state.competitions.nationalCup.championTeamId === state.userTeamId) awardPrize(state, "Premio campeon Copa Chile", PRIZE_TABLE.nationalCupChampion);
+    if (state.competitions.international.championTeamId === state.userTeamId) awardPrize(state, "Premio campeon internacional", PRIZE_TABLE.internationalChampion);
     updateCompetitionRankings(state);
   }
 
@@ -246,7 +252,7 @@
     if (!championId || !cupChampionId || championId === cupChampionId) return null;
     const match = knockoutWinner(state, championId, cupChampionId, "Supercopa", "Final");
     state.competitions.superCup = { seasonNumber: state.seasonNumber, match, championTeamId: match.winnerTeamId, championName: match.winnerName };
-    if (match.winnerTeamId === state.userTeamId) awardPrize(state, "Premio Supercopa", 9000000);
+    if (match.winnerTeamId === state.userTeamId) awardPrize(state, "Premio Supercopa", PRIZE_TABLE.superCupChampion);
     return state.competitions.superCup;
   }
 
@@ -263,7 +269,7 @@
       userTeamName: state.userClub ? state.userClub.name : "Sin club",
       userPosition: state.standings.findIndex((entry) => entry.teamId === state.userTeamId) + 1,
       userPoints: userStanding ? userStanding.points : 0,
-      completedAt: FMG.nowISO ? FMG.nowISO("season-record") : "2025-01-01T12:00:00.000Z"
+      completedAt: FMG.nowISO ? FMG.nowISO("season-record") : FMG.EPOCH_ISO
     };
   }
 
@@ -302,6 +308,16 @@
     state.eventsLog = state.eventsLog.slice(0, 12);
   }
 
+  function schedulePostWeekSideEffects(state, results, event) {
+    const run = () => {
+      if (FMG.generatePostMatchNews) results.forEach((result) => FMG.generatePostMatchNews(state, result));
+      if (FMG.generateContextualWeeklyNews) FMG.generateContextualWeeklyNews(state, event);
+      FMG.runManagerEcosystemWeek?.(state, { phase: "post-week" });
+    };
+    if (typeof document !== "undefined" && typeof queueMicrotask === "function") queueMicrotask(run);
+    else run();
+  }
+
   function finishFixture(state, currentFixture, results) {
     results.forEach((result) => {
       FMG.updateStandings(state.standings, result);
@@ -331,7 +347,6 @@
     const userMatch = results.find((result) => result.homeTeamId === state.userTeamId || result.awayTeamId === state.userTeamId) || null;
     if (userMatch) state.currentMatch = userMatch;
     if (userMatch) FMG.recordCareerMatchImpact(state, userMatch);
-    if (FMG.generatePostMatchNews) results.forEach((result) => FMG.generatePostMatchNews(state, result));
 
     const event = FMG.applyWeeklyEvent(state);
     const financeReport = FMG.processWeeklyFinances(state);
@@ -351,7 +366,6 @@
     state.completedWeeks = state.fixtures.filter((fixture) => fixture.played).length;
     FMG.updateSquadHappiness(state);
     updateCompetitionRankings(state);
-    if (FMG.generateContextualWeeklyNews) FMG.generateContextualWeeklyNews(state, event);
 
     const nextFixture = getNextUnplayedFixture(state);
     if (nextFixture) {
@@ -366,7 +380,7 @@
       FMG.evaluateCareerSeasonEnd(state, seasonRecord);
     }
     updateMarketWindow(state);
-    FMG.runManagerEcosystemWeek?.(state, { phase: "post-week" });
+    schedulePostWeekSideEffects(state, results, event);
 
     const nextOpponent = FMG.getNextOpponent();
     const message = state.seasonComplete
@@ -399,8 +413,62 @@
     return { ok: true, message: "Fecha simulada correctamente." };
   }
 
+  function applyVersionMigrations(revived, sourceVersion) {
+    const fromVersion = Number(sourceVersion) || 1;
+    const applied = [];
+    const migrate = (targetVersion, label, update) => {
+      if (fromVersion >= targetVersion) return;
+      update();
+      applied.push({ from: fromVersion, to: targetVersion, label });
+    };
+
+    migrate(4, "competition-and-match-history", () => {
+      revived.lastResults = revived.lastResults || [];
+      revived.seasonLog = revived.seasonLog || [];
+      revived.completedWeeks = revived.fixtures ? revived.fixtures.filter((fixture) => fixture.played).length : 0;
+    });
+
+    migrate(7, "market-and-finance-state", () => {
+      revived.market = revived.market || { listings: [], refreshCost: 2500000, windowOpen: true };
+      revived.finances = revived.finances || { balance: 0, incomeHistory: [], expenseHistory: [], weeklyReport: [] };
+      revived.eventsLog = revived.eventsLog || [];
+    });
+
+    migrate(10, "squad-and-rival-ui-state", () => {
+      revived.squadView = revived.squadView || { selectedPlayerId: null, filter: "all", sort: "overall" };
+      revived.rivalAI = revived.rivalAI || { log: [], budgets: {}, profiles: {} };
+    });
+
+    migrate(13, "settings-career-and-world-news", () => {
+      revived.notifications = revived.notifications || [];
+      revived.notificationLog = revived.notificationLog || [];
+      revived.seasonHistory = revived.seasonHistory || [];
+      revived.liveMatch = revived.liveMatch || null;
+    });
+
+    migrate(20, "replay-and-separated-runtime-state", () => {
+      revived.matchState = revived.matchState || null;
+      revived.uiState = revived.uiState || revived.ui || null;
+      revived.replayState = revived.replayState || { enabled: true, mode: "idle", lastReplayId: null, highlightQueue: [], maxFrames: 300 };
+      revived.simulationState = revived.simulationState || { week: revived.currentWeek || 1, seasonNumber: revived.seasonNumber || 1, pendingJobs: [], completedJobs: [], lastRunAt: null };
+    });
+
+    migrate(24, "phase24-tactical-runtime-state", () => {
+      revived.tactics = revived.tactics || {};
+      revived.presentation = revived.presentation || {};
+      revived.saveMeta = revived.saveMeta || {};
+    });
+
+    if (applied.length) {
+      revived.saveMeta = revived.saveMeta || {};
+      revived.saveMeta.migrationsApplied = [...(revived.saveMeta.migrationsApplied || []), ...applied];
+    }
+  }
+
   function reviveState(state) {
     const revived = FMG.deepClone(state);
+    const sourceVersion = revived.version;
+    applyVersionMigrations(revived, sourceVersion);
     revived.version = FMG.CURRENT_VERSION;
     revived.route = revived.route || FMG.ROUTES.dashboard;
     revived.notifications = revived.notifications || [];
@@ -899,7 +967,7 @@
     if (FMG.NotificationManager) {
       return FMG.NotificationManager.push(FMG.gameState, message, type);
     }
-    const notification = { id: FMG.uid("note"), message, type, createdAt: FMG.nowISO ? FMG.nowISO("notification") : "2025-01-01T12:00:00.000Z" };
+    const notification = { id: FMG.uid("note"), message, type, createdAt: FMG.nowISO ? FMG.nowISO("notification") : FMG.EPOCH_ISO };
     FMG.gameState.notifications = FMG.gameState.notifications || [];
     FMG.gameState.notificationLog = FMG.gameState.notificationLog || [];
     FMG.gameState.notifications.push(notification);

@@ -6,6 +6,33 @@
   let menuAudio = null;
   let livePlaybackTimer = 0;
   let notificationPruneTimer = 0;
+  const SANDBOX_PHASE_ROUTES = new Set([
+    "phase15", "phase16", "phase17", "phase18", "phase19",
+    "phase20", "phase21", "phase22", "phase23", "phase24"
+  ]);
+  const SANDBOX_OPT_IN_KEY = "fmg-sandbox-opt-in";
+
+  function hideLoadingScreen() {
+    document.getElementById("loading-screen")?.remove();
+  }
+
+  function isKnownRoute(route) {
+    return Object.values(FMG.ROUTES || {}).includes(route);
+  }
+
+  function syncBrowserRoute(route, options = {}) {
+    if (!route || !window.history?.pushState) return;
+    const url = new URL(window.location.href);
+    url.hash = route;
+    const state = { route };
+    if (options.replace) window.history.replaceState(state, "", url);
+    else window.history.pushState(state, "", url);
+  }
+
+  function routeFromLocation() {
+    const route = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+    return isKnownRoute(route) ? route : null;
+  }
 
   function ensureMenuAudio() {
     if (menuAudio || !FMG.Phase23?.StadiumAudio) return;
@@ -15,7 +42,9 @@
   }
 
   function clubDifficulty(team) {
-    const budgetRatio = team.budget / 145000000;
+    const budgets = (FMG.gameState?.teams || [team]).map((item) => Number(item.budget) || 0);
+    const maxBudget = Math.max(1, ...budgets);
+    const budgetRatio = team.budget / maxBudget;
     if (budgetRatio > 0.85) return { label: "Dificil", desc: "Alta exigencia del directorio", color: "danger" };
     if (budgetRatio > 0.65) return { label: "Medio", desc: "Balance entre recursos y presion", color: "warning" };
     return { label: "Accesible", desc: "Mas margen para errores", color: "success" };
@@ -96,9 +125,32 @@
       <nav class="nav" role="navigation" aria-label="Menu principal">
         <button class="btn-ghost nav-save" data-action="change-route" data-route="${FMG.ROUTES.settings}" aria-label="Gestionar guardados">Guardar</button>
         ${visibleItems.map(([route, label, tooltip]) => `
-          <button class="${FMG.gameState.route === route ? "active" : "btn-ghost"}" data-action="change-route" data-route="${route}" title="${FMG.escapeHtml(tooltip)}" aria-label="${FMG.escapeHtml(tooltip)}">${label}</button>`).join("")}
+          <button class="${FMG.gameState.route === route ? "active" : "btn-ghost"} ${SANDBOX_PHASE_ROUTES.has(route) ? "sandbox-nav-item" : ""}" data-action="change-route" data-route="${route}" title="${FMG.escapeHtml(SANDBOX_PHASE_ROUTES.has(route) ? `Sandbox / No afecta carrera - ${tooltip}` : tooltip)}" aria-label="${FMG.escapeHtml(SANDBOX_PHASE_ROUTES.has(route) ? `Sandbox, no afecta carrera, ${tooltip}` : tooltip)}">${label}${SANDBOX_PHASE_ROUTES.has(route) ? `<span class="sandbox-mini-badge">Sandbox</span>` : ""}</button>`).join("")}
       </nav>
     `;
+  }
+
+  function renderDevBanner() {
+    if (!isDevMode) return "";
+    return `<div class="dev-mode-banner" role="status">Modo dev activo: fases sandbox visibles, no afectan la carrera principal.</div>`;
+  }
+
+  function renderSandboxFrame(content) {
+    return `
+      <section class="panel sandbox-disclaimer" aria-label="Modo sandbox">
+        <span class="chip chip-warning">Sandbox / No afecta carrera</span>
+        <p class="muted">Estas fases son laboratorios jugables del motor. Sus controles y resultados no modifican tu partida principal.</p>
+      </section>
+      ${content}
+    `;
+  }
+
+  function confirmSandboxOptIn(route) {
+    if (!SANDBOX_PHASE_ROUTES.has(route)) return true;
+    if (sessionStorage.getItem(SANDBOX_OPT_IN_KEY) === "1") return true;
+    const accepted = window.confirm("Estas vistas son sandbox y no afectan tu carrera. ¿Quieres entrar?");
+    if (accepted) sessionStorage.setItem(SANDBOX_OPT_IN_KEY, "1");
+    return accepted;
   }
 
   function renderNotifications() {
@@ -175,16 +227,16 @@
       case FMG.ROUTES.table: return FMG.renderTableView(FMG.gameState);
       case FMG.ROUTES.onboarding: return FMG.renderOnboardingView();
       case FMG.ROUTES.credits: return FMG.renderCreditsView();
-      case FMG.ROUTES.phase15: return FMG.renderPhase15View();
-      case FMG.ROUTES.phase16: return FMG.renderPhase16View();
-      case FMG.ROUTES.phase17: return FMG.renderPhase17View();
-      case FMG.ROUTES.phase18: return FMG.renderPhase18View();
-      case FMG.ROUTES.phase19: return FMG.renderPhase19View();
-      case FMG.ROUTES.phase20: return FMG.renderPhase20View();
-      case FMG.ROUTES.phase21: return FMG.renderPhase21View();
-      case FMG.ROUTES.phase22: return FMG.renderPhase22View();
-      case FMG.ROUTES.phase23: return FMG.renderPhase23View();
-      case FMG.ROUTES.phase24: return FMG.renderPhase24View();
+      case FMG.ROUTES.phase15: return renderSandboxFrame(FMG.renderPhase15View());
+      case FMG.ROUTES.phase16: return renderSandboxFrame(FMG.renderPhase16View());
+      case FMG.ROUTES.phase17: return renderSandboxFrame(FMG.renderPhase17View());
+      case FMG.ROUTES.phase18: return renderSandboxFrame(FMG.renderPhase18View());
+      case FMG.ROUTES.phase19: return renderSandboxFrame(FMG.renderPhase19View());
+      case FMG.ROUTES.phase20: return renderSandboxFrame(FMG.renderPhase20View());
+      case FMG.ROUTES.phase21: return renderSandboxFrame(FMG.renderPhase21View());
+      case FMG.ROUTES.phase22: return renderSandboxFrame(FMG.renderPhase22View());
+      case FMG.ROUTES.phase23: return renderSandboxFrame(FMG.renderPhase23View());
+      case FMG.ROUTES.phase24: return renderSandboxFrame(FMG.renderPhase24View());
       default: return FMG.renderDashboard(FMG.gameState, helpers);
     }
   }
@@ -202,16 +254,17 @@
       ? renderSelection()
       : renderRoute();
     const navHtml = (!FMG.gameState.selectionMode && FMG.gameState.route !== FMG.ROUTES.onboarding) ? renderNavigation() : "";
+    const devBannerHtml = renderDevBanner();
     const overlayHtml = renderNotifications();
     if (FMG.Hardening?.PersistentUIShell && FMG.renderScheduler) {
       FMG.persistentUIShell = FMG.persistentUIShell || new FMG.Hardening.PersistentUIShell(app, FMG.renderScheduler);
-      FMG.persistentUIShell.render({ nav: navHtml, route: routeHtml, overlay: overlayHtml });
+      FMG.persistentUIShell.render({ nav: `${devBannerHtml}${navHtml}`, route: routeHtml, overlay: overlayHtml });
     } else {
       app.innerHTML = FMG.gameState.route === FMG.ROUTES.onboarding
-        ? `${routeHtml}${overlayHtml}`
+        ? `${devBannerHtml}${routeHtml}${overlayHtml}`
         : FMG.gameState.selectionMode
-        ? `${routeHtml}${overlayHtml}`
-        : `<div class="shell">${navHtml}${routeHtml}</div>${overlayHtml}`;
+        ? `${devBannerHtml}${routeHtml}${overlayHtml}`
+        : `<div class="shell">${devBannerHtml}${navHtml}${routeHtml}</div>${overlayHtml}`;
     }
     scheduleLivePlaybackLoop();
   }
@@ -227,142 +280,158 @@
     }, 1000);
   }
 
-  function handleAction(action, target) {
-    if (!action) return;
-    if (target.dataset.confirm && !window.confirm(target.dataset.confirm)) return;
-    const activeAction = document.activeElement?.dataset?.action;
-    if (action === "select-club") FMG.selectClub(target.dataset.teamId);
-    if (action === "finish-onboarding") {
+  function unmountCurrentPhaseRoute() {
+    const phaseUnmounts = {
+      [FMG.ROUTES.phase15]: FMG.unmountPhase15,
+      [FMG.ROUTES.phase16]: FMG.unmountPhase16,
+      [FMG.ROUTES.phase17]: FMG.unmountPhase17,
+      [FMG.ROUTES.phase18]: FMG.unmountPhase18,
+      [FMG.ROUTES.phase19]: FMG.unmountPhase19,
+      [FMG.ROUTES.phase20]: FMG.unmountPhase20,
+      [FMG.ROUTES.phase21]: FMG.unmountPhase21,
+      [FMG.ROUTES.phase22]: FMG.unmountPhase22,
+      [FMG.ROUTES.phase23]: FMG.unmountPhase23,
+      [FMG.ROUTES.phase24]: FMG.unmountPhase24
+    };
+    phaseUnmounts[FMG.gameState.route]?.();
+  }
+
+  const PHASE_ACTION_HANDLERS = [
+    () => FMG.handlePhase15Action,
+    () => FMG.handlePhase16Action,
+    () => FMG.handlePhase17Action,
+    () => FMG.handlePhase18Action,
+    () => FMG.handlePhase19Action,
+    () => FMG.handlePhase20Action,
+    () => FMG.handlePhase21Action,
+    () => FMG.handlePhase22Action,
+    () => FMG.handlePhase23Action,
+    () => FMG.handlePhase24Action
+  ];
+
+  const ACTION_HANDLERS = {
+    "select-club": ({ target }) => FMG.selectClub(target.dataset.teamId),
+    "finish-onboarding": () => {
       localStorage.setItem("fmg-onboarding-done", "1");
       FMG.gameState.route = FMG.ROUTES.dashboard;
       FMG.gameState.selectionMode = true;
-    }
-    if (action === "import-save-start") {
+    },
+    "import-save-start": () => {
       localStorage.setItem("fmg-onboarding-done", "1");
       FMG.gameState.route = FMG.ROUTES.settings;
       FMG.gameState.selectionMode = false;
-    }
-    if (action === "change-route") {
-      if (FMG.gameState.route === FMG.ROUTES.phase15) FMG.unmountPhase15();
-      if (FMG.gameState.route === FMG.ROUTES.phase16) FMG.unmountPhase16();
-      if (FMG.gameState.route === FMG.ROUTES.phase17) FMG.unmountPhase17();
-      if (FMG.gameState.route === FMG.ROUTES.phase18) FMG.unmountPhase18();
-      if (FMG.gameState.route === FMG.ROUTES.phase19) FMG.unmountPhase19();
-      if (FMG.gameState.route === FMG.ROUTES.phase20) FMG.unmountPhase20();
-      if (FMG.gameState.route === FMG.ROUTES.phase21) FMG.unmountPhase21();
-      if (FMG.gameState.route === FMG.ROUTES.phase22) FMG.unmountPhase22();
-      if (FMG.gameState.route === FMG.ROUTES.phase23) FMG.unmountPhase23();
-      if (FMG.gameState.route === FMG.ROUTES.phase24) FMG.unmountPhase24();
+    },
+    "change-route": ({ target }) => {
+      if (!confirmSandboxOptIn(target.dataset.route)) return false;
+      unmountCurrentPhaseRoute();
       FMG.gameState.route = target.dataset.route;
       if (target.dataset.route === FMG.ROUTES.settings || target.dataset.route === FMG.ROUTES.credits) FMG.gameState.selectionMode = false;
-    }
-    if (action === "advance-week") {
+      syncBrowserRoute(target.dataset.route);
+    },
+    "advance-week": () => {
       const result = FMG.advanceWeek();
       if (!result.ok) FMG.pushNotification(result.message);
-    }
-    if (action === "start-live-match") {
-      FMG.pushNotification(FMG.startLiveUserMatch().message);
-    }
-    if (action === "toggle-live-playback") {
+    },
+    "start-live-match": () => FMG.pushNotification(FMG.startLiveUserMatch().message),
+    "toggle-live-playback": () => {
       const liveMatch = FMG.gameState.liveMatch;
       if (liveMatch && !liveMatch.completed) {
         liveMatch.paused = !liveMatch.paused;
         FMG.pushNotification(liveMatch.paused ? "Partido pausado." : "Partido en reproduccion.");
       }
-    }
-    if (action === "advance-live-minute") {
+    },
+    "advance-live-minute": () => {
       const liveMatch = FMG.gameState.liveMatch;
       if (liveMatch) liveMatch.paused = true;
       const result = FMG.advanceLiveUserMatch(1);
       if (!result.ok) FMG.pushNotification(result.message);
-    }
-    if (action === "advance-live-match") {
+    },
+    "advance-live-match": () => {
       const liveMatch = FMG.gameState.liveMatch;
       if (liveMatch) liveMatch.paused = true;
       const result = FMG.advanceLiveUserMatch(FMG.gameState.liveMatch ? FMG.gameState.liveMatch.speed : 5);
       if (!result.ok) FMG.pushNotification(result.message);
-    }
-    if (action === "advance-live-half") {
+    },
+    "advance-live-half": () => {
       const liveMatch = FMG.gameState.liveMatch;
       if (liveMatch && !liveMatch.completed) {
         liveMatch.paused = true;
-        const target = liveMatch.minute < 45 ? 45 : 90;
-        const steps = Math.max(0, target - liveMatch.minute);
+        const targetMinute = liveMatch.minute < 45 ? 45 : 90;
+        const steps = Math.max(0, targetMinute - liveMatch.minute);
         if (steps > 0) {
           const result = FMG.advanceLiveUserMatch(steps);
           if (!result.ok) FMG.pushNotification(result.message);
         }
       }
-    }
-    if (action === "simulate-live-full") {
+    },
+    "simulate-live-full": () => {
       const liveMatch = FMG.gameState.liveMatch;
       if (liveMatch) liveMatch.paused = true;
       const result = FMG.advanceLiveUserMatch(liveMatch ? 90 - liveMatch.minute : 90);
       if (!result.ok) FMG.pushNotification(result.message);
-    }
-    if (action === "finish-live-match") {
+    },
+    "finish-live-match": () => {
       FMG.pushNotification(FMG.finishLiveUserMatch().message);
-      // Destruir visualizador
       FMG.matchVisualController.dispose();
       FMG._visualizerInitialized = false;
-    }
-    if (action === "set-live-speed") {
+    },
+    "set-live-speed": ({ target }) => {
       FMG.pushNotification(FMG.setLiveMatchSpeed(Number(target.dataset.speed)).message);
       scheduleLivePlaybackLoop();
-    }
-    if (action === "live-tactic") FMG.pushNotification(FMG.applyLiveTacticalShift(target.dataset.mode).message);
-    if (action === "live-team-order") FMG.pushNotification(FMG.setLiveTeamOrder(target.dataset.group, target.dataset.value).message);
-    if (action === "live-player-order") FMG.pushNotification(FMG.setLivePlayerOrder(target.dataset.playerId, target.dataset.order).message);
-    if (action === "live-substitution") {
-      FMG.pushNotification(FMG.makeLiveSubstitution(target.dataset.outPlayerId, target.dataset.inPlayerId).message);
-    }
-    if (action === "select-sub-out") {
+    },
+    "live-tactic": ({ target }) => FMG.pushNotification(FMG.applyLiveTacticalShift(target.dataset.mode).message),
+    "live-team-order": ({ target }) => FMG.pushNotification(FMG.setLiveTeamOrder(target.dataset.group, target.dataset.value).message),
+    "live-player-order": ({ target }) => FMG.pushNotification(FMG.setLivePlayerOrder(target.dataset.playerId, target.dataset.order).message),
+    "live-substitution": ({ target }) => FMG.pushNotification(FMG.makeLiveSubstitution(target.dataset.outPlayerId, target.dataset.inPlayerId).message),
+    "select-sub-out": ({ target }) => {
       FMG.gameState.ui = FMG.gameState.ui || {};
       FMG.gameState.ui.selectedSubOutId = target.dataset.playerId;
-    }
-    if (action === "save-game") {
+    },
+    "save-game": () => {
       const result = FMG.saveGame();
       if (!result.ok) FMG.pushNotification(result.message);
-    }
-    if (action === "load-game") {
+    },
+    "load-game": () => {
       const result = FMG.loadGame();
       if (!result.ok) FMG.pushNotification(result.message);
-    }
-    if (action === "take-bank-loan" && !target.dataset.confirm && !window.confirm("Solicitar prestamo bancario por 30.000.000 CLP?")) return;
-    if (action === "take-bank-loan") FMG.pushNotification(FMG.takeBankLoan(FMG.gameState, 30000000).message);
-    if (action === "negotiate-sponsor") FMG.pushNotification(FMG.negotiateSponsor(FMG.gameState).message);
-    if (action === "upgrade-infrastructure") FMG.pushNotification(FMG.upgradeInfrastructure(FMG.gameState, target.dataset.area).message);
-    if (action === "upgrade-staff") FMG.pushNotification(FMG.upgradeStaff(FMG.gameState, target.dataset.area).message);
-    if (action === "set-manager-style") {
+    },
+    "take-bank-loan": ({ target }) => {
+      if (!target.dataset.confirm && !window.confirm("Solicitar prestamo bancario por 30.000.000 CLP?")) return false;
+      FMG.pushNotification(FMG.takeBankLoan(FMG.gameState, FMG.FINANCE_CONSTANTS.defaultBankLoanAmount).message);
+    },
+    "negotiate-sponsor": () => FMG.pushNotification(FMG.negotiateSponsor(FMG.gameState).message),
+    "upgrade-infrastructure": ({ target }) => FMG.pushNotification(FMG.upgradeInfrastructure(FMG.gameState, target.dataset.area).message),
+    "upgrade-staff": ({ target }) => FMG.pushNotification(FMG.upgradeStaff(FMG.gameState, target.dataset.area).message),
+    "set-manager-style": ({ target }) => {
       FMG.gameState.managerProfile.style = target.dataset.style;
       FMG.pushNotification(`Estilo de manager: ${FMG.MANAGER_STYLES[target.dataset.style].label}.`);
-    }
-    if (action === "generate-career-offers") {
+    },
+    "generate-career-offers": () => {
       const offers = FMG.generateCareerOffers(FMG.gameState, { force: true, reason: "manual" });
       FMG.pushNotification(offers.length ? "Llegaron nuevas ofertas de clubes." : "No hay clubes interesados esta semana.");
-    }
-    if (action === "accept-career-offer" && !target.dataset.confirm && !window.confirm("Aceptar esta oferta y cambiar de club?")) return;
-    if (action === "accept-career-offer") FMG.pushNotification(FMG.acceptCareerOffer(FMG.gameState, target.dataset.offerId).message);
-    if (action === "create-career-decision") {
+    },
+    "accept-career-offer": ({ target }) => {
+      if (!target.dataset.confirm && !window.confirm("Aceptar esta oferta y cambiar de club?")) return false;
+      FMG.pushNotification(FMG.acceptCareerOffer(FMG.gameState, target.dataset.offerId).message);
+    },
+    "create-career-decision": () => {
       const decision = FMG.createNarrativeDecision(FMG.gameState);
       FMG.pushNotification(`Nueva decision: ${decision.title}.`);
-    }
-    if (action === "resolve-career-decision") {
-      FMG.pushNotification(FMG.resolveNarrativeDecision(FMG.gameState, target.dataset.decisionId, target.dataset.choiceId).message);
-    }
-    if (action === "set-news-filter") FMG.setNewsFilter(FMG.gameState, target.dataset.filter);
-    if (action === "set-table-sort") FMG.setTableViewOption(FMG.gameState, "sort", target.dataset.sort);
-    if (action === "set-table-filter") FMG.setTableViewOption(FMG.gameState, "filter", target.dataset.filter);
-    if (action === "set-calendar-filter") FMG.setCalendarFilter(FMG.gameState, target.dataset.filter);
-    if (action === "select-rival-club") FMG.pushNotification(FMG.selectRivalClub(FMG.gameState, target.dataset.teamId).message);
-    if (action === "update-setting") FMG.pushNotification(FMG.updateGameSetting(FMG.gameState, target.dataset.setting, target.dataset.value).message);
-    if (action === "save-slot") FMG.pushNotification(FMG.saveToSlot(FMG.gameState, target.dataset.slotId, { overwrite: true }).message);
-    if (action === "load-slot") FMG.pushNotification(FMG.loadFromSlot(target.dataset.slotId).message);
-    if (action === "import-save") {
+    },
+    "resolve-career-decision": ({ target }) => FMG.pushNotification(FMG.resolveNarrativeDecision(FMG.gameState, target.dataset.decisionId, target.dataset.choiceId).message),
+    "set-news-filter": ({ target }) => FMG.setNewsFilter(FMG.gameState, target.dataset.filter),
+    "set-table-sort": ({ target }) => FMG.setTableViewOption(FMG.gameState, "sort", target.dataset.sort),
+    "set-table-filter": ({ target }) => FMG.setTableViewOption(FMG.gameState, "filter", target.dataset.filter),
+    "set-calendar-filter": ({ target }) => FMG.setCalendarFilter(FMG.gameState, target.dataset.filter),
+    "select-rival-club": ({ target }) => FMG.pushNotification(FMG.selectRivalClub(FMG.gameState, target.dataset.teamId).message),
+    "update-setting": ({ target }) => FMG.pushNotification(FMG.updateGameSetting(FMG.gameState, target.dataset.setting, target.dataset.value).message),
+    "save-slot": ({ target }) => FMG.pushNotification(FMG.saveToSlot(FMG.gameState, target.dataset.slotId, { overwrite: true }).message),
+    "load-slot": ({ target }) => FMG.pushNotification(FMG.loadFromSlot(target.dataset.slotId).message),
+    "import-save": ({ target }) => {
       const payload = document.querySelector("[data-role='import-payload']")?.value || "";
       FMG.pushNotification(FMG.importSave(payload, target.dataset.slotId).message);
-    }
-    if (action === "export-save") {
+    },
+    "export-save": () => {
       const blob = new Blob([FMG.exportSave(FMG.gameState)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -372,75 +441,82 @@
       link.click();
       URL.revokeObjectURL(url);
       FMG.pushNotification("Partida exportada como archivo.", "info");
-    }
-    if (action === "safe-reset") {
+    },
+    "safe-reset": () => {
       FMG.initializeGame(FMG.gameState.teams, FMG.gameState.players);
       FMG.pushNotification("Partida reiniciada. Los slots guardados se conservan.");
-    }
-    if (action === "generate-world-news") {
+    },
+    "generate-world-news": () => {
       const created = FMG.generateContextualWeeklyNews(FMG.gameState, null);
       FMG.pushNotification(created.length ? `Mundo actualizado con ${created.length} noticia(s).` : "No surgieron nuevas historias esta semana.");
-    }
-    if (action === "generate-market-rumors") {
+    },
+    "generate-market-rumors": () => {
       const rumors = FMG.generateMarketRumors(FMG.gameState);
       FMG.pushNotification(rumors.length ? "La red de scouting filtro nuevos rumores." : "No hay rumores nuevos por ahora.");
-    }
-    if (action === "refresh-market") {
-      FMG.pushNotification(FMG.refreshTransferMarket(FMG.gameState).message);
-    }
-    if (action === "create-transfer-offer") {
+    },
+    "refresh-market": () => FMG.pushNotification(FMG.refreshTransferMarket(FMG.gameState).message),
+    "create-transfer-offer": ({ target }) => {
       const player = FMG.gameState.players.find((item) => item.id === target.dataset.playerId);
       const role = player && player.overall >= 76 ? "starter" : "rotation";
       FMG.pushNotification(FMG.createTransferOffer(FMG.gameState, target.dataset.playerId, { transferType: target.dataset.transferType, role }).message);
-    }
-    if (action === "create-loan-offer") {
-      FMG.pushNotification(FMG.createTransferOffer(FMG.gameState, target.dataset.playerId, { transferType: "loan", role: "rotation" }).message);
-    }
-    if (action === "resolve-negotiation") FMG.pushNotification(FMG.resolveTransferNegotiation(FMG.gameState, target.dataset.negotiationId).message);
-    if (action === "generate-incoming-offers") {
+    },
+    "create-loan-offer": ({ target }) => FMG.pushNotification(FMG.createTransferOffer(FMG.gameState, target.dataset.playerId, { transferType: "loan", role: "rotation" }).message),
+    "resolve-negotiation": ({ target }) => FMG.pushNotification(FMG.resolveTransferNegotiation(FMG.gameState, target.dataset.negotiationId).message),
+    "generate-incoming-offers": () => {
       const offers = FMG.generateIncomingOffers(FMG.gameState);
       FMG.pushNotification(offers.length ? "Llegaron nuevas ofertas por jugadores." : "No llegaron ofertas nuevas.");
-    }
-    if (action === "accept-incoming-offer" && !target.dataset.confirm && !window.confirm("Aceptar venta del jugador?")) return;
-    if (action === "accept-incoming-offer") FMG.pushNotification(FMG.respondIncomingOffer(FMG.gameState, target.dataset.offerId, true).message);
-    if (action === "reject-incoming-offer") FMG.pushNotification(FMG.respondIncomingOffer(FMG.gameState, target.dataset.offerId, false).message);
-    if (action === "set-formation") FMG.pushNotification(FMG.setFormation(FMG.gameState, target.dataset.formation).message);
-    if (action === "set-training") FMG.pushNotification(FMG.setTrainingFocus(FMG.gameState, target.dataset.focus).message);
-    if (action === "set-team-tactic") FMG.pushNotification(FMG.setTeamTactic(FMG.gameState, target.dataset.tacticKey, target.dataset.tacticValue).message);
-    if (action === "set-position-role") FMG.pushNotification(FMG.setPositionRole(FMG.gameState, target.dataset.position, target.dataset.role).message);
-    if (action === "set-player-instruction") FMG.pushNotification(FMG.setPlayerInstruction(FMG.gameState, target.dataset.playerId, target.dataset.instruction).message);
-    if (action === "set-squad-role") FMG.pushNotification(FMG.setSquadRole(FMG.gameState, target.dataset.playerId, target.dataset.role).message);
-    if (action === "set-captain") FMG.pushNotification(FMG.setCaptain(FMG.gameState, target.dataset.playerId).message);
-    if (action === "select-squad-player") {
+    },
+    "accept-incoming-offer": ({ target }) => {
+      if (!target.dataset.confirm && !window.confirm("Aceptar venta del jugador?")) return false;
+      FMG.pushNotification(FMG.respondIncomingOffer(FMG.gameState, target.dataset.offerId, true).message);
+    },
+    "reject-incoming-offer": ({ target }) => FMG.pushNotification(FMG.respondIncomingOffer(FMG.gameState, target.dataset.offerId, false).message),
+    "set-formation": ({ target }) => FMG.pushNotification(FMG.setFormation(FMG.gameState, target.dataset.formation).message),
+    "set-training": ({ target }) => FMG.pushNotification(FMG.setTrainingFocus(FMG.gameState, target.dataset.focus).message),
+    "set-team-tactic": ({ target }) => FMG.pushNotification(FMG.setTeamTactic(FMG.gameState, target.dataset.tacticKey, target.dataset.tacticValue).message),
+    "set-position-role": ({ target }) => FMG.pushNotification(FMG.setPositionRole(FMG.gameState, target.dataset.position, target.dataset.role).message),
+    "set-player-instruction": ({ target }) => FMG.pushNotification(FMG.setPlayerInstruction(FMG.gameState, target.dataset.playerId, target.dataset.instruction).message),
+    "set-squad-role": ({ target }) => FMG.pushNotification(FMG.setSquadRole(FMG.gameState, target.dataset.playerId, target.dataset.role).message),
+    "set-captain": ({ target }) => FMG.pushNotification(FMG.setCaptain(FMG.gameState, target.dataset.playerId).message),
+    "select-squad-player": ({ target }) => {
       FMG.pushNotification(FMG.selectSquadPlayer(FMG.gameState, target.dataset.playerId).message);
       FMG.gameState.route = FMG.ROUTES.player;
-    }
-    if (action === "set-squad-filter") FMG.setSquadView(FMG.gameState, "filter", target.dataset.filter);
-    if (action === "set-squad-sort") FMG.setSquadView(FMG.gameState, "sort", target.dataset.sort);
-    if (action === "renew-contract") {
+    },
+    "set-squad-filter": ({ target }) => FMG.setSquadView(FMG.gameState, "filter", target.dataset.filter),
+    "set-squad-sort": ({ target }) => FMG.setSquadView(FMG.gameState, "sort", target.dataset.sort),
+    "renew-contract": ({ target }) => {
       const player = FMG.gameState.players.find((item) => item.id === target.dataset.playerId);
       FMG.pushNotification(FMG.renewPlayerContract(FMG.gameState, target.dataset.playerId, {
         role: player ? player.squadRole : "rotation",
         years: 3
       }).message);
+    },
+    "train-squad": () => FMG.pushNotification(FMG.trainUserSquad(FMG.gameState).message),
+    "new-season": ({ target }) => {
+      if (!target.dataset.confirm && !window.confirm("Iniciar una nueva temporada?")) return false;
+      FMG.pushNotification(FMG.startNewSeason().message);
+    },
+    "buy-player": ({ target }) => FMG.pushNotification(FMG.buyPlayer(FMG.gameState, target.dataset.playerId).message),
+    "sell-player": ({ target }) => {
+      if (!target.dataset.confirm && !window.confirm("Poner en venta a este jugador?")) return false;
+      FMG.pushNotification(FMG.sellPlayer(FMG.gameState, target.dataset.playerId).message);
+    },
+    "dismiss-toast": ({ target }) => FMG.dismissNotification(target.dataset.id)
+  };
+
+  function handleAction(action, target) {
+    if (!action) return;
+    if (target.dataset.confirm && !window.confirm(target.dataset.confirm)) return;
+    const activeAction = document.activeElement?.dataset?.action;
+    const handler = ACTION_HANDLERS[action];
+    if (handler) {
+      if (handler({ target, action }) === false) return;
+    } else if (PHASE_ACTION_HANDLERS.some((resolveHandler) => {
+      const phaseHandler = resolveHandler();
+      return phaseHandler && phaseHandler(action);
+    })) {
+      return;
     }
-    if (action === "train-squad") FMG.pushNotification(FMG.trainUserSquad(FMG.gameState).message);
-    if (action === "new-season" && !target.dataset.confirm && !window.confirm("Iniciar una nueva temporada?")) return;
-    if (action === "new-season") FMG.pushNotification(FMG.startNewSeason().message);
-    if (action === "buy-player") FMG.pushNotification(FMG.buyPlayer(FMG.gameState, target.dataset.playerId).message);
-    if (action === "sell-player" && !target.dataset.confirm && !window.confirm("Poner en venta a este jugador?")) return;
-    if (action === "sell-player") FMG.pushNotification(FMG.sellPlayer(FMG.gameState, target.dataset.playerId).message);
-    if (FMG.handlePhase15Action && FMG.handlePhase15Action(action)) return;
-    if (FMG.handlePhase16Action && FMG.handlePhase16Action(action)) return;
-    if (FMG.handlePhase17Action && FMG.handlePhase17Action(action)) return;
-    if (FMG.handlePhase18Action && FMG.handlePhase18Action(action)) return;
-    if (FMG.handlePhase19Action && FMG.handlePhase19Action(action)) return;
-    if (FMG.handlePhase20Action && FMG.handlePhase20Action(action)) return;
-    if (FMG.handlePhase21Action && FMG.handlePhase21Action(action)) return;
-    if (FMG.handlePhase22Action && FMG.handlePhase22Action(action)) return;
-    if (FMG.handlePhase23Action && FMG.handlePhase23Action(action)) return;
-    if (FMG.handlePhase24Action && FMG.handlePhase24Action(action)) return;
-    if (action === "dismiss-toast") FMG.dismissNotification(target.dataset.id);
     if (["save-slot", "buy-player", "finish-live-match"].includes(action)) FMG.UIAudio?.confirm();
     render();
     if (activeAction) {
@@ -460,6 +536,16 @@
     if (target) handleAction(target.dataset.action, target);
   });
 
+  window.addEventListener("popstate", (event) => {
+    const route = event.state?.route || routeFromLocation();
+    if (!route || !FMG.gameState || FMG.gameState.route === route) return;
+    unmountCurrentPhaseRoute();
+    FMG.gameState.route = route;
+    FMG.gameState.selectionMode = false;
+    render();
+    requestAnimationFrame(() => syncLiveVisualizer());
+  });
+
   async function boot() {
     try {
       const seed = await loadSeedData();
@@ -468,12 +554,20 @@
         FMG.Core.initialize({ diagnostics: { scaling: { profile: "low-end" } } });
       }
       if (isDebugMode) FMG.Core?.diagnostics?.enableOverlay(true);
-      startNotificationPruner();
       if (!localStorage.getItem("fmg-onboarding-done")) {
         FMG.gameState.route = FMG.ROUTES.onboarding;
       }
+      const browserRoute = routeFromLocation();
+      if (browserRoute && localStorage.getItem("fmg-onboarding-done")) {
+        FMG.gameState.route = browserRoute;
+        FMG.gameState.selectionMode = false;
+      }
+      syncBrowserRoute(FMG.gameState.route, { replace: true });
       render();
+      startNotificationPruner();
+      hideLoadingScreen();
     } catch (error) {
+      hideLoadingScreen();
       app.innerHTML = `
         <section class="panel error-screen">
           <h1>No se pudieron cargar los datos del juego</h1>

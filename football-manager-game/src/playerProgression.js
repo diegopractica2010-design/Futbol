@@ -36,18 +36,15 @@
   function initializePersonality(player, seed = 0) {
     if (player.personality) return player.personality;
 
-    const seedValue = (parseInt(player.id.replace(/\D/g, "") || "0") + seed) % 1000;
-    const seededRandom = (offset) => {
-      const x = Math.sin(seedValue + offset) * 10000;
-      return x - Math.floor(x);
-    };
+    const seedValue = FMG.hashText(`${player.id}|${player.name}|${seed}`);
+    const seededRandom = FMG.mulberry32(seedValue);
 
     player.personality = {
-      professionalism: Math.round(50 + seededRandom(1) * 45),
-      ambition: Math.round(50 + seededRandom(2) * 50),
-      leadership: Math.round(35 + seededRandom(3) * 50),
-      consistency: Math.round(50 + seededRandom(4) * 40),
-      temperament: Math.round(50 + seededRandom(5) * 45)
+      professionalism: Math.round(50 + seededRandom() * 45),
+      ambition: Math.round(50 + seededRandom() * 50),
+      leadership: Math.round(35 + seededRandom() * 50),
+      consistency: Math.round(50 + seededRandom() * 40),
+      temperament: Math.round(50 + seededRandom() * 45)
     };
 
     // Clamp values within bounds

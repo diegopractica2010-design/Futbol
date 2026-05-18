@@ -1,3 +1,14 @@
+if (typeof window === "undefined") {
+  global.window = global;
+  global.FMG = global.FMG || {};
+  require("../src/utils.js");
+  require("../src/FMG.Core/Utils/RNG.js");
+  require("../src/FMG.Core/Engine/GameState.js");
+  require("../src/FMG.Core/Engine/Reducers.js");
+  require("../src/FMG.Core/Engine/StateTransition.js");
+  require("../src/FMG.Core/Engine/StateSnapshot.js");
+}
+
 (function () {
   "use strict";
 
@@ -50,6 +61,15 @@
         throw new Error((message || "") + " Element " + i + " mismatch");
       }
     }
+  }
+
+  function validGameStateConfig(overrides) {
+    return Object.assign({
+      version: 1,
+      season: { week: 1 },
+      clubs: [{ teamId: "test-club", squad: [] }],
+      manager: { profile: { name: "Manager" } }
+    }, overrides || {});
   }
 
   // ============================================================================
@@ -171,10 +191,7 @@
   // ============================================================================
 
   test("StateTransaction commits atomically", function () {
-    const state = new FMG.Core.Engine.GameState({
-      version: 1,
-      season: { week: 1 }
-    });
+    const state = new FMG.Core.Engine.GameState(validGameStateConfig());
 
     const transaction = new FMG.Core.Engine.StateTransaction(state);
     transaction.apply({
@@ -188,7 +205,7 @@
   });
 
   test("StateTransaction can abort", function () {
-    const state = new FMG.Core.Engine.GameState({ version: 1 });
+    const state = new FMG.Core.Engine.GameState(validGameStateConfig());
     const originalStateId = state.stateId;
 
     const transaction = new FMG.Core.Engine.StateTransaction(state);
@@ -336,3 +353,8 @@
     };
   };
 })();
+
+if (typeof module !== "undefined" && require.main === module) {
+  const result = global.FMG.Core.Tests.runImmutableStateTests();
+  if (result.failed > 0) process.exit(1);
+}

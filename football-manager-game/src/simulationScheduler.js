@@ -40,7 +40,7 @@
     }
     this._log = this._log.slice(0, 80);
     if (state.simulationState) {
-      state.simulationState.lastRunAt = FMG.nowISO ? FMG.nowISO("simulation-scheduler") : "2025-01-01T12:00:00.000Z";
+      state.simulationState.lastRunAt = FMG.nowISO ? FMG.nowISO("simulation-scheduler") : FMG.EPOCH_ISO;
       state.simulationState.completedJobs = this._log.slice(0, 20);
     }
     return executed;

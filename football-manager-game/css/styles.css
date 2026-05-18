@@ -207,6 +207,23 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   outline-offset: 3px;
 }
 
+.skip-link {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 1000;
+  transform: translateY(-160%);
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #111b17;
+  color: #fff;
+  font-weight: 800;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
 .btn-primary { background: linear-gradient(135deg, var(--primary), #198857); color: #fff; box-shadow: 0 10px 20px rgba(20, 108, 67, 0.22); }
 .btn-secondary { background: rgba(200, 149, 40, 0.18); color: #5f4210; }
 .btn-ghost { background: rgba(255, 255, 255, 0.78); color: var(--text); border: 1px solid var(--line); }
@@ -1373,9 +1390,56 @@ button {
   border-left: 3px solid rgba(159, 126, 219, 0.34);
 }
 
+.sandbox-nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sandbox-mini-badge {
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(231, 184, 74, 0.18);
+  color: #f0d27a;
+  font-size: 0.66rem;
+  line-height: 1;
+}
+
+.sandbox-disclaimer {
+  margin-bottom: 14px;
+  border-color: rgba(231, 184, 74, 0.3);
+  background:
+    linear-gradient(135deg, rgba(231, 184, 74, 0.1), transparent 60%),
+    var(--surface);
+}
+
+.sandbox-disclaimer p {
+  margin-top: 8px;
+}
+
+.dev-mode-banner {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(231, 184, 74, 0.36);
+  border-radius: 8px;
+  background: rgba(231, 184, 74, 0.14);
+  color: #f2d787;
+  font-weight: 800;
+}
+
 @media (max-width: 920px) {
   .ecosystem-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition: none !important;
   }
 }
 

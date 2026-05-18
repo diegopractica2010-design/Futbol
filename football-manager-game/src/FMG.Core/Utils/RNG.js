@@ -136,12 +136,10 @@
     return String(value).padStart(length, "0");
   }
 
-  function stableStringify(value) {
-    if (value === null || value === undefined) return String(value);
-    if (typeof value !== "object") return String(value);
-    if (Array.isArray(value)) {
-      return "[" + value.map(stableStringify).join(",") + "]";
-    }
-    return "{" + Object.keys(value).sort().map((key) => key + ":" + stableStringify(value[key])).join(",") + "}";
-  }
+  const stableStringify = FMG.stableStringify || function fallbackStableStringify(value) {
+    if (value === undefined) return "undefined";
+    if (value === null || typeof value !== "object") return JSON.stringify(value);
+    if (Array.isArray(value)) return "[" + value.map(fallbackStableStringify).join(",") + "]";
+    return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + fallbackStableStringify(value[key])).join(",") + "}";
+  };
 })();

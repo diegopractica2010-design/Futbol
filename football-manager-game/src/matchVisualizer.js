@@ -6,9 +6,7 @@
   const FIELD_WIDTH = 105;
   const FIELD_HEIGHT = 68;
 
-  function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-  }
+  const clamp = FMG.clamp;
 
   function colorToCss(color, fallback) {
     if (typeof color === "number") {

@@ -26,6 +26,10 @@ Estado actual: fase publica 24 en navegador. La suite historica de tests conserv
 - `data/`: seed base de equipos y jugadores.
 - `tests/`: regresion automatizada.
 
+## Arquitectura Runtime
+
+La interfaz del navegador usa `FMG.gameState` como estado primario de UI por compatibilidad con las partidas existentes. `FMG.Core` se mantiene activo como capa de validacion, determinismo, snapshots, replay y migracion incremental por dominio; no debe asumirse como driver principal de UI hasta completar una migracion dedicada.
+
 ## Ejecucion Local
 
 El juego debe abrirse desde un servidor web, no con doble clic sobre `index.html`.
@@ -41,6 +45,11 @@ Alternativas:
 
 - VS Code: extension Live Server, clic derecho en `index.html`, "Open with Live Server".
 - Node.js: `npx serve .`.
+
+Modo desarrollo:
+
+- Agrega `?dev` a la URL para mostrar las fases sandbox 15-24 y herramientas experimentales.
+- Cuando `?dev` esta activo, el juego muestra un aviso visible porque esas pantallas no afectan la carrera principal.
 
 ## Pruebas
 

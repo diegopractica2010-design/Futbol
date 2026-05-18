@@ -12,7 +12,8 @@
    */
   function ClubRepository(config) {
     config = config || {};
-    this.storageKey = config.storageKey || "FMG_CLUB";
+    this.storageKey = config.storageKey || ((FMG.CORE_STORAGE_PREFIX || "football-manager-game-core-") + "club");
+    this.legacyStorageKey = "FMG_CLUB";
   }
 
   /**
@@ -58,7 +59,7 @@
   ClubRepository.prototype.load = function (clubId) {
     try {
       if (window.localStorage) {
-        const data = localStorage.getItem(this.storageKey + "_" + clubId);
+        const data = localStorage.getItem(this.storageKey + "_" + clubId) || localStorage.getItem(this.legacyStorageKey + "_" + clubId);
         if (!data) return Promise.resolve(null);
         const parsed = JSON.parse(data);
         return Promise.resolve(parsed.club);
@@ -76,11 +77,11 @@
   ClubRepository.prototype.loadAll = function () {
     try {
       const results = [];
-      const prefix = this.storageKey + "_";
+      const prefixes = [this.storageKey + "_", this.legacyStorageKey + "_"];
       if (window.localStorage) {
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
-          if (key.startsWith(prefix)) {
+          if (prefixes.some((prefix) => key.startsWith(prefix))) {
             const data = JSON.parse(localStorage.getItem(key));
             results.push(data.club);
           }

@@ -7,9 +7,7 @@
   const DEFAULT_TICK_MS = 1000;
   const MAX_SPEED = 30;
 
-  function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-  }
+  const clamp = FMG.clamp;
 
   function asNumber(value, fallback) {
     const number = Number(value);

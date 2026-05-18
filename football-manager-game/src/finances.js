@@ -1,5 +1,10 @@
 (function () {
   const FMG = (window.FMG = window.FMG || {});
+  FMG.FINANCE_CONSTANTS = FMG.FINANCE_CONSTANTS || Object.freeze({
+    defaultBankLoanAmount: 30000000,
+    minBankLoanAmount: 5000000,
+    maxBankLoanAmount: 120000000
+  });
 
   function defaultFinanceState(current = {}, club = {}) {
     const baseBudget = club.budget || 90000000;
@@ -68,7 +73,7 @@
   };
 
   FMG.registerFinanceEntry = function (finances, type, label, amount, budgetKey) {
-    const entry = { type, label, amount, budgetKey: budgetKey || null, date: FMG.nowISO ? FMG.nowISO("finance-entry") : "2025-01-01T12:00:00.000Z" };
+    const entry = { type, label, amount, budgetKey: budgetKey || null, date: FMG.nowISO ? FMG.nowISO("finance-entry") : FMG.EPOCH_ISO };
 
     if (amount > 0) finances.incomeHistory.unshift(entry);
     else if (amount < 0) finances.expenseHistory.unshift(entry);
@@ -105,7 +110,7 @@
 
   FMG.takeBankLoan = function (state, amount) {
     const finances = FMG.ensureAdvancedFinances(state);
-    const value = FMG.clamp(Number(amount) || 0, 5000000, 120000000);
+    const value = FMG.clamp(Number(amount) || 0, FMG.FINANCE_CONSTANTS.minBankLoanAmount, FMG.FINANCE_CONSTANTS.maxBankLoanAmount);
     const loan = {
       id: FMG.uid("loan"),
       principal: value,
@@ -126,7 +131,7 @@
   FMG.previewFinancialAction = function (state, actionType, params = {}) {
     const finances = FMG.ensureAdvancedFinances(state);
     if (actionType === "loan") {
-      const value = FMG.clamp(Number(params.amount) || 30000000, 5000000, 120000000);
+      const value = FMG.clamp(Number(params.amount) || FMG.FINANCE_CONSTANTS.defaultBankLoanAmount, FMG.FINANCE_CONSTANTS.minBankLoanAmount, FMG.FINANCE_CONSTANTS.maxBankLoanAmount);
       const fee = Math.round(value * 0.05);
       return {
         title: `Prestamo de ${FMG.currency(value)}`,

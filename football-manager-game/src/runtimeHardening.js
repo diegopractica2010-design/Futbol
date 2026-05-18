@@ -5,11 +5,7 @@
   const FMG = (root.FMG = root.FMG || {});
   const Hardening = (FMG.Hardening = FMG.Hardening || {});
 
-  function stableStringify(value) {
-    if (value === null || typeof value !== "object") return JSON.stringify(value);
-    if (Array.isArray(value)) return "[" + value.map(stableStringify).join(",") + "]";
-    return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + stableStringify(value[key])).join(",") + "}";
-  }
+  const stableStringify = FMG.stableStringify;
 
   function hashString(input) {
     const str = String(input || "");
@@ -414,6 +410,7 @@
       const unique = (items) => Array.from(new Set(items));
       return {
         authority: this.authority,
+        authorityConfig: FMG.getRuntimeAuthorityConfig ? FMG.getRuntimeAuthorityConfig() : null,
         runtimeId: this.runtimeId,
         status: this.status,
         authoritativeChecksum: this.authoritativeChecksum,

@@ -65,7 +65,7 @@
     render(state, escapeHtml) {
       this.ensure(state);
       return `
-        <div class="toast-stack" role="status" aria-live="polite">
+        <div class="toast-stack" role="status" aria-live="polite" aria-atomic="false">
           ${state.notifications.map((notification, index) => `
             <article class="toast toast-${escapeHtml(notification.type || "info")}" data-id="${escapeHtml(notification.id)}" style="--toast-index:${index};">
               <span class="toast-icon">${escapeHtml(notification.icon || "i")}</span>
