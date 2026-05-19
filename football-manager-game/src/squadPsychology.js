@@ -449,3 +449,492 @@
 
   FMG.ensureSquadPsychologyState = ensureSquadPsychologyState;
 })();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SQUAD PSYCHOLOGY — EXTENDED SYSTEMS (Fase 3+4)
+// Ego, Factions, Mentor/Protege, Toxicity, Captain Influence, Dressing Room Events
+// ═══════════════════════════════════════════════════════════════════════════
+(function () {
+  "use strict";
+
+  const FMG = (window.FMG = window.FMG || {});
+  const clamp = FMG.clamp;
+  const hashText = FMG.hashText;
+  const deterministicId = FMG.deterministicId;
+  const boundedPush = FMG.boundedPush;
+
+  function getSquad(state) {
+    return (state.players || []).filter(function (p) { return p.teamId === state.userTeamId && !p.retired; });
+  }
+
+  function getPlayer(state, playerId) {
+    return (state.players || []).find(function (p) { return p.id === playerId; }) || null;
+  }
+
+  // ═══════════════════════════════
+  // DRESSING ROOM EVENTS
+  // ═══════════════════════════════
+
+  function ensureDressingRoomEvents(state) {
+    state.dressingRoomEvents = state.dressingRoomEvents || [];
+    return state.dressingRoomEvents;
+  }
+
+  function addDressingRoomEvent(state, event) {
+    ensureDressingRoomEvents(state);
+    const id = deterministicId("dre", [event.type, state.seasonNumber || 1, state.currentWeek || 1, event.playerId || event.title || ""]);
+    if (state.dressingRoomEvents.some(function (e) { return e.id === id; })) return null;
+    const entry = {
+      id: id,
+      week: state.currentWeek || 1,
+      seasonNumber: state.seasonNumber || 1,
+      resolved: false,
+      type: event.type || "general",
+      title: event.title || "",
+      description: event.description || "",
+      icon: event.icon || "📋",
+      playerId: event.playerId || null,
+      choices: event.choices || []
+    };
+    boundedPush(state.dressingRoomEvents, entry, 20);
+    return entry;
+  }
+
+  // ═══════════════════════════════
+  // EGO SYSTEM
+  // ═══════════════════════════════
+
+  function ensureEgo(player) {
+    if (!Number.isFinite(player.ego)) {
+      const seed = hashText(player.id + "-ego");
+      const base = 30 + (player.overall || 55) * 0.4 + (player.age <= 24 ? 5 : player.age >= 32 ? -5 : 0);
+      player.ego = clamp(Math.round(base + (seed % 21) - 10), 0, 100);
+    }
+    return player.ego;
+  }
+
+  function weeklyEgoUpdate(state) {
+    const players = getSquad(state);
+    const completedWeeks = Math.max(1, state.completedWeeks || 1);
+    players.forEach(function (player) {
+      ensureEgo(player);
+      const record = state.psychology && state.psychology.players && state.psychology.players[player.id];
+      if (!record) return;
+
+      const startRatio = (player.seasonStats && player.seasonStats.starts ? player.seasonStats.starts : 0) / completedWeeks;
+      const role = FMG.SQUAD_ROLES && FMG.SQUAD_ROLES[player.squadRole];
+      const expectedStarts = role ? role.expectedStarts : 0.5;
+
+      if (startRatio < expectedStarts - 0.3) {
+        player.ego = clamp(player.ego - 1, 0, 100);
+      }
+      if ((record.emotions && record.emotions.confidence > 75) && player.seasonStats && player.seasonStats.goals >= 2) {
+        player.ego = clamp(player.ego + 1, 0, 100);
+      }
+
+      if (player.ego > 75) {
+        const weeksBenched = Math.round((1 - startRatio) * completedWeeks);
+        if (weeksBenched >= 3) {
+          addDressingRoomEvent(state, {
+            type: "ego-clash",
+            title: player.name + " exige protagonismo",
+            description: "Ego " + player.ego + "/100. Lleva " + weeksBenched + " semanas sin ser titular y hace sentir su malestar.",
+            playerId: player.id,
+            icon: "⚡",
+            choices: [
+              { label: "Conversar en privado", effect: { egoPlayer: -5, managerTrust: 3 } },
+              { label: "Ignorar", effect: { egoPlayer: 2, toxicity: 5 } }
+            ]
+          });
+        }
+        const otherHighEgo = players.filter(function (p) { return p.id !== player.id && p.ego > 75; });
+        if (otherHighEgo.length > 0 && (state.currentWeek || 1) % 3 === 0) {
+          const seed = hashText("ego-clash-" + (state.seasonNumber || 1) + "-" + (state.currentWeek || 1) + "-" + player.id);
+          const rival = otherHighEgo[seed % otherHighEgo.length];
+          if (rival) {
+            addDressingRoomEvent(state, {
+              type: "ego-clash",
+              title: player.name + " y " + rival.name + ": dos egos que chocan",
+              description: "Tension creciente entre dos figuras del plantel. Cohesion puede verse afectada.",
+              playerId: player.id,
+              icon: "💥",
+              choices: [
+                { label: "Separar sus funciones", effect: { cohesion: -3, conflict: -5 } },
+                { label: "Dejar que se resuelva solo", effect: { conflict: 3, toxicity: 4 } }
+              ]
+            });
+          }
+        }
+      }
+
+      if (player.ego < 30 && record.emotions && record.emotions.confidence > 65) {
+        const teammates = players.filter(function (p) { return p.id !== player.id; }).slice(0, 3);
+        teammates.forEach(function (t) {
+          const tr = state.psychology.players[t.id];
+          if (tr && tr.emotions) tr.emotions.motivation = clamp(tr.emotions.motivation + 1, 0, 100);
+        });
+      }
+    });
+  }
+
+  // ═══════════════════════════════
+  // FACTIONS SYSTEM
+  // ═══════════════════════════════
+
+  function ensureFactions(state) {
+    if (!state.psychology) state.psychology = {};
+    state.psychology.factions = state.psychology.factions || [];
+    return state.psychology.factions;
+  }
+
+  function detectFactionFormation(state) {
+    const players = getSquad(state);
+    const factions = ensureFactions(state);
+    const MAX_FACTIONS = 4;
+
+    const byNationality = {};
+    players.forEach(function (p) {
+      const nat = p.nationality || p.country || "neutral";
+      if (!byNationality[nat]) byNationality[nat] = [];
+      byNationality[nat].push(p.id);
+    });
+
+    const youngGroup = players.filter(function (p) { return p.age < 22; }).map(function (p) { return p.id; });
+    const veteranGroup = players.filter(function (p) { return p.age > 30; }).map(function (p) { return p.id; });
+
+    const candidates = [];
+    Object.keys(byNationality).forEach(function (nat) {
+      if (byNationality[nat].length >= 3) {
+        candidates.push({ type: "nationality", name: "Grupo " + nat, memberIds: byNationality[nat].slice(0, 8) });
+      }
+    });
+    if (youngGroup.length >= 3) candidates.push({ type: "young", name: "La cantera", memberIds: youngGroup.slice(0, 8) });
+    if (veteranGroup.length >= 3) candidates.push({ type: "veteran", name: "Los mayores", memberIds: veteranGroup.slice(0, 8) });
+
+    candidates.slice(0, MAX_FACTIONS).forEach(function (candidate) {
+      const exists = factions.find(function (f) { return f.type === candidate.type && f.name === candidate.name; });
+      if (!exists && factions.length < MAX_FACTIONS) {
+        factions.push({
+          id: deterministicId("faction", [state.seasonNumber || 1, candidate.type, candidate.name]),
+          type: candidate.type,
+          name: candidate.name,
+          memberIds: candidate.memberIds,
+          strength: 30 + hashText(candidate.name + "-" + (state.seasonNumber || 1)) % 40,
+          mood: 55
+        });
+      }
+    });
+
+    const activeIds = new Set(players.map(function (p) { return p.id; }));
+    for (let i = factions.length - 1; i >= 0; i -= 1) {
+      factions[i].memberIds = factions[i].memberIds.filter(function (id) { return activeIds.has(id); });
+      if (factions[i].memberIds.length < 3) factions.splice(i, 1);
+    }
+
+    return factions;
+  }
+
+  function updateFactions(state) {
+    const factions = ensureFactions(state);
+    const psych = state.psychology;
+    if (!psych || !psych.chemistry) return factions;
+    detectFactionFormation(state);
+
+    factions.forEach(function (faction) {
+      const members = (state.players || []).filter(function (p) { return faction.memberIds.includes(p.id); });
+      if (!members.length) return;
+      const avgMorale = members.reduce(function (s, p) { return s + (p.morale || 55); }, 0) / members.length;
+      faction.mood = clamp(Math.round(faction.mood * 0.8 + avgMorale * 0.2), 0, 100);
+      faction.strength = clamp(faction.strength + (faction.mood > 60 ? 1 : -1), 0, 100);
+
+      if (faction.strength > 65 && faction.mood > 60) {
+        psych.chemistry.cohesion = clamp(psych.chemistry.cohesion + 5, 0, 100);
+      } else if (faction.strength > 65 && faction.mood <= 60) {
+        psych.chemistry.cohesion = clamp(psych.chemistry.cohesion - 8, 0, 100);
+        if (psych.chemistry.conflict < 80) {
+          addDressingRoomEvent(state, {
+            type: "faction-conflict",
+            title: "Tension interna en \"" + faction.name + "\"",
+            description: "El grupo \"" + faction.name + "\" (" + faction.memberIds.length + " jugadores) muestra descontento. Fortaleza: " + faction.strength + "/100.",
+            icon: "🔥",
+            choices: [
+              { label: "Reunion grupal", effect: { cohesion: 4, factionMood: 8 } },
+              { label: "Ignorar", effect: { cohesion: -3, conflict: 5 } }
+            ]
+          });
+        }
+      }
+
+      const conflictFactions = factions.filter(function (f) { return f.id !== faction.id && f.strength > 65 && f.mood < 45; });
+      if (faction.strength > 65 && faction.mood < 45 && conflictFactions.length > 0) {
+        psych.chemistry.cohesion = clamp(psych.chemistry.cohesion - 15, 0, 100);
+        psych.chemistry.conflict = clamp(psych.chemistry.conflict + 10, 0, 100);
+      }
+    });
+    return factions;
+  }
+
+  // ═══════════════════════════════
+  // MENTOR / PROTEGE SYSTEM
+  // ═══════════════════════════════
+
+  const POSITION_GROUPS = { POR: "POR", DEF: "DEF", MED: "MED", EXT: "MED", DEL: "DEL" };
+
+  function detectMentors(state) {
+    const players = getSquad(state);
+    const psych = state.psychology;
+    if (!psych) return;
+    const relationships = psych.relationships || {};
+
+    players.forEach(function (veteran) {
+      if (veteran.age < 30 || (veteran.overall || 0) < 70) return;
+      const record = psych.players && psych.players[veteran.id];
+      if (!record || record.personality.professionalism < 65) return;
+      const vetGroup = POSITION_GROUPS[veteran.position] || veteran.position;
+
+      players.forEach(function (youngster) {
+        if (youngster.id === veteran.id || youngster.age >= 21) return;
+        const youngGroup = POSITION_GROUPS[youngster.position] || youngster.position;
+        if (vetGroup !== youngGroup) return;
+
+        const pairId = [veteran.id, youngster.id].sort().join("::");
+        const rel = relationships[pairId];
+        if (rel && !rel.mentorType) {
+          rel.mentorType = "mentor";
+          rel.mentorId = veteran.id;
+          rel.protegeId = youngster.id;
+          rel.mentorBondStrength = 40;
+          rel.startSeason = state.seasonNumber || 1;
+          addDressingRoomEvent(state, {
+            type: "mentor-bond",
+            title: veteran.name + " guia a " + youngster.name,
+            description: "El veterano " + veteran.name + " (" + veteran.age + " anyos, OVR " + veteran.overall + ") toma bajo su ala al joven " + youngster.name + " (" + youngster.age + " anyos).",
+            playerId: veteran.id,
+            icon: "🤝",
+            choices: []
+          });
+        }
+      });
+    });
+  }
+
+  function updateMentorEffects(state) {
+    const psych = state.psychology;
+    if (!psych) return;
+    const relationships = psych.relationships || {};
+
+    Object.keys(relationships).forEach(function (key) {
+      const rel = relationships[key];
+      if (!rel.mentorType) return;
+      const veteran = getPlayer(state, rel.mentorId);
+      const youngster = getPlayer(state, rel.protegeId);
+      if (!veteran || !youngster) { rel.mentorType = null; return; }
+
+      if (veteran.teamId !== state.userTeamId) {
+        youngster.confidence = clamp((youngster.confidence || 55) - 8, 0, 100);
+        rel.mentorType = null;
+        return;
+      }
+
+      rel.mentorBondStrength = clamp((rel.mentorBondStrength || 40) + 1, 0, 100);
+      const youngRecord = psych.players && psych.players[youngster.id];
+      if (youngRecord && youngRecord.emotions) {
+        youngRecord.emotions.confidence = clamp(youngRecord.emotions.confidence + 0.5, 0, 100);
+        youngRecord.emotions.motivation = clamp(youngRecord.emotions.motivation + 0.5, 0, 100);
+      }
+      if (!Number.isFinite(veteran.legacyPoints)) veteran.legacyPoints = 0;
+      veteran.legacyPoints += 3 / 36;
+    });
+  }
+
+  // ═══════════════════════════════
+  // TOXICITY SYSTEM
+  // ═══════════════════════════════
+
+  function ensureToxicity(player) {
+    if (!Number.isFinite(player.toxicity)) player.toxicity = 0;
+    return player.toxicity;
+  }
+
+  function updateToxicity(state, player) {
+    ensureToxicity(player);
+    ensureEgo(player);
+    const record = state.psychology && state.psychology.players && state.psychology.players[player.id];
+    if (!record) return;
+
+    const unhappy = (player.happiness || 55) < 45;
+    const highEgo = player.ego > 65;
+    const lowTrust = record.managerTrust < 40;
+
+    if (unhappy && highEgo && lowTrust) {
+      player.toxicity = clamp(player.toxicity + 3, 0, 100);
+    } else if (!unhappy || record.managerTrust > 60) {
+      player.toxicity = clamp(player.toxicity - 2, 0, 100);
+    }
+
+    if (player.toxicity > 60 && (state.currentWeek || 1) % 2 === 0) {
+      addDressingRoomEvent(state, {
+        type: "toxic-spread",
+        title: player.name + ": ambiente enrarecido",
+        description: "Toxicidad " + player.toxicity + "/100. El descontento de " + player.name + " afecta el clima del vestuario.",
+        playerId: player.id,
+        icon: "☠️",
+        choices: [
+          { label: "Reunion privada", effect: { toxicity: -10, managerTrust: 5 } },
+          { label: "Darle titularidad", effect: { toxicity: -15, ego: 5 } }
+        ]
+      });
+    }
+
+    if (player.toxicity > 80) {
+      const others = getSquad(state).filter(function (p) { return p.id !== player.id; }).slice(0, 2);
+      others.forEach(function (other) {
+        other.morale = clamp((other.morale || 55) - 5, 0, 100);
+      });
+    }
+
+    if (player.toxicity > 90 && !player.transferRequest) {
+      player.transferRequest = true;
+      addDressingRoomEvent(state, {
+        type: "ego-clash",
+        title: player.name + " pide salir del club",
+        description: "Toxicidad maxima (" + player.toxicity + "/100). " + player.name + " ha solicitado formalmente su transferencia.",
+        playerId: player.id,
+        icon: "🚪",
+        choices: [
+          { label: "Vender en el proximo mercado", effect: { morale: 3 } },
+          { label: "Intentar reconciliacion", effect: { toxicity: -20, managerTrust: -10 } }
+        ]
+      });
+    }
+  }
+
+  // ═══════════════════════════════
+  // CAPTAIN INFLUENCE
+  // ═══════════════════════════════
+
+  function updateCaptainInfluence(state) {
+    const psych = state.psychology;
+    if (!psych) return;
+    const captainId = psych.captainId;
+    if (!captainId) {
+      if (!psych.hierarchy || psych.hierarchy.length === 0) {
+        addDressingRoomEvent(state, {
+          type: "leadership-void",
+          title: "El vestuario busca un lider",
+          description: "No hay figura natural de liderazgo en el plantel. La cohesion puede verse afectada.",
+          icon: "👥",
+          choices: [
+            { label: "Nombrar capitan", effect: { cohesion: 5, leadership: 8 } },
+            { label: "Dejar que emerja", effect: { cohesion: -2 } }
+          ]
+        });
+      }
+      return;
+    }
+
+    const captain = getPlayer(state, captainId);
+    if (!captain) return;
+    ensureEgo(captain);
+    const record = psych.players && psych.players[captainId];
+    if (!record) return;
+    const conf = record.emotions ? record.emotions.confidence : 50;
+    const players = getSquad(state);
+    const captainSeasons = psych.captainSeasonsCount || 0;
+
+    if (conf > 70) {
+      players.forEach(function (p) {
+        const r = psych.players && psych.players[p.id];
+        if (r && r.emotions) r.emotions.motivation = clamp(r.emotions.motivation + 3, 0, 100);
+      });
+    } else if (conf < 40) {
+      players.forEach(function (p) {
+        p.morale = clamp((p.morale || 55) - 2, 0, 100);
+      });
+    }
+
+    if (captain.ego > 75 && (state.currentWeek || 1) % 4 === 0) {
+      addDressingRoomEvent(state, {
+        type: "captain-speech",
+        title: captain.name + ": el capitan marca terreno",
+        description: "El capitan (ego " + captain.ego + "/100) muestra fricciones con el cuerpo tecnico. Confianza manager: " + record.managerTrust + "/100.",
+        playerId: captainId,
+        icon: "👑",
+        choices: [
+          { label: "Ceder espacio", effect: { captainEgo: 5, managerTrust: -5 } },
+          { label: "Recordar jerarquia", effect: { captainEgo: -5, managerTrust: -8 } }
+        ]
+      });
+    }
+
+    if (psych.captainAppointedWeek) {
+      const weeksSince = (state.currentWeek || 1) - psych.captainAppointedWeek;
+      if (weeksSince >= 0 && weeksSince <= 2) {
+        players.forEach(function (p) { p.morale = clamp((p.morale || 55) - 2, 0, 100); });
+      }
+    }
+
+    if (captainSeasons >= 3) {
+      psych.chemistry.cohesion = clamp(psych.chemistry.cohesion + 5, 0, 100);
+    }
+  }
+
+  // ═══════════════════════════════
+  // WEEKLY UPDATE
+  // ═══════════════════════════════
+
+  function runExtendedPsychologyWeek(state) {
+    if (!state.psychology && FMG.ensureSquadPsychologyState) FMG.ensureSquadPsychologyState(state);
+    const players = getSquad(state);
+    weeklyEgoUpdate(state);
+    players.forEach(function (p) { updateToxicity(state, p); });
+    updateFactions(state);
+    detectMentors(state);
+    updateMentorEffects(state);
+    updateCaptainInfluence(state);
+  }
+
+  // ═══════════════════════════════
+  // HOOKS
+  // ═══════════════════════════════
+
+  const _prevRunWeek = FMG.runManagerEcosystemWeek;
+  FMG.runManagerEcosystemWeek = function (state, options) {
+    const result = _prevRunWeek ? _prevRunWeek(state, options) : {};
+    runExtendedPsychologyWeek(state);
+    return result;
+  };
+  if (FMG.ManagerEcosystem) FMG.ManagerEcosystem.runWeek = FMG.runManagerEcosystemWeek;
+
+  const _prevSetCaptain = FMG.setCaptain;
+  FMG.setCaptain = function (state, playerId) {
+    const result = _prevSetCaptain ? _prevSetCaptain(state, playerId) : { ok: false, message: "No disponible." };
+    if (result.ok) {
+      if (!state.psychology) state.psychology = {};
+      state.psychology.captainId = playerId;
+      state.psychology.captainAppointedWeek = state.currentWeek || 1;
+      state.psychology.captainAppointedSeason = state.seasonNumber || 1;
+      state.psychology.captainSeasonsCount = state.psychology.captainSeasonsCount || 0;
+    }
+    return result;
+  };
+  if (FMG.ManagerEcosystem) FMG.ManagerEcosystem.runWeek = FMG.runManagerEcosystemWeek;
+
+  // ═══════════════════════════════
+  // PUBLIC API
+  // ═══════════════════════════════
+
+  FMG.SquadPsychologyExtended = {
+    ensureEgo: ensureEgo,
+    ensureToxicity: ensureToxicity,
+    updateToxicity: updateToxicity,
+    ensureFactions: ensureFactions,
+    updateFactions: updateFactions,
+    detectMentors: detectMentors,
+    updateMentorEffects: updateMentorEffects,
+    addDressingRoomEvent: addDressingRoomEvent,
+    ensureDressingRoomEvents: ensureDressingRoomEvents,
+    runExtendedPsychologyWeek: runExtendedPsychologyWeek,
+    updateCaptainInfluence: updateCaptainInfluence
+  };
+})();
