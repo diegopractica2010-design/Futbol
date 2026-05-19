@@ -3,37 +3,46 @@
     "id": "colo-colo",
     "name": "Colo-Colo",
     "city": "Santiago",
-    "stadium": "Monumental",
+    "stadium": "Monumental David Arellano",
     "style": "Presion",
     "budget": 145000000,
     "fanBase": 920000,
     "sponsor": 82000000,
     "infrastructureCost": 16000000,
-    "form": 13
+    "form": 13,
+    "stadiumCapacity": 47347,
+    "colorPrimary": "#111111",
+    "colorSecondary": "#ffffff"
   },
   {
     "id": "u-de-chile",
     "name": "Universidad de Chile",
     "city": "Santiago",
-    "stadium": "Nacional",
+    "stadium": "Estadio Nacional Julio Martinez Pradanos",
     "style": "Posesion",
     "budget": 136000000,
     "fanBase": 870000,
     "sponsor": 76000000,
     "infrastructureCost": 15200000,
-    "form": 12
+    "form": 12,
+    "stadiumCapacity": 48665,
+    "colorPrimary": "#0057b8",
+    "colorSecondary": "#d71920"
   },
   {
     "id": "u-catolica",
     "name": "Universidad Catolica",
     "city": "Santiago",
-    "stadium": "Santa Laura",
+    "stadium": "Claro Arena",
     "style": "Posesion",
     "budget": 132000000,
     "fanBase": 780000,
     "sponsor": 74000000,
     "infrastructureCost": 14800000,
-    "form": 12
+    "form": 12,
+    "stadiumCapacity": 20000,
+    "colorPrimary": "#005eb8",
+    "colorSecondary": "#ffffff"
   },
   {
     "id": "cobreloa",
@@ -45,19 +54,25 @@
     "fanBase": 410000,
     "sponsor": 38000000,
     "infrastructureCost": 9800000,
-    "form": 10
+    "form": 10,
+    "stadiumCapacity": 12000,
+    "colorPrimary": "#f58220",
+    "colorSecondary": "#ffffff"
   },
   {
     "id": "huachipato",
     "name": "Huachipato",
     "city": "Talcahuano",
-    "stadium": "CAP",
+    "stadium": "CAP Acero",
     "style": "Presion",
     "budget": 98000000,
     "fanBase": 380000,
     "sponsor": 42000000,
     "infrastructureCost": 9400000,
-    "form": 11
+    "form": 11,
+    "stadiumCapacity": 10500,
+    "colorPrimary": "#003f88",
+    "colorSecondary": "#000000"
   },
   {
     "id": "palestino",
@@ -69,31 +84,40 @@
     "fanBase": 300000,
     "sponsor": 35000000,
     "infrastructureCost": 8600000,
-    "form": 10
+    "form": 10,
+    "stadiumCapacity": 12000,
+    "colorPrimary": "#0b8f43",
+    "colorSecondary": "#d71920"
   },
   {
     "id": "wanderers",
     "name": "Santiago Wanderers",
     "city": "Valparaiso",
-    "stadium": "Elias Figueroa",
+    "stadium": "Elias Figueroa Brander",
     "style": "Vertical",
     "budget": 84000000,
     "fanBase": 360000,
     "sponsor": 33000000,
     "infrastructureCost": 8300000,
-    "form": 9
+    "form": 9,
+    "stadiumCapacity": 21113,
+    "colorPrimary": "#00843d",
+    "colorSecondary": "#ffffff"
   },
   {
     "id": "nublense",
     "name": "Nublense",
     "city": "Chillan",
-    "stadium": "Nelson Oyarzun",
+    "stadium": "Nelson Oyarzun Arenas",
     "style": "Presion",
     "budget": 76000000,
     "fanBase": 240000,
     "sponsor": 28000000,
     "infrastructureCost": 7600000,
-    "form": 9
+    "form": 9,
+    "stadiumCapacity": 12000,
+    "colorPrimary": "#d71920",
+    "colorSecondary": "#ffffff"
   },
   {
     "id": "la-serena",
@@ -105,7 +129,10 @@
     "fanBase": 220000,
     "sponsor": 26000000,
     "infrastructureCost": 7300000,
-    "form": 8
+    "form": 8,
+    "stadiumCapacity": 18243,
+    "colorPrimary": "#d71920",
+    "colorSecondary": "#ffffff"
   },
   {
     "id": "cobresal",
@@ -117,7 +144,10 @@
     "fanBase": 210000,
     "sponsor": 30000000,
     "infrastructureCost": 8000000,
-    "form": 10
+    "form": 10,
+    "stadiumCapacity": 11240,
+    "colorPrimary": "#f58220",
+    "colorSecondary": "#ffffff"
   },
   {
     "id": "ohiggins",
@@ -129,7 +159,10 @@
     "fanBase": 310000,
     "sponsor": 34000000,
     "infrastructureCost": 8500000,
-    "form": 10
+    "form": 10,
+    "stadiumCapacity": 14450,
+    "colorPrimary": "#7fc7ff",
+    "colorSecondary": "#ffffff"
   },
   {
     "id": "everton",
@@ -141,7 +174,10 @@
     "fanBase": 330000,
     "sponsor": 36000000,
     "infrastructureCost": 8900000,
-    "form": 11
+    "form": 11,
+    "stadiumCapacity": 22340,
+    "colorPrimary": "#003f88",
+    "colorSecondary": "#f5c400"
   },
   {
     "id": "deportes-antofagasta",
@@ -153,6 +189,54 @@
     "fanBase": 230000,
     "sponsor": 27000000,
     "infrastructureCost": 7600000,
-    "form": 8
+    "form": 8,
+    "stadiumCapacity": 21178,
+    "colorPrimary": "#00a3e0",
+    "colorSecondary": "#ffffff"
+  },
+  {
+    "id": "union-espanola",
+    "name": "Union Espanola",
+    "city": "Santiago",
+    "stadium": "Santa Laura Universidad SEK",
+    "style": "Posesion",
+    "budget": 87000000,
+    "fanBase": 320000,
+    "sponsor": 34000000,
+    "infrastructureCost": 8500000,
+    "form": 10,
+    "colorPrimary": "#d71920",
+    "colorSecondary": "#f5c400",
+    "stadiumCapacity": 19887
+  },
+  {
+    "id": "audax-italiano",
+    "name": "Audax Italiano",
+    "city": "La Florida",
+    "stadium": "Bicentenario de La Florida",
+    "style": "Presion",
+    "budget": 79000000,
+    "fanBase": 250000,
+    "sponsor": 29000000,
+    "infrastructureCost": 7800000,
+    "form": 9,
+    "colorPrimary": "#00843d",
+    "colorSecondary": "#ffffff",
+    "stadiumCapacity": 12000
+  },
+  {
+    "id": "coquimbo-unido",
+    "name": "Coquimbo Unido",
+    "city": "Coquimbo",
+    "stadium": "Francisco Sanchez Rumoroso",
+    "style": "Vertical",
+    "budget": 81000000,
+    "fanBase": 280000,
+    "sponsor": 31000000,
+    "infrastructureCost": 8000000,
+    "form": 10,
+    "colorPrimary": "#f5c400",
+    "colorSecondary": "#000000",
+    "stadiumCapacity": 18750
   }
 ]

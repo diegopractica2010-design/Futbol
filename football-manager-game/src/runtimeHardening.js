@@ -355,7 +355,16 @@
     setAuthoritativeState(coreState, reason) {
       if (!coreState) return null;
       this.authoritativeState = coreState;
-      this.authoritativeChecksum = typeof coreState._calculateChecksum === "function" ? coreState._calculateChecksum() : hashString(stableStringify(coreState));
+      try {
+        this.authoritativeChecksum = typeof coreState._calculateChecksum === "function" ? coreState._calculateChecksum() : hashString(stableStringify(coreState));
+      } catch (error) {
+        this.authoritativeChecksum = hashString([
+          "core-state",
+          coreState.stateId || "",
+          coreState.generation || 0,
+          reason || ""
+        ].join(":"));
+      }
       this.authoritativeGeneration = coreState.generation || this.authoritativeGeneration;
       this.stateWrites.push({
         source: this.authority,
@@ -496,6 +505,7 @@
 
     wrapLegacyState(state) {
       if (!state || typeof state !== "object" || !this.rawToProxy) return state;
+      if (Object.isFrozen(state)) return state;
       if (this.proxyToRaw.has(state)) return state;
       if (this.rawToProxy.has(state)) return this.rawToProxy.get(state);
       const self = this;

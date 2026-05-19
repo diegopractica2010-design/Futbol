@@ -4,13 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta property="og:title" content="Football Manager Chile" />
-    <meta property="og:description" content="Gestiona tu club chileno. Tacticas, fichajes y partidos en vivo. Gratis en el navegador." />
+    <meta property="og:description" content="Gestiona tu club chileno. Tácticas, fichajes y partidos en vivo. Gratis en el navegador." />
     <meta property="og:type" content="game" />
-    <meta property="og:image" content="./assets/og-preview.png" />
+    <meta property="og:image" content="./assets/og-preview.svg" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="description" content="Football Manager Chile - el simulador de futbol chileno gratuito. Elige tu club, ficha jugadores y dirige tu equipo a la gloria." />
+    <meta name="twitter:image" content="./assets/og-preview.svg" />
+    <meta name="theme-color" content="#0f7a5a" />
+    <meta name="description" content="Football Manager Chile - el simulador de fútbol chileno gratuito. Elige tu club, ficha jugadores y dirige tu equipo a la gloria." />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self';" />
     <title>Football Manager Game Chile</title>
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="./manifest.json" />
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
@@ -18,7 +22,7 @@
     <div id="loading-screen" style="position:fixed;inset:0;display:grid;place-items:center;background:#eef2ea;z-index:999;">
       <p style="color:#0f7a5a;font-weight:800;font-size:1.5rem;">Cargando Football Manager Chile...</p>
     </div>
-    <div id="app"></div>
+    <div id="app" role="main" tabindex="-1"></div>
     <canvas id="match-canvas" style="display:none;" role="img" aria-label="Visualizador de partido">
       Visualizador de partido no disponible en este navegador.
     </canvas>

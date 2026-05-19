@@ -67,17 +67,20 @@
           <div class="button-row">${optionButtons("season.marketWindows", settings.seasonOptions.marketWindows, [["standard", "Mercado normal"], ["generous", "Mercado abierto"]])}</div>
           <div class="button-row">${optionButtons("season.financialPressure", settings.seasonOptions.financialPressure, [["relaxed", "Finanzas suaves"], ["normal", "Finanzas normal"], ["strict", "Finanzas estrictas"]])}</div>
         </section>
-        <section class="card">
-          <div class="section-title"><h2>Exportar / importar</h2></div>
-          <label class="muted" for="save-export">Exportacion de partida</label>
-          <div class="button-row"><button class="btn-primary export-big" data-action="export-save">Exportar como archivo</button></div>
-          <textarea id="save-export" readonly>${exportText}</textarea>
-          <label class="muted" for="save-import">Importar partida</label>
-          <textarea id="save-import" data-role="import-payload" aria-label="Pega aqui una partida exportada"></textarea>
-          <div class="button-row">
-            <button class="btn-primary" data-action="import-save" data-slot-id="${FMG.escapeHtml(state.saveMeta.activeSlotId)}" data-confirm="Importar y sobrescribir el slot activo?">Importar en slot activo</button>
-          </div>
-        </section>
+        <details class="ux-disclosure">
+          <summary>Exportar / importar partida</summary>
+          <section class="card">
+            <div class="section-title"><h2>Exportar / importar</h2></div>
+            <label class="muted" for="save-export">Exportacion de partida</label>
+            <div class="button-row"><button class="btn-primary export-big" data-action="export-save">Exportar como archivo</button></div>
+            <textarea id="save-export" readonly>${exportText}</textarea>
+            <label class="muted" for="save-import">Importar partida</label>
+            <textarea id="save-import" data-role="import-payload" aria-label="Pega aqui una partida exportada"></textarea>
+            <div class="button-row">
+              <button class="btn-primary" data-action="import-save" data-slot-id="${FMG.escapeHtml(state.saveMeta.activeSlotId)}" data-confirm="Importar y sobrescribir el slot activo?">Importar en slot activo</button>
+            </div>
+          </section>
+        </details>
       </section>
     `;
   };

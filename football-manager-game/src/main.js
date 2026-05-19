@@ -12,8 +12,24 @@
   ]);
   const SANDBOX_OPT_IN_KEY = "fmg-sandbox-opt-in";
 
+  function authorizedGameStateWrite(writeBlock) {
+    FMG.openWriteToken?.();
+    try {
+      return writeBlock();
+    } finally {
+      FMG.closeWriteToken?.();
+    }
+  }
+
   function hideLoadingScreen() {
     document.getElementById("loading-screen")?.remove();
+  }
+
+  function focusRouteHeading() {
+    const heading = app.querySelector("h1, h2");
+    const focusTarget = heading || app;
+    focusTarget.setAttribute("tabindex", "-1");
+    focusTarget.focus({ preventScroll: true });
   }
 
   function isKnownRoute(route) {
@@ -110,7 +126,7 @@
       [FMG.ROUTES.phase15, "Jugar v1", "Partido jugable Fase 15"],
       [FMG.ROUTES.phase16, "Jugar v2", "Framework modular Fase 16"],
       [FMG.ROUTES.phase17, "Jugar v3", "Animaciones base Fase 17"],
-      [FMG.ROUTES.phase18, "Jugar v4", "IA de partido Fase 18"],
+      [FMG.ROUTES.phase18, "Jugar v4", "Comportamiento rival Fase 18"],
       [FMG.ROUTES.phase19, "Jugar v5", "Porteros Fase 19"],
       [FMG.ROUTES.phase20, "Jugar v6", "Camara Broadcast Fase 20"],
       [FMG.ROUTES.phase21, "Jugar v7", "Estadio Premium Fase 21"],
@@ -125,7 +141,7 @@
       <nav class="nav" role="navigation" aria-label="Menu principal">
         <button class="btn-ghost nav-save" data-action="change-route" data-route="${FMG.ROUTES.settings}" aria-label="Gestionar guardados">Guardar</button>
         ${visibleItems.map(([route, label, tooltip]) => `
-          <button class="${FMG.gameState.route === route ? "active" : "btn-ghost"} ${SANDBOX_PHASE_ROUTES.has(route) ? "sandbox-nav-item" : ""}" data-action="change-route" data-route="${route}" title="${FMG.escapeHtml(SANDBOX_PHASE_ROUTES.has(route) ? `Sandbox / No afecta carrera - ${tooltip}` : tooltip)}" aria-label="${FMG.escapeHtml(SANDBOX_PHASE_ROUTES.has(route) ? `Sandbox, no afecta carrera, ${tooltip}` : tooltip)}">${label}${SANDBOX_PHASE_ROUTES.has(route) ? `<span class="sandbox-mini-badge">Sandbox</span>` : ""}</button>`).join("")}
+          <button class="${FMG.gameState.route === route ? "active" : "btn-ghost"} ${SANDBOX_PHASE_ROUTES.has(route) ? "sandbox-nav-item" : ""}" data-action="change-route" data-route="${route}" aria-current="${FMG.gameState.route === route ? "page" : "false"}" title="${FMG.escapeHtml(SANDBOX_PHASE_ROUTES.has(route) ? `Sandbox / No afecta carrera - ${tooltip}` : tooltip)}" aria-label="${FMG.escapeHtml(SANDBOX_PHASE_ROUTES.has(route) ? `Sandbox, no afecta carrera, ${tooltip}` : tooltip)}">${label}${SANDBOX_PHASE_ROUTES.has(route) ? `<span class="sandbox-mini-badge">Sandbox</span>` : ""}</button>`).join("")}
       </nav>
     `;
   }
@@ -313,19 +329,25 @@
     "select-club": ({ target }) => FMG.selectClub(target.dataset.teamId),
     "finish-onboarding": () => {
       localStorage.setItem("fmg-onboarding-done", "1");
-      FMG.gameState.route = FMG.ROUTES.dashboard;
-      FMG.gameState.selectionMode = true;
+      authorizedGameStateWrite(() => {
+        FMG.gameState.route = FMG.ROUTES.dashboard;
+        FMG.gameState.selectionMode = true;
+      });
     },
     "import-save-start": () => {
       localStorage.setItem("fmg-onboarding-done", "1");
-      FMG.gameState.route = FMG.ROUTES.settings;
-      FMG.gameState.selectionMode = false;
+      authorizedGameStateWrite(() => {
+        FMG.gameState.route = FMG.ROUTES.settings;
+        FMG.gameState.selectionMode = false;
+      });
     },
     "change-route": ({ target }) => {
       if (!confirmSandboxOptIn(target.dataset.route)) return false;
       unmountCurrentPhaseRoute();
-      FMG.gameState.route = target.dataset.route;
-      if (target.dataset.route === FMG.ROUTES.settings || target.dataset.route === FMG.ROUTES.credits) FMG.gameState.selectionMode = false;
+      authorizedGameStateWrite(() => {
+        FMG.gameState.route = target.dataset.route;
+        if (target.dataset.route === FMG.ROUTES.settings || target.dataset.route === FMG.ROUTES.credits) FMG.gameState.selectionMode = false;
+      });
       syncBrowserRoute(target.dataset.route);
     },
     "advance-week": () => {
@@ -384,7 +406,9 @@
     "live-player-order": ({ target }) => FMG.pushNotification(FMG.setLivePlayerOrder(target.dataset.playerId, target.dataset.order).message),
     "live-substitution": ({ target }) => FMG.pushNotification(FMG.makeLiveSubstitution(target.dataset.outPlayerId, target.dataset.inPlayerId).message),
     "select-sub-out": ({ target }) => {
-      FMG.gameState.ui = FMG.gameState.ui || {};
+      authorizedGameStateWrite(() => {
+        FMG.gameState.ui = FMG.gameState.ui || {};
+      });
       FMG.gameState.ui.selectedSubOutId = target.dataset.playerId;
     },
     "save-game": () => {
@@ -392,7 +416,7 @@
       if (!result.ok) FMG.pushNotification(result.message);
     },
     "load-game": () => {
-      const result = FMG.loadGame();
+      const result = authorizedGameStateWrite(() => FMG.loadGame());
       if (!result.ok) FMG.pushNotification(result.message);
     },
     "take-bank-loan": ({ target }) => {
@@ -426,10 +450,30 @@
     "select-rival-club": ({ target }) => FMG.pushNotification(FMG.selectRivalClub(FMG.gameState, target.dataset.teamId).message),
     "update-setting": ({ target }) => FMG.pushNotification(FMG.updateGameSetting(FMG.gameState, target.dataset.setting, target.dataset.value).message),
     "save-slot": ({ target }) => FMG.pushNotification(FMG.saveToSlot(FMG.gameState, target.dataset.slotId, { overwrite: true }).message),
-    "load-slot": ({ target }) => FMG.pushNotification(FMG.loadFromSlot(target.dataset.slotId).message),
+    "load-slot": async ({ target }) => {
+      const btn = target.closest("button") || target;
+      const originalText = btn.textContent;
+
+      btn.disabled = true;
+      btn.textContent = "Cargando...";
+
+      try {
+        FMG.openWriteToken?.();
+        const result = FMG.loadFromSlotAsync
+          ? await FMG.loadFromSlotAsync(target.dataset.slotId)
+          : FMG.loadFromSlot(target.dataset.slotId);
+        FMG.closeWriteToken?.();
+
+        FMG.pushNotification(result.message);
+      } finally {
+        FMG.closeWriteToken?.();
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    },
     "import-save": ({ target }) => {
       const payload = document.querySelector("[data-role='import-payload']")?.value || "";
-      FMG.pushNotification(FMG.importSave(payload, target.dataset.slotId).message);
+      FMG.pushNotification(authorizedGameStateWrite(() => FMG.importSave(payload, target.dataset.slotId)).message);
     },
     "export-save": () => {
       const blob = new Blob([FMG.exportSave(FMG.gameState)], { type: "application/json" });
@@ -443,7 +487,7 @@
       FMG.pushNotification("Partida exportada como archivo.", "info");
     },
     "safe-reset": () => {
-      FMG.initializeGame(FMG.gameState.teams, FMG.gameState.players);
+      authorizedGameStateWrite(() => FMG.initializeGame(FMG.gameState.teams, FMG.gameState.players));
       FMG.pushNotification("Partida reiniciada. Los slots guardados se conservan.");
     },
     "generate-world-news": () => {
@@ -452,7 +496,7 @@
     },
     "generate-market-rumors": () => {
       const rumors = FMG.generateMarketRumors(FMG.gameState);
-      FMG.pushNotification(rumors.length ? "La red de scouting filtro nuevos rumores." : "No hay rumores nuevos por ahora.");
+    FMG.pushNotification(rumors.length ? "La red de observacion filtro nuevos rumores." : "No hay rumores nuevos por ahora.");
     },
     "refresh-market": () => FMG.pushNotification(FMG.refreshTransferMarket(FMG.gameState).message),
     "create-transfer-offer": ({ target }) => {
@@ -480,7 +524,9 @@
     "set-captain": ({ target }) => FMG.pushNotification(FMG.setCaptain(FMG.gameState, target.dataset.playerId).message),
     "select-squad-player": ({ target }) => {
       FMG.pushNotification(FMG.selectSquadPlayer(FMG.gameState, target.dataset.playerId).message);
-      FMG.gameState.route = FMG.ROUTES.player;
+      authorizedGameStateWrite(() => {
+        FMG.gameState.route = FMG.ROUTES.player;
+      });
     },
     "set-squad-filter": ({ target }) => FMG.setSquadView(FMG.gameState, "filter", target.dataset.filter),
     "set-squad-sort": ({ target }) => FMG.setSquadView(FMG.gameState, "sort", target.dataset.sort),
@@ -504,13 +550,13 @@
     "dismiss-toast": ({ target }) => FMG.dismissNotification(target.dataset.id)
   };
 
-  function handleAction(action, target) {
+  async function handleAction(action, target) {
     if (!action) return;
     if (target.dataset.confirm && !window.confirm(target.dataset.confirm)) return;
     const activeAction = document.activeElement?.dataset?.action;
     const handler = ACTION_HANDLERS[action];
     if (handler) {
-      if (handler({ target, action }) === false) return;
+      if (await handler({ target, action }) === false) return;
     } else if (PHASE_ACTION_HANDLERS.some((resolveHandler) => {
       const phaseHandler = resolveHandler();
       return phaseHandler && phaseHandler(action);
@@ -519,6 +565,9 @@
     }
     if (["save-slot", "buy-player", "finish-live-match"].includes(action)) FMG.UIAudio?.confirm();
     render();
+    if (["change-route", "finish-onboarding", "import-save-start", "select-squad-player", "load-game", "load-slot"].includes(action)) {
+      requestAnimationFrame(() => focusRouteHeading());
+    }
     if (activeAction) {
       const el = document.querySelector(`[data-action="${activeAction}"]`);
       if (el) el.focus();
@@ -540,9 +589,12 @@
     const route = event.state?.route || routeFromLocation();
     if (!route || !FMG.gameState || FMG.gameState.route === route) return;
     unmountCurrentPhaseRoute();
-    FMG.gameState.route = route;
-    FMG.gameState.selectionMode = false;
+    authorizedGameStateWrite(() => {
+      FMG.gameState.route = route;
+      FMG.gameState.selectionMode = !FMG.gameState.userTeamId && route !== FMG.ROUTES.settings;
+    });
     render();
+    requestAnimationFrame(() => focusRouteHeading());
     requestAnimationFrame(() => syncLiveVisualizer());
   });
 
@@ -553,17 +605,28 @@
       if (FMG.Core?.initialize && !FMG.Core.isInitialized?.()) {
         FMG.Core.initialize({ diagnostics: { scaling: { profile: "low-end" } } });
       }
+      if (FMG.protectGameState && !FMG._gameStateProtected) {
+        FMG.openWriteToken();
+        FMG.gameState = FMG.protectGameState(FMG.gameState);
+        FMG.closeWriteToken();
+        FMG._gameStateProtected = true;
+      }
       if (isDebugMode) FMG.Core?.diagnostics?.enableOverlay(true);
       if (!localStorage.getItem("fmg-onboarding-done")) {
-        FMG.gameState.route = FMG.ROUTES.onboarding;
+        authorizedGameStateWrite(() => {
+          FMG.gameState.route = FMG.ROUTES.onboarding;
+        });
       }
       const browserRoute = routeFromLocation();
       if (browserRoute && localStorage.getItem("fmg-onboarding-done")) {
-        FMG.gameState.route = browserRoute;
-        FMG.gameState.selectionMode = false;
+        authorizedGameStateWrite(() => {
+          FMG.gameState.route = browserRoute;
+          FMG.gameState.selectionMode = !FMG.gameState.userTeamId && browserRoute !== FMG.ROUTES.settings;
+        });
       }
       syncBrowserRoute(FMG.gameState.route, { replace: true });
       render();
+      requestAnimationFrame(() => focusRouteHeading());
       startNotificationPruner();
       hideLoadingScreen();
     } catch (error) {

@@ -149,7 +149,7 @@
       .sort((a, b) => (b.record.emotions?.pressure || 0) - (a.record.emotions?.pressure || 0))[0];
     return `
       <section class="card psychology-dashboard">
-        <div class="section-title"><h2>Psicologia del plantel</h2><span class="chip">Cohesion ${psych.chemistry?.cohesion || 0}/100</span></div>
+        <div class="section-title"><h2>Camarín del plantel</h2><span class="chip">Cohesion ${psych.chemistry?.cohesion || 0}/100</span></div>
         <div class="ecosystem-kpis">
           <article><span>Confianza</span><strong>${psych.chemistry?.trust || 0}/100</strong></article>
           <article><span>Conflicto</span><strong>${psych.chemistry?.conflict || 0}/100</strong></article>
@@ -160,7 +160,7 @@
         </div>
         <div class="content-grid psychology-grid">
           <section>
-            <strong>Jerarquia emocional</strong>
+            <strong>Voces del vestuario</strong>
             <div class="log-list" style="margin-top:10px;">
               ${(psych.hierarchy || []).slice(0, 4).map((item) => `
                 <div class="log-item">
@@ -170,7 +170,7 @@
             </div>
           </section>
           <section>
-            <strong>Memoria humana</strong>
+            <strong>Clima interno</strong>
             <div class="log-list" style="margin-top:10px;">
               ${mostPressed ? `<div class="log-item"><strong>${FMG.escapeHtml(mostPressed.player.name)}</strong><p class="muted">Presion ${mostPressed.record.emotions.pressure}/100 | Frustracion ${mostPressed.record.emotions.frustration}/100 | Confianza ${mostPressed.record.emotions.confidence}/100</p></div>` : ""}
               ${latestMemory ? `<div class="log-item"><strong>${FMG.escapeHtml(latestMemory.title)}</strong><p class="muted">${FMG.escapeHtml(latestMemory.detail)} | Intensidad ${latestMemory.intensity}/100</p></div>` : `<div class="empty-state">Sin recuerdos emocionales recientes.</div>`}
@@ -205,8 +205,8 @@
     const selectedPlayer = state.players.find((player) => player.id === state.squadView.selectedPlayerId && player.teamId === state.userTeamId && !player.retired) || squad[0];
 
     return `
-      <section class="side-stack">
-      <section class="card">
+      <section class="screen-rhythm">
+      <section class="card football-priority">
         <div class="section-title"><h2>${FMG.clubBadge(state.userClub, "sm")} Plan deportivo</h2><span class="chip">${plan.formation}</span></div>
         <div class="stats-grid">
           <article class="stat-card"><div class="muted">Titulares disponibles</div><div class="stat-value">${starters.length}/11</div></article>
@@ -224,26 +224,34 @@
           <button class="btn-primary" data-action="train-squad" title="Aplicar entrenamiento semanal">Entrenar semana</button>
         </div>
       </section>
+      <details class="ux-disclosure">
+        <summary>Pizarra e instrucciones del cuerpo técnico</summary>
       <section class="card">
-        <div class="section-title"><h2>Pizarra tactica</h2><span class="chip">Fase 4</span></div>
+        <div class="section-title"><h2>Pizarra táctica</h2><span class="chip">Fase 4</span></div>
         <div class="tactic-grid">
           ${renderTacticButtons(plan, "mentality", "Mentalidad")}
-          ${renderTacticButtons(plan, "pressing", "Presion")}
+          ${renderTacticButtons(plan, "pressing", "Presión")}
           ${renderTacticButtons(plan, "tempo", "Ritmo")}
           ${renderTacticButtons(plan, "passing", "Pase")}
           ${renderTacticButtons(plan, "width", "Anchura")}
-          ${renderTacticButtons(plan, "defensiveLine", "Linea defensiva")}
+          ${renderTacticButtons(plan, "defensiveLine", "Línea defensiva")}
         </div>
       </section>
       <section class="card">
-        <div class="section-title"><h2>Roles por posicion</h2><span class="chip">Instrucciones</span></div>
+        <div class="section-title"><h2>Roles por posición</h2><span class="chip">Instrucciones</span></div>
         <div class="tactic-grid">
           ${["POR", "DEF", "MED", "EXT", "DEL"].map((position) => renderRoleButtons(plan, position)).join("")}
         </div>
       </section>
-      ${renderPsychologyDashboard(state)}
-      ${renderAcademyDashboard(state)}
-      <section class="card">
+      </details>
+      <details class="ux-disclosure">
+        <summary>Camarín, cantera y lectura humana</summary>
+        <section class="side-stack">
+          ${renderPsychologyDashboard(state)}
+          ${renderAcademyDashboard(state)}
+        </section>
+      </details>
+      <section class="card football-priority">
         <div class="section-title"><h2>Plantilla profesional</h2><span class="chip">${squad.length} jugadores</span></div>
         <div class="button-row">
           ${["all", "POR", "DEF", "MED", "EXT", "DEL"].map((filter) => `<button class="${state.squadView.filter === filter ? "active" : "btn-ghost"}" data-action="set-squad-filter" data-filter="${filter}">${filter === "all" ? "Todos" : filter}</button>`).join("")}
@@ -259,7 +267,7 @@
         </div>
         <div class="list">
           ${squad.map((player) => `
-            <article class="list-row squad-row">
+            <article class="list-row squad-row club-tinted-row subtle" style="--club-primary:${FMG.getClubIdentity(player.teamId).primary};--club-secondary:${FMG.getClubIdentity(player.teamId).secondary};--club-accent:${FMG.getClubIdentity(player.teamId).accent};">
               <div>
                 <strong>${FMG.escapeHtml(player.name)} ${plan.captainId === player.id ? "(C)" : ""}</strong>
                 <div class="meta">
@@ -285,7 +293,10 @@
             </article>`).join("")}
         </div>
       </section>
-      ${renderPlayerCard(state, plan, selectedPlayer)}
+      <details class="ux-disclosure">
+        <summary>Ficha completa del jugador seleccionado</summary>
+        ${renderPlayerCard(state, plan, selectedPlayer)}
+      </details>
       </section>
     `;
   };

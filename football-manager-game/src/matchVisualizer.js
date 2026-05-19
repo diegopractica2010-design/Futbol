@@ -300,6 +300,7 @@
 
     movePosition(position, targetPos, duration = this.defaultDuration, options = {}) {
       if (!position) return null;
+      const previous = this.animations.find((item) => item.position === position);
       const animation = {
         id: this.sequence += 1,
         position,
@@ -316,6 +317,9 @@
         duration: Math.max(1, Number(duration) || this.defaultDuration),
         elapsed: 0,
         easing: options.easing || "smooth",
+        inertia: Number.isFinite(Number(options.inertia)) ? Number(options.inertia) : 0.42,
+        blend: Number.isFinite(Number(options.blend)) ? Number(options.blend) : 0.64,
+        velocity: previous?.velocity ? { ...previous.velocity } : { x: 0, y: 0, z: 0 },
         onComplete: options.onComplete || null
       };
       this.animations = this.animations.filter((item) => item.position !== position);
@@ -331,9 +335,19 @@
         animation.elapsed = Math.min(animation.duration, animation.elapsed + delta);
         const progress = clamp(animation.elapsed / animation.duration, 0, 1);
         const eased = this._ease(progress, animation.easing);
-        animation.position.x = animation.start.x + (animation.target.x - animation.start.x) * eased;
-        animation.position.y = animation.start.y + (animation.target.y - animation.start.y) * eased;
-        animation.position.z = animation.start.z + (animation.target.z - animation.start.z) * eased;
+        const desired = {
+          x: animation.start.x + (animation.target.x - animation.start.x) * eased,
+          y: animation.start.y + (animation.target.y - animation.start.y) * eased,
+          z: animation.start.z + (animation.target.z - animation.start.z) * eased
+        };
+        const pull = Math.max(0.1, Math.min(1, animation.blend));
+        const carry = Math.max(0, Math.min(0.82, animation.inertia));
+        animation.velocity.x = animation.velocity.x * carry + (desired.x - animation.position.x) * pull;
+        animation.velocity.y = animation.velocity.y * carry + (desired.y - animation.position.y) * pull;
+        animation.velocity.z = animation.velocity.z * carry + (desired.z - animation.position.z) * pull;
+        animation.position.x += animation.velocity.x;
+        animation.position.y += animation.velocity.y;
+        animation.position.z += animation.velocity.z;
         if (progress >= 1) {
           animation.position.x = animation.target.x;
           animation.position.y = animation.target.y;
@@ -356,9 +370,10 @@
           start: { ...animation.start },
           target: { ...animation.target },
           duration: animation.duration,
-          elapsed: animation.elapsed,
-          easing: animation.easing
-        }))
+        elapsed: animation.elapsed,
+        easing: animation.easing,
+        velocity: { ...animation.velocity }
+      }))
       };
     }
 
@@ -545,17 +560,42 @@
       this.flowPaths = this.flowPaths.slice(-8);
     }
 
+    _flowVariance(playerId, targetPos) {
+      const player = this.players[playerId];
+      if (!player || !targetPos) return targetPos;
+      const minute = Number(this.matchState.minute) || 0;
+      const phase = hashId(`${playerId}:${Math.floor(minute / 3)}:${player.positionCode || ""}`);
+      const lane = ((phase % 9) - 4) * 0.18;
+      const stride = (((phase >> 4) % 7) - 3) * 0.16;
+      const spacingPulse = Math.sin((minute * 0.19) + (phase % 360) * Math.PI / 180) * 0.22;
+      const pressure = player.positionCode === "POR" ? 0.25 : player.positionCode === "DEF" ? 0.65 : player.positionCode === "MED" ? 0.9 : 1.15;
+      return {
+        x: clamp((Number(targetPos.x) || 0) + (lane + spacingPulse) * pressure, -FIELD_WIDTH / 2 + 5, FIELD_WIDTH / 2 - 5),
+        y: Number(targetPos.y) || 0,
+        z: clamp((Number(targetPos.z) || 0) + (stride - spacingPulse * 0.6) * pressure, -FIELD_HEIGHT / 2 + 2, FIELD_HEIGHT / 2 - 2)
+      };
+    }
+
     animatePlayerMove(playerId, targetPos, duration = 1000) {
       const player = this.players[playerId];
       if (!player) return;
-      player.targetPosition.copy(targetPos);
-      this.animationSystem.movePosition(player.mesh.position, targetPos, duration);
+      const blendedTarget = this._flowVariance(playerId, targetPos);
+      const movement = Math.hypot(
+        blendedTarget.x - (Number(player.mesh.position.x) || 0),
+        blendedTarget.z - (Number(player.mesh.position.z) || 0)
+      );
+      const stagger = (hashId(`${playerId}:${this.matchState.minute}`) % 90) - 25;
+      const adjustedDuration = Math.max(260, duration + stagger + Math.min(140, movement * 8));
+      const inertia = movement > 10 ? 0.52 : 0.44;
+      const blend = movement > 10 ? 0.52 : 0.62;
+      player.targetPosition.copy(blendedTarget);
+      this.animationSystem.movePosition(player.mesh.position, blendedTarget, adjustedDuration, { inertia, blend });
     }
 
     animateBallMove(targetPos, duration = 1000) {
       if (!this.ball) this.createBall();
       this.ball.targetPosition.copy(targetPos);
-      this.animationSystem.movePosition(this.ball.position, targetPos, duration, { easing: "quick" });
+      this.animationSystem.movePosition(this.ball.position, targetPos, duration, { easing: "quick", inertia: 0.18, blend: 0.82 });
     }
 
     animateShot(targetPos, duration = 400) {

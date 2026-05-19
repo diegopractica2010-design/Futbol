@@ -9,7 +9,17 @@
     "morale": 78,
     "energy": 88,
     "value": 9500000,
-    "salary": 1300000
+    "salary": 1300000,
+    "pace": 74,
+    "shooting": 53,
+    "passing": 74,
+    "defending": 76,
+    "physical": 76,
+    "goalkeeping": 82,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p01-matias-orellana",
+    "potential": 77
   },
   {
     "id": "p02",
@@ -21,7 +31,17 @@
     "morale": 80,
     "energy": 90,
     "value": 8800000,
-    "salary": 1200000
+    "salary": 1200000,
+    "pace": 77,
+    "shooting": 66,
+    "passing": 79,
+    "defending": 81,
+    "physical": 77,
+    "goalkeeping": 53,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p02-brayan-leiva",
+    "potential": 79
   },
   {
     "id": "p03",
@@ -33,7 +53,17 @@
     "morale": 77,
     "energy": 87,
     "value": 9100000,
-    "salary": 1220000
+    "salary": 1220000,
+    "pace": 70,
+    "shooting": 68,
+    "passing": 76,
+    "defending": 86,
+    "physical": 79,
+    "goalkeeping": 50,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p03-sebastian-riffo",
+    "potential": 86
   },
   {
     "id": "p04",
@@ -45,7 +75,17 @@
     "morale": 76,
     "energy": 85,
     "value": 7600000,
-    "salary": 1100000
+    "salary": 1100000,
+    "pace": 67,
+    "shooting": 68,
+    "passing": 77,
+    "defending": 77,
+    "physical": 79,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p04-alan-jorquera",
+    "potential": 74
   },
   {
     "id": "p05",
@@ -57,7 +97,17 @@
     "morale": 79,
     "energy": 91,
     "value": 7200000,
-    "salary": 980000
+    "salary": 980000,
+    "pace": 74,
+    "shooting": 61,
+    "passing": 72,
+    "defending": 78,
+    "physical": 72,
+    "goalkeeping": 50,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p05-diego-viveros",
+    "potential": 76
   },
   {
     "id": "p06",
@@ -69,7 +119,17 @@
     "morale": 81,
     "energy": 84,
     "value": 10400000,
-    "salary": 1420000
+    "salary": 1420000,
+    "pace": 75,
+    "shooting": 73,
+    "passing": 82,
+    "defending": 75,
+    "physical": 74,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p06-nicolas-tapia",
+    "potential": 77
   },
   {
     "id": "p07",
@@ -81,7 +141,17 @@
     "morale": 79,
     "energy": 89,
     "value": 8600000,
-    "salary": 1180000
+    "salary": 1180000,
+    "pace": 77,
+    "shooting": 72,
+    "passing": 78,
+    "defending": 80,
+    "physical": 73,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p07-cristobal-escobar",
+    "potential": 79
   },
   {
     "id": "p08",
@@ -93,7 +163,17 @@
     "morale": 74,
     "energy": 93,
     "value": 6900000,
-    "salary": 860000
+    "salary": 860000,
+    "pace": 71,
+    "shooting": 73,
+    "passing": 77,
+    "defending": 76,
+    "physical": 74,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p08-benjamin-mena",
+    "potential": 81
   },
   {
     "id": "p09",
@@ -105,7 +185,17 @@
     "morale": 80,
     "energy": 90,
     "value": 9900000,
-    "salary": 1350000
+    "salary": 1350000,
+    "pace": 80,
+    "shooting": 80,
+    "passing": 82,
+    "defending": 73,
+    "physical": 77,
+    "goalkeeping": 51,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p09-julian-saavedra",
+    "potential": 84
   },
   {
     "id": "p10",
@@ -117,7 +207,17 @@
     "morale": 78,
     "energy": 92,
     "value": 8100000,
-    "salary": 1050000
+    "salary": 1050000,
+    "pace": 82,
+    "shooting": 77,
+    "passing": 77,
+    "defending": 70,
+    "physical": 74,
+    "goalkeeping": 51,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p10-tomas-venegas",
+    "potential": 81
   },
   {
     "id": "p11",
@@ -129,7 +229,17 @@
     "morale": 83,
     "energy": 88,
     "value": 11200000,
-    "salary": 1500000
+    "salary": 1500000,
+    "pace": 81,
+    "shooting": 86,
+    "passing": 76,
+    "defending": 67,
+    "physical": 80,
+    "goalkeeping": 55,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p11-vicente-rojas",
+    "potential": 82
   },
   {
     "id": "p12",
@@ -141,7 +251,17 @@
     "morale": 73,
     "energy": 80,
     "value": 5200000,
-    "salary": 720000
+    "salary": 720000,
+    "pace": 66,
+    "shooting": 54,
+    "passing": 69,
+    "defending": 71,
+    "physical": 77,
+    "goalkeeping": 80,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p12-jorge-cisternas",
+    "potential": 74
   },
   {
     "id": "p13",
@@ -153,7 +273,17 @@
     "morale": 72,
     "energy": 79,
     "value": 4900000,
-    "salary": 690000
+    "salary": 690000,
+    "pace": 67,
+    "shooting": 64,
+    "passing": 72,
+    "defending": 79,
+    "physical": 75,
+    "goalkeeping": 42,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p13-fabian-maripan",
+    "potential": 69
   },
   {
     "id": "p14",
@@ -165,7 +295,17 @@
     "morale": 75,
     "energy": 94,
     "value": 4300000,
-    "salary": 540000
+    "salary": 540000,
+    "pace": 63,
+    "shooting": 63,
+    "passing": 64,
+    "defending": 72,
+    "physical": 74,
+    "goalkeeping": 38,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p14-emilio-pavez",
+    "potential": 82
   },
   {
     "id": "p15",
@@ -177,7 +317,17 @@
     "morale": 77,
     "energy": 86,
     "value": 6300000,
-    "salary": 840000
+    "salary": 840000,
+    "pace": 71,
+    "shooting": 70,
+    "passing": 81,
+    "defending": 75,
+    "physical": 71,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p15-juan-pablo-toledo",
+    "potential": 76
   },
   {
     "id": "p16",
@@ -189,7 +339,17 @@
     "morale": 76,
     "energy": 90,
     "value": 4700000,
-    "salary": 620000
+    "salary": 620000,
+    "pace": 66,
+    "shooting": 69,
+    "passing": 77,
+    "defending": 71,
+    "physical": 71,
+    "goalkeeping": 44,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p16-felipe-araya",
+    "potential": 76
   },
   {
     "id": "p17",
@@ -201,7 +361,17 @@
     "morale": 78,
     "energy": 89,
     "value": 5900000,
-    "salary": 760000
+    "salary": 760000,
+    "pace": 82,
+    "shooting": 75,
+    "passing": 74,
+    "defending": 68,
+    "physical": 72,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p17-gonzalo-neira",
+    "potential": 80
   },
   {
     "id": "p18",
@@ -213,7 +383,17 @@
     "morale": 75,
     "energy": 95,
     "value": 4100000,
-    "salary": 460000
+    "salary": 460000,
+    "pace": 74,
+    "shooting": 76,
+    "passing": 65,
+    "defending": 56,
+    "physical": 69,
+    "goalkeeping": 40,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p18-marco-barraza",
+    "potential": 75
   },
   {
     "id": "p19",
@@ -225,7 +405,17 @@
     "morale": 78,
     "energy": 87,
     "value": 8700000,
-    "salary": 1240000
+    "salary": 1240000,
+    "pace": 73,
+    "shooting": 59,
+    "passing": 69,
+    "defending": 81,
+    "physical": 82,
+    "goalkeeping": 81,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p19-ignacio-hormazabal",
+    "potential": 77
   },
   {
     "id": "p20",
@@ -237,7 +427,17 @@
     "morale": 77,
     "energy": 86,
     "value": 8200000,
-    "salary": 1120000
+    "salary": 1120000,
+    "pace": 75,
+    "shooting": 69,
+    "passing": 76,
+    "defending": 80,
+    "physical": 80,
+    "goalkeeping": 53,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p20-patricio-zamorano",
+    "potential": 78
   },
   {
     "id": "p21",
@@ -249,7 +449,17 @@
     "morale": 79,
     "energy": 90,
     "value": 9700000,
-    "salary": 1280000
+    "salary": 1280000,
+    "pace": 74,
+    "shooting": 79,
+    "passing": 88,
+    "defending": 77,
+    "physical": 81,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p21-mauricio-mardones",
+    "potential": 84
   },
   {
     "id": "p22",
@@ -261,7 +471,17 @@
     "morale": 80,
     "energy": 91,
     "value": 8400000,
-    "salary": 1080000
+    "salary": 1080000,
+    "pace": 86,
+    "shooting": 78,
+    "passing": 79,
+    "defending": 69,
+    "physical": 76,
+    "goalkeeping": 50,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p22-leandro-carrasco",
+    "potential": 85
   },
   {
     "id": "p23",
@@ -273,7 +493,17 @@
     "morale": 82,
     "energy": 88,
     "value": 10800000,
-    "salary": 1460000
+    "salary": 1460000,
+    "pace": 85,
+    "shooting": 87,
+    "passing": 79,
+    "defending": 65,
+    "physical": 80,
+    "goalkeeping": 51,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p23-renato-pino",
+    "potential": 78
   },
   {
     "id": "p24",
@@ -285,7 +515,17 @@
     "morale": 77,
     "energy": 86,
     "value": 8100000,
-    "salary": 1140000
+    "salary": 1140000,
+    "pace": 69,
+    "shooting": 50,
+    "passing": 70,
+    "defending": 73,
+    "physical": 73,
+    "goalkeeping": 87,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p24-lucas-carvajal",
+    "potential": 77
   },
   {
     "id": "p25",
@@ -297,7 +537,17 @@
     "morale": 79,
     "energy": 85,
     "value": 9000000,
-    "salary": 1240000
+    "salary": 1240000,
+    "pace": 71,
+    "shooting": 65,
+    "passing": 76,
+    "defending": 87,
+    "physical": 77,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p25-andres-abarca",
+    "potential": 79
   },
   {
     "id": "p26",
@@ -309,7 +559,17 @@
     "morale": 80,
     "energy": 88,
     "value": 9800000,
-    "salary": 1290000
+    "salary": 1290000,
+    "pace": 77,
+    "shooting": 79,
+    "passing": 84,
+    "defending": 74,
+    "physical": 80,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p26-martin-solar",
+    "potential": 79
   },
   {
     "id": "p27",
@@ -321,7 +581,17 @@
     "morale": 78,
     "energy": 90,
     "value": 7900000,
-    "salary": 1020000
+    "salary": 1020000,
+    "pace": 77,
+    "shooting": 76,
+    "passing": 77,
+    "defending": 66,
+    "physical": 74,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p27-eduardo-sanhueza",
+    "potential": 81
   },
   {
     "id": "p28",
@@ -333,7 +603,17 @@
     "morale": 81,
     "energy": 84,
     "value": 10300000,
-    "salary": 1440000
+    "salary": 1440000,
+    "pace": 85,
+    "shooting": 91,
+    "passing": 75,
+    "defending": 71,
+    "physical": 84,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p28-nestor-cid",
+    "potential": 81
   },
   {
     "id": "p29",
@@ -345,7 +625,17 @@
     "morale": 74,
     "energy": 84,
     "value": 5600000,
-    "salary": 760000
+    "salary": 760000,
+    "pace": 64,
+    "shooting": 47,
+    "passing": 68,
+    "defending": 75,
+    "physical": 71,
+    "goalkeeping": 79,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p29-ruben-avalos",
+    "potential": 70
   },
   {
     "id": "p30",
@@ -357,7 +647,17 @@
     "morale": 75,
     "energy": 86,
     "value": 6200000,
-    "salary": 840000
+    "salary": 840000,
+    "pace": 71,
+    "shooting": 64,
+    "passing": 72,
+    "defending": 76,
+    "physical": 75,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p30-hector-salgado",
+    "potential": 76
   },
   {
     "id": "p31",
@@ -369,7 +669,17 @@
     "morale": 76,
     "energy": 89,
     "value": 7100000,
-    "salary": 910000
+    "salary": 910000,
+    "pace": 73,
+    "shooting": 72,
+    "passing": 77,
+    "defending": 77,
+    "physical": 73,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p31-claudio-donoso",
+    "potential": 83
   },
   {
     "id": "p32",
@@ -381,7 +691,17 @@
     "morale": 74,
     "energy": 92,
     "value": 5900000,
-    "salary": 760000
+    "salary": 760000,
+    "pace": 78,
+    "shooting": 69,
+    "passing": 78,
+    "defending": 64,
+    "physical": 66,
+    "goalkeeping": 44,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p32-yahir-valdes",
+    "potential": 76
   },
   {
     "id": "p33",
@@ -393,7 +713,17 @@
     "morale": 78,
     "energy": 87,
     "value": 7600000,
-    "salary": 980000
+    "salary": 980000,
+    "pace": 77,
+    "shooting": 85,
+    "passing": 70,
+    "defending": 65,
+    "physical": 78,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p33-damian-olguin",
+    "potential": 75
   },
   {
     "id": "p34",
@@ -405,7 +735,17 @@
     "morale": 75,
     "energy": 86,
     "value": 6600000,
-    "salary": 920000
+    "salary": 920000,
+    "pace": 68,
+    "shooting": 51,
+    "passing": 73,
+    "defending": 75,
+    "physical": 75,
+    "goalkeeping": 83,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p34-gabriel-maturana",
+    "potential": 77
   },
   {
     "id": "p35",
@@ -417,7 +757,17 @@
     "morale": 77,
     "energy": 88,
     "value": 7400000,
-    "salary": 980000
+    "salary": 980000,
+    "pace": 73,
+    "shooting": 65,
+    "passing": 72,
+    "defending": 82,
+    "physical": 76,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p35-cristian-opazo",
+    "potential": 74
   },
   {
     "id": "p36",
@@ -429,7 +779,17 @@
     "morale": 79,
     "energy": 90,
     "value": 8100000,
-    "salary": 1080000
+    "salary": 1080000,
+    "pace": 78,
+    "shooting": 72,
+    "passing": 80,
+    "defending": 75,
+    "physical": 74,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p36-luis-moya",
+    "potential": 82
   },
   {
     "id": "p37",
@@ -441,7 +801,17 @@
     "morale": 76,
     "energy": 93,
     "value": 6100000,
-    "salary": 790000
+    "salary": 790000,
+    "pace": 80,
+    "shooting": 78,
+    "passing": 79,
+    "defending": 66,
+    "physical": 75,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p37-franco-vallejos",
+    "potential": 83
   },
   {
     "id": "p38",
@@ -453,7 +823,17 @@
     "morale": 80,
     "energy": 87,
     "value": 8800000,
-    "salary": 1180000
+    "salary": 1180000,
+    "pace": 82,
+    "shooting": 83,
+    "passing": 78,
+    "defending": 67,
+    "physical": 76,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p38-bastian-ocaranza",
+    "potential": 77
   },
   {
     "id": "p39",
@@ -465,7 +845,17 @@
     "morale": 75,
     "energy": 85,
     "value": 5900000,
-    "salary": 800000
+    "salary": 800000,
+    "pace": 70,
+    "shooting": 52,
+    "passing": 69,
+    "defending": 77,
+    "physical": 75,
+    "goalkeeping": 80,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p39-alexis-arancibia",
+    "potential": 74
   },
   {
     "id": "p40",
@@ -477,7 +867,17 @@
     "morale": 76,
     "energy": 87,
     "value": 6600000,
-    "salary": 910000
+    "salary": 910000,
+    "pace": 74,
+    "shooting": 64,
+    "passing": 73,
+    "defending": 85,
+    "physical": 75,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p40-nicolas-fuenzalida",
+    "potential": 77
   },
   {
     "id": "p41",
@@ -489,7 +889,17 @@
     "morale": 78,
     "energy": 89,
     "value": 7600000,
-    "salary": 1020000
+    "salary": 1020000,
+    "pace": 71,
+    "shooting": 76,
+    "passing": 81,
+    "defending": 72,
+    "physical": 77,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p41-maximiliano-jerez",
+    "potential": 78
   },
   {
     "id": "p42",
@@ -501,7 +911,17 @@
     "morale": 77,
     "energy": 91,
     "value": 6200000,
-    "salary": 810000
+    "salary": 810000,
+    "pace": 81,
+    "shooting": 78,
+    "passing": 77,
+    "defending": 68,
+    "physical": 75,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p42-sergio-albornoz",
+    "potential": 82
   },
   {
     "id": "p43",
@@ -513,7 +933,17 @@
     "morale": 80,
     "energy": 86,
     "value": 8200000,
-    "salary": 1120000
+    "salary": 1120000,
+    "pace": 74,
+    "shooting": 87,
+    "passing": 77,
+    "defending": 62,
+    "physical": 80,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p43-joaquin-campillay",
+    "potential": 78
   },
   {
     "id": "p44",
@@ -525,7 +955,17 @@
     "morale": 74,
     "energy": 84,
     "value": 5400000,
-    "salary": 760000
+    "salary": 760000,
+    "pace": 62,
+    "shooting": 49,
+    "passing": 70,
+    "defending": 75,
+    "physical": 72,
+    "goalkeeping": 84,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p44-miguel-soto",
+    "potential": 71
   },
   {
     "id": "p45",
@@ -537,7 +977,17 @@
     "morale": 75,
     "energy": 86,
     "value": 6100000,
-    "salary": 850000
+    "salary": 850000,
+    "pace": 70,
+    "shooting": 65,
+    "passing": 74,
+    "defending": 77,
+    "physical": 76,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p45-esteban-cortes",
+    "potential": 73
   },
   {
     "id": "p46",
@@ -549,7 +999,17 @@
     "morale": 77,
     "energy": 89,
     "value": 7000000,
-    "salary": 930000
+    "salary": 930000,
+    "pace": 72,
+    "shooting": 68,
+    "passing": 80,
+    "defending": 74,
+    "physical": 69,
+    "goalkeeping": 46,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p46-pablo-gajardo",
+    "potential": 77
   },
   {
     "id": "p47",
@@ -561,7 +1021,17 @@
     "morale": 74,
     "energy": 92,
     "value": 5600000,
-    "salary": 730000
+    "salary": 730000,
+    "pace": 75,
+    "shooting": 68,
+    "passing": 72,
+    "defending": 63,
+    "physical": 66,
+    "goalkeeping": 40,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p47-kevin-aros",
+    "potential": 74
   },
   {
     "id": "p48",
@@ -573,7 +1043,17 @@
     "morale": 79,
     "energy": 87,
     "value": 7600000,
-    "salary": 1010000
+    "salary": 1010000,
+    "pace": 77,
+    "shooting": 84,
+    "passing": 70,
+    "defending": 65,
+    "physical": 77,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p48-matias-serey",
+    "potential": 78
   },
   {
     "id": "p049",
@@ -585,7 +1065,17 @@
     "morale": 76,
     "energy": 89,
     "value": 11115000,
-    "salary": 1043500
+    "salary": 1043500,
+    "pace": 82,
+    "shooting": 83,
+    "passing": 88,
+    "defending": 81,
+    "physical": 84,
+    "goalkeeping": 57,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p049-camilo-toro",
+    "potential": 84
   },
   {
     "id": "p050",
@@ -597,7 +1087,17 @@
     "morale": 77,
     "energy": 90,
     "value": 10785000,
-    "salary": 1026500
+    "salary": 1026500,
+    "pace": 71,
+    "shooting": 73,
+    "passing": 77,
+    "defending": 73,
+    "physical": 75,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p050-lucas-sepulveda",
+    "potential": 78
   },
   {
     "id": "p051",
@@ -609,7 +1109,17 @@
     "morale": 78,
     "energy": 91,
     "value": 11050000,
-    "salary": 1055000
+    "salary": 1055000,
+    "pace": 78,
+    "shooting": 76,
+    "passing": 81,
+    "defending": 79,
+    "physical": 78,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p051-bastian-salinas",
+    "potential": 75
   },
   {
     "id": "p052",
@@ -621,7 +1131,17 @@
     "morale": 79,
     "energy": 92,
     "value": 11315000,
-    "salary": 1083500
+    "salary": 1083500,
+    "pace": 83,
+    "shooting": 75,
+    "passing": 82,
+    "defending": 68,
+    "physical": 72,
+    "goalkeeping": 50,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p052-ivan-riquelme",
+    "potential": 90
   },
   {
     "id": "p053",
@@ -633,7 +1153,17 @@
     "morale": 80,
     "energy": 93,
     "value": 11580000,
-    "salary": 1112000
+    "salary": 1112000,
+    "pace": 83,
+    "shooting": 82,
+    "passing": 84,
+    "defending": 73,
+    "physical": 79,
+    "goalkeeping": 54,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p053-pablo-reyes",
+    "potential": 86
   },
   {
     "id": "p054",
@@ -645,7 +1175,17 @@
     "morale": 81,
     "energy": 94,
     "value": 11845000,
-    "salary": 1140500
+    "salary": 1140500,
+    "pace": 78,
+    "shooting": 85,
+    "passing": 74,
+    "defending": 71,
+    "physical": 78,
+    "goalkeeping": 53,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p054-aaron-quiroz",
+    "potential": 82
   },
   {
     "id": "p055",
@@ -657,7 +1197,17 @@
     "morale": 82,
     "energy": 95,
     "value": 12110000,
-    "salary": 1169000
+    "salary": 1169000,
+    "pace": 77,
+    "shooting": 60,
+    "passing": 77,
+    "defending": 81,
+    "physical": 83,
+    "goalkeeping": 86,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p055-ignacio-quinteros",
+    "potential": 78
   },
   {
     "id": "p056",
@@ -669,7 +1219,17 @@
     "morale": 70,
     "energy": 82,
     "value": 12375000,
-    "salary": 1197500
+    "salary": 1197500,
+    "pace": 74,
+    "shooting": 76,
+    "passing": 80,
+    "defending": 84,
+    "physical": 87,
+    "goalkeeping": 58,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p056-vicente-poblete",
+    "potential": 83
   },
   {
     "id": "p057",
@@ -681,7 +1241,17 @@
     "morale": 71,
     "energy": 83,
     "value": 12045000,
-    "salary": 1180500
+    "salary": 1180500,
+    "pace": 68,
+    "shooting": 65,
+    "passing": 71,
+    "defending": 83,
+    "physical": 76,
+    "goalkeeping": 50,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p057-gaspar-pizarro",
+    "potential": 85
   },
   {
     "id": "p058",
@@ -693,7 +1263,17 @@
     "morale": 72,
     "energy": 84,
     "value": 12310000,
-    "salary": 1209000
+    "salary": 1209000,
+    "pace": 75,
+    "shooting": 77,
+    "passing": 83,
+    "defending": 76,
+    "physical": 79,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p058-nicolas-ormazabal",
+    "potential": 81
   },
   {
     "id": "p059",
@@ -705,7 +1285,17 @@
     "morale": 73,
     "energy": 85,
     "value": 12575000,
-    "salary": 1237500
+    "salary": 1237500,
+    "pace": 71,
+    "shooting": 71,
+    "passing": 80,
+    "defending": 78,
+    "physical": 73,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p059-walter-ojeda",
+    "potential": 77
   },
   {
     "id": "p060",
@@ -717,7 +1307,17 @@
     "morale": 74,
     "energy": 86,
     "value": 12840000,
-    "salary": 1266000
+    "salary": 1266000,
+    "pace": 84,
+    "shooting": 83,
+    "passing": 81,
+    "defending": 76,
+    "physical": 80,
+    "goalkeeping": 55,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p060-franco-naranjo",
+    "potential": 76
   },
   {
     "id": "p061",
@@ -729,7 +1329,17 @@
     "morale": 75,
     "energy": 87,
     "value": 13105000,
-    "salary": 1294500
+    "salary": 1294500,
+    "pace": 84,
+    "shooting": 84,
+    "passing": 80,
+    "defending": 67,
+    "physical": 77,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p061-renato-norambuena",
+    "potential": 90
   },
   {
     "id": "p062",
@@ -741,7 +1351,17 @@
     "morale": 77,
     "energy": 91,
     "value": 10605000,
-    "salary": 1004500
+    "salary": 1004500,
+    "pace": 73,
+    "shooting": 77,
+    "passing": 82,
+    "defending": 79,
+    "physical": 78,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p062-nicolas-salinas",
+    "potential": 73
   },
   {
     "id": "p063",
@@ -753,7 +1373,17 @@
     "morale": 78,
     "energy": 92,
     "value": 10870000,
-    "salary": 1033000
+    "salary": 1033000,
+    "pace": 73,
+    "shooting": 78,
+    "passing": 80,
+    "defending": 73,
+    "physical": 79,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p063-walter-riquelme",
+    "potential": 83
   },
   {
     "id": "p064",
@@ -765,7 +1395,17 @@
     "morale": 79,
     "energy": 93,
     "value": 11135000,
-    "salary": 1061500
+    "salary": 1061500,
+    "pace": 75,
+    "shooting": 75,
+    "passing": 79,
+    "defending": 76,
+    "physical": 76,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p064-franco-reyes",
+    "potential": 85
   },
   {
     "id": "p065",
@@ -777,7 +1417,17 @@
     "morale": 80,
     "energy": 94,
     "value": 11400000,
-    "salary": 1090000
+    "salary": 1090000,
+    "pace": 86,
+    "shooting": 80,
+    "passing": 82,
+    "defending": 71,
+    "physical": 77,
+    "goalkeeping": 50,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p065-renato-quiroz",
+    "potential": 83
   },
   {
     "id": "p066",
@@ -789,7 +1439,17 @@
     "morale": 81,
     "energy": 95,
     "value": 11665000,
-    "salary": 1118500
+    "salary": 1118500,
+    "pace": 85,
+    "shooting": 84,
+    "passing": 83,
+    "defending": 73,
+    "physical": 81,
+    "goalkeeping": 56,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p066-emiliano-quinteros",
+    "potential": 83
   },
   {
     "id": "p067",
@@ -801,7 +1461,17 @@
     "morale": 82,
     "energy": 82,
     "value": 11930000,
-    "salary": 1147000
+    "salary": 1147000,
+    "pace": 86,
+    "shooting": 91,
+    "passing": 80,
+    "defending": 68,
+    "physical": 84,
+    "goalkeeping": 57,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p067-lautaro-poblete",
+    "potential": 78
   },
   {
     "id": "p068",
@@ -813,7 +1483,17 @@
     "morale": 70,
     "energy": 83,
     "value": 12195000,
-    "salary": 1175500
+    "salary": 1175500,
+    "pace": 79,
+    "shooting": 55,
+    "passing": 80,
+    "defending": 81,
+    "physical": 79,
+    "goalkeeping": 85,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p068-tomas-pizarro",
+    "potential": 93
   },
   {
     "id": "p069",
@@ -825,7 +1505,17 @@
     "morale": 71,
     "energy": 84,
     "value": 11865000,
-    "salary": 1158500
+    "salary": 1158500,
+    "pace": 74,
+    "shooting": 63,
+    "passing": 75,
+    "defending": 80,
+    "physical": 74,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p069-diego-ormazabal",
+    "potential": 84
   },
   {
     "id": "p070",
@@ -837,7 +1527,17 @@
     "morale": 72,
     "energy": 85,
     "value": 12130000,
-    "salary": 1187000
+    "salary": 1187000,
+    "pace": 74,
+    "shooting": 66,
+    "passing": 75,
+    "defending": 87,
+    "physical": 77,
+    "goalkeeping": 50,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p070-martin-ojeda",
+    "potential": 78
   },
   {
     "id": "p071",
@@ -849,7 +1549,17 @@
     "morale": 73,
     "energy": 86,
     "value": 12395000,
-    "salary": 1215500
+    "salary": 1215500,
+    "pace": 74,
+    "shooting": 79,
+    "passing": 80,
+    "defending": 80,
+    "physical": 80,
+    "goalkeeping": 51,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p071-cristian-naranjo",
+    "potential": 75
   },
   {
     "id": "p072",
@@ -861,7 +1571,17 @@
     "morale": 74,
     "energy": 87,
     "value": 12660000,
-    "salary": 1244000
+    "salary": 1244000,
+    "pace": 76,
+    "shooting": 79,
+    "passing": 85,
+    "defending": 75,
+    "physical": 81,
+    "goalkeeping": 50,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p072-javier-norambuena",
+    "potential": 78
   },
   {
     "id": "p073",
@@ -873,7 +1593,17 @@
     "morale": 75,
     "energy": 88,
     "value": 12925000,
-    "salary": 1272500
+    "salary": 1272500,
+    "pace": 82,
+    "shooting": 79,
+    "passing": 77,
+    "defending": 75,
+    "physical": 76,
+    "goalkeeping": 50,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p073-raimundo-mancilla",
+    "potential": 92
   },
   {
     "id": "p074",
@@ -885,7 +1615,17 @@
     "morale": 76,
     "energy": 89,
     "value": 13190000,
-    "salary": 1301000
+    "salary": 1301000,
+    "pace": 80,
+    "shooting": 87,
+    "passing": 77,
+    "defending": 74,
+    "physical": 80,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p074-bruno-miranda",
+    "potential": 89
   },
   {
     "id": "p075",
@@ -897,7 +1637,17 @@
     "morale": 78,
     "energy": 93,
     "value": 10435000,
-    "salary": 991500
+    "salary": 991500,
+    "pace": 71,
+    "shooting": 72,
+    "passing": 81,
+    "defending": 70,
+    "physical": 73,
+    "goalkeeping": 46,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p075-cristian-reyes",
+    "potential": 83
   },
   {
     "id": "p076",
@@ -909,7 +1659,17 @@
     "morale": 79,
     "energy": 94,
     "value": 10700000,
-    "salary": 1020000
+    "salary": 1020000,
+    "pace": 74,
+    "shooting": 70,
+    "passing": 82,
+    "defending": 72,
+    "physical": 72,
+    "goalkeeping": 44,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p076-javier-quiroz",
+    "potential": 81
   },
   {
     "id": "p077",
@@ -921,7 +1681,17 @@
     "morale": 80,
     "energy": 95,
     "value": 10965000,
-    "salary": 1048500
+    "salary": 1048500,
+    "pace": 73,
+    "shooting": 72,
+    "passing": 82,
+    "defending": 76,
+    "physical": 73,
+    "goalkeeping": 50,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p077-raimundo-quinteros",
+    "potential": 79
   },
   {
     "id": "p078",
@@ -933,7 +1703,17 @@
     "morale": 81,
     "energy": 82,
     "value": 11230000,
-    "salary": 1077000
+    "salary": 1077000,
+    "pace": 84,
+    "shooting": 80,
+    "passing": 79,
+    "defending": 69,
+    "physical": 77,
+    "goalkeeping": 53,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p078-bruno-poblete",
+    "potential": 74
   },
   {
     "id": "p079",
@@ -945,7 +1725,17 @@
     "morale": 82,
     "energy": 83,
     "value": 11495000,
-    "salary": 1105500
+    "salary": 1105500,
+    "pace": 81,
+    "shooting": 81,
+    "passing": 80,
+    "defending": 69,
+    "physical": 78,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p079-joaquin-pizarro",
+    "potential": 90
   },
   {
     "id": "p080",
@@ -957,7 +1747,17 @@
     "morale": 70,
     "energy": 84,
     "value": 11760000,
-    "salary": 1134000
+    "salary": 1134000,
+    "pace": 83,
+    "shooting": 89,
+    "passing": 78,
+    "defending": 70,
+    "physical": 82,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p080-agustin-ormazabal",
+    "potential": 81
   },
   {
     "id": "p081",
@@ -969,7 +1769,17 @@
     "morale": 71,
     "energy": 85,
     "value": 11430000,
-    "salary": 1117000
+    "salary": 1117000,
+    "pace": 69,
+    "shooting": 50,
+    "passing": 71,
+    "defending": 70,
+    "physical": 73,
+    "goalkeeping": 81,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p081-hernan-ojeda",
+    "potential": 74
   },
   {
     "id": "p082",
@@ -981,7 +1791,17 @@
     "morale": 72,
     "energy": 86,
     "value": 11695000,
-    "salary": 1145500
+    "salary": 1145500,
+    "pace": 68,
+    "shooting": 61,
+    "passing": 70,
+    "defending": 82,
+    "physical": 73,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p082-oscar-naranjo",
+    "potential": 73
   },
   {
     "id": "p083",
@@ -993,7 +1813,17 @@
     "morale": 73,
     "energy": 87,
     "value": 11960000,
-    "salary": 1174000
+    "salary": 1174000,
+    "pace": 73,
+    "shooting": 66,
+    "passing": 71,
+    "defending": 78,
+    "physical": 77,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p083-yonathan-norambuena",
+    "potential": 73
   },
   {
     "id": "p084",
@@ -1005,7 +1835,17 @@
     "morale": 74,
     "energy": 88,
     "value": 12225000,
-    "salary": 1202500
+    "salary": 1202500,
+    "pace": 77,
+    "shooting": 73,
+    "passing": 81,
+    "defending": 78,
+    "physical": 74,
+    "goalkeeping": 46,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p084-gonzalo-mancilla",
+    "potential": 87
   },
   {
     "id": "p085",
@@ -1017,7 +1857,17 @@
     "morale": 75,
     "energy": 89,
     "value": 12490000,
-    "salary": 1231000
+    "salary": 1231000,
+    "pace": 78,
+    "shooting": 76,
+    "passing": 79,
+    "defending": 75,
+    "physical": 77,
+    "goalkeeping": 46,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p085-sebastian-miranda",
+    "potential": 80
   },
   {
     "id": "p086",
@@ -1029,7 +1879,17 @@
     "morale": 76,
     "energy": 90,
     "value": 12755000,
-    "salary": 1259500
+    "salary": 1259500,
+    "pace": 82,
+    "shooting": 82,
+    "passing": 81,
+    "defending": 73,
+    "physical": 79,
+    "goalkeeping": 46,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p086-facundo-loyola",
+    "potential": 78
   },
   {
     "id": "p087",
@@ -1041,7 +1901,17 @@
     "morale": 77,
     "energy": 91,
     "value": 13020000,
-    "salary": 1288000
+    "salary": 1288000,
+    "pace": 77,
+    "shooting": 87,
+    "passing": 76,
+    "defending": 68,
+    "physical": 81,
+    "goalkeeping": 54,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p087-marcos-lagos",
+    "potential": 76
   },
   {
     "id": "p088",
@@ -1053,7 +1923,17 @@
     "morale": 79,
     "energy": 95,
     "value": 10605000,
-    "salary": 1004500
+    "salary": 1004500,
+    "pace": 73,
+    "shooting": 69,
+    "passing": 85,
+    "defending": 74,
+    "physical": 71,
+    "goalkeeping": 50,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p088-gonzalo-quinteros",
+    "potential": 80
   },
   {
     "id": "p089",
@@ -1065,7 +1945,17 @@
     "morale": 80,
     "energy": 82,
     "value": 10870000,
-    "salary": 1033000
+    "salary": 1033000,
+    "pace": 74,
+    "shooting": 70,
+    "passing": 86,
+    "defending": 76,
+    "physical": 71,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p089-sebastian-poblete",
+    "potential": 74
   },
   {
     "id": "p090",
@@ -1077,7 +1967,17 @@
     "morale": 81,
     "energy": 83,
     "value": 11135000,
-    "salary": 1061500
+    "salary": 1061500,
+    "pace": 75,
+    "shooting": 78,
+    "passing": 84,
+    "defending": 74,
+    "physical": 79,
+    "goalkeeping": 51,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p090-facundo-pizarro",
+    "potential": 78
   },
   {
     "id": "p091",
@@ -1089,7 +1989,17 @@
     "morale": 82,
     "energy": 84,
     "value": 11400000,
-    "salary": 1090000
+    "salary": 1090000,
+    "pace": 80,
+    "shooting": 81,
+    "passing": 76,
+    "defending": 73,
+    "physical": 78,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p091-marcos-ormazabal",
+    "potential": 86
   },
   {
     "id": "p092",
@@ -1101,7 +2011,17 @@
     "morale": 70,
     "energy": 85,
     "value": 11665000,
-    "salary": 1118500
+    "salary": 1118500,
+    "pace": 84,
+    "shooting": 82,
+    "passing": 82,
+    "defending": 69,
+    "physical": 79,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p092-valentin-ojeda",
+    "potential": 83
   },
   {
     "id": "p093",
@@ -1113,7 +2033,17 @@
     "morale": 71,
     "energy": 86,
     "value": 11335000,
-    "salary": 1101500
+    "salary": 1101500,
+    "pace": 75,
+    "shooting": 85,
+    "passing": 74,
+    "defending": 62,
+    "physical": 78,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p093-esteban-naranjo",
+    "potential": 74
   },
   {
     "id": "p094",
@@ -1125,7 +2055,17 @@
     "morale": 72,
     "energy": 87,
     "value": 11600000,
-    "salary": 1130000
+    "salary": 1130000,
+    "pace": 65,
+    "shooting": 48,
+    "passing": 74,
+    "defending": 70,
+    "physical": 71,
+    "goalkeeping": 79,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p094-matias-norambuena",
+    "potential": 72
   },
   {
     "id": "p095",
@@ -1137,7 +2077,17 @@
     "morale": 73,
     "energy": 88,
     "value": 11865000,
-    "salary": 1158500
+    "salary": 1158500,
+    "pace": 74,
+    "shooting": 68,
+    "passing": 72,
+    "defending": 84,
+    "physical": 79,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p095-dario-mancilla",
+    "potential": 88
   },
   {
     "id": "p096",
@@ -1149,7 +2099,17 @@
     "morale": 74,
     "energy": 89,
     "value": 12130000,
-    "salary": 1187000
+    "salary": 1187000,
+    "pace": 75,
+    "shooting": 63,
+    "passing": 77,
+    "defending": 86,
+    "physical": 74,
+    "goalkeeping": 51,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p096-kevin-miranda",
+    "potential": 79
   },
   {
     "id": "p097",
@@ -1161,7 +2121,17 @@
     "morale": 75,
     "energy": 90,
     "value": 12395000,
-    "salary": 1215500
+    "salary": 1215500,
+    "pace": 71,
+    "shooting": 77,
+    "passing": 81,
+    "defending": 76,
+    "physical": 78,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p097-santiago-loyola",
+    "potential": 78
   },
   {
     "id": "p098",
@@ -1173,7 +2143,17 @@
     "morale": 76,
     "energy": 91,
     "value": 12660000,
-    "salary": 1244000
+    "salary": 1244000,
+    "pace": 74,
+    "shooting": 78,
+    "passing": 83,
+    "defending": 79,
+    "physical": 79,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p098-camilo-lagos",
+    "potential": 80
   },
   {
     "id": "p099",
@@ -1185,7 +2165,17 @@
     "morale": 77,
     "energy": 92,
     "value": 12925000,
-    "salary": 1272500
+    "salary": 1272500,
+    "pace": 88,
+    "shooting": 77,
+    "passing": 83,
+    "defending": 71,
+    "physical": 74,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p099-lucas-iturra",
+    "potential": 77
   },
   {
     "id": "p100",
@@ -1197,7 +2187,17 @@
     "morale": 78,
     "energy": 93,
     "value": 12595000,
-    "salary": 1255500
+    "salary": 1255500,
+    "pace": 76,
+    "shooting": 77,
+    "passing": 74,
+    "defending": 61,
+    "physical": 71,
+    "goalkeeping": 44,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p100-bastian-jimenez",
+    "potential": 84
   },
   {
     "id": "p101",
@@ -1209,7 +2209,17 @@
     "morale": 80,
     "energy": 83,
     "value": 10520000,
-    "salary": 998000
+    "salary": 998000,
+    "pace": 68,
+    "shooting": 72,
+    "passing": 77,
+    "defending": 75,
+    "physical": 73,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p101-santiago-pizarro",
+    "potential": 75
   },
   {
     "id": "p102",
@@ -1221,7 +2231,17 @@
     "morale": 81,
     "energy": 84,
     "value": 10785000,
-    "salary": 1026500
+    "salary": 1026500,
+    "pace": 74,
+    "shooting": 72,
+    "passing": 79,
+    "defending": 77,
+    "physical": 74,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p102-camilo-ormazabal",
+    "potential": 82
   },
   {
     "id": "p103",
@@ -1233,7 +2253,17 @@
     "morale": 82,
     "energy": 85,
     "value": 11050000,
-    "salary": 1055000
+    "salary": 1055000,
+    "pace": 78,
+    "shooting": 75,
+    "passing": 84,
+    "defending": 77,
+    "physical": 76,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p103-lucas-ojeda",
+    "potential": 81
   },
   {
     "id": "p104",
@@ -1245,7 +2275,17 @@
     "morale": 70,
     "energy": 86,
     "value": 11315000,
-    "salary": 1083500
+    "salary": 1083500,
+    "pace": 86,
+    "shooting": 78,
+    "passing": 80,
+    "defending": 71,
+    "physical": 75,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p104-bastian-naranjo",
+    "potential": 81
   },
   {
     "id": "p105",
@@ -1257,7 +2297,17 @@
     "morale": 71,
     "energy": 87,
     "value": 10985000,
-    "salary": 1066500
+    "salary": 1066500,
+    "pace": 74,
+    "shooting": 71,
+    "passing": 75,
+    "defending": 63,
+    "physical": 68,
+    "goalkeeping": 46,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p105-ivan-norambuena",
+    "potential": 70
   },
   {
     "id": "p106",
@@ -1269,7 +2319,17 @@
     "morale": 72,
     "energy": 88,
     "value": 11250000,
-    "salary": 1095000
+    "salary": 1095000,
+    "pace": 75,
+    "shooting": 83,
+    "passing": 67,
+    "defending": 63,
+    "physical": 76,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p106-pablo-mancilla",
+    "potential": 73
   },
   {
     "id": "p107",
@@ -1281,7 +2341,17 @@
     "morale": 73,
     "energy": 89,
     "value": 11515000,
-    "salary": 1123500
+    "salary": 1123500,
+    "pace": 68,
+    "shooting": 49,
+    "passing": 73,
+    "defending": 72,
+    "physical": 73,
+    "goalkeeping": 85,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p107-aaron-miranda",
+    "potential": 86
   },
   {
     "id": "p108",
@@ -1293,7 +2363,17 @@
     "morale": 74,
     "energy": 90,
     "value": 11780000,
-    "salary": 1152000
+    "salary": 1152000,
+    "pace": 70,
+    "shooting": 63,
+    "passing": 77,
+    "defending": 85,
+    "physical": 74,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p108-ignacio-loyola",
+    "potential": 82
   },
   {
     "id": "p109",
@@ -1305,7 +2385,17 @@
     "morale": 75,
     "energy": 91,
     "value": 12045000,
-    "salary": 1180500
+    "salary": 1180500,
+    "pace": 72,
+    "shooting": 62,
+    "passing": 78,
+    "defending": 80,
+    "physical": 73,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p109-vicente-lagos",
+    "potential": 75
   },
   {
     "id": "p110",
@@ -1317,7 +2407,17 @@
     "morale": 76,
     "energy": 92,
     "value": 12310000,
-    "salary": 1209000
+    "salary": 1209000,
+    "pace": 75,
+    "shooting": 76,
+    "passing": 83,
+    "defending": 77,
+    "physical": 77,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p110-gaspar-iturra",
+    "potential": 78
   },
   {
     "id": "p111",
@@ -1329,7 +2429,17 @@
     "morale": 77,
     "energy": 93,
     "value": 12575000,
-    "salary": 1237500
+    "salary": 1237500,
+    "pace": 72,
+    "shooting": 73,
+    "passing": 86,
+    "defending": 76,
+    "physical": 74,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p111-nicolas-jimenez",
+    "potential": 84
   },
   {
     "id": "p112",
@@ -1341,7 +2451,17 @@
     "morale": 78,
     "energy": 94,
     "value": 12245000,
-    "salary": 1220500
+    "salary": 1220500,
+    "pace": 80,
+    "shooting": 68,
+    "passing": 71,
+    "defending": 65,
+    "physical": 65,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p112-walter-henriquez",
+    "potential": 75
   },
   {
     "id": "p113",
@@ -1353,7 +2473,17 @@
     "morale": 79,
     "energy": 95,
     "value": 12510000,
-    "salary": 1249000
+    "salary": 1249000,
+    "pace": 70,
+    "shooting": 83,
+    "passing": 75,
+    "defending": 62,
+    "physical": 77,
+    "goalkeeping": 42,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p113-franco-ibacache",
+    "potential": 75
   },
   {
     "id": "p114",
@@ -1365,7 +2495,17 @@
     "morale": 81,
     "energy": 85,
     "value": 10605000,
-    "salary": 1004500
+    "salary": 1004500,
+    "pace": 77,
+    "shooting": 69,
+    "passing": 81,
+    "defending": 74,
+    "physical": 70,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p114-gaspar-ojeda",
+    "potential": 82
   },
   {
     "id": "p115",
@@ -1377,7 +2517,17 @@
     "morale": 82,
     "energy": 86,
     "value": 10870000,
-    "salary": 1033000
+    "salary": 1033000,
+    "pace": 73,
+    "shooting": 75,
+    "passing": 84,
+    "defending": 77,
+    "physical": 77,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p115-nicolas-naranjo",
+    "potential": 76
   },
   {
     "id": "p116",
@@ -1389,7 +2539,17 @@
     "morale": 70,
     "energy": 87,
     "value": 11135000,
-    "salary": 1061500
+    "salary": 1061500,
+    "pace": 78,
+    "shooting": 72,
+    "passing": 85,
+    "defending": 75,
+    "physical": 73,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p116-walter-norambuena",
+    "potential": 80
   },
   {
     "id": "p117",
@@ -1401,7 +2561,17 @@
     "morale": 71,
     "energy": 88,
     "value": 10805000,
-    "salary": 1044500
+    "salary": 1044500,
+    "pace": 74,
+    "shooting": 73,
+    "passing": 75,
+    "defending": 66,
+    "physical": 71,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p117-franco-mancilla",
+    "potential": 69
   },
   {
     "id": "p118",
@@ -1413,7 +2583,17 @@
     "morale": 72,
     "energy": 89,
     "value": 11070000,
-    "salary": 1073000
+    "salary": 1073000,
+    "pace": 77,
+    "shooting": 74,
+    "passing": 70,
+    "defending": 66,
+    "physical": 71,
+    "goalkeeping": 42,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p118-renato-miranda",
+    "potential": 81
   },
   {
     "id": "p119",
@@ -1425,7 +2605,17 @@
     "morale": 73,
     "energy": 90,
     "value": 11335000,
-    "salary": 1101500
+    "salary": 1101500,
+    "pace": 76,
+    "shooting": 81,
+    "passing": 69,
+    "defending": 59,
+    "physical": 74,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p119-emiliano-loyola",
+    "potential": 76
   },
   {
     "id": "p120",
@@ -1437,7 +2627,17 @@
     "morale": 74,
     "energy": 91,
     "value": 11600000,
-    "salary": 1130000
+    "salary": 1130000,
+    "pace": 65,
+    "shooting": 49,
+    "passing": 73,
+    "defending": 75,
+    "physical": 72,
+    "goalkeeping": 83,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p120-lautaro-lagos",
+    "potential": 77
   },
   {
     "id": "p121",
@@ -1449,7 +2649,17 @@
     "morale": 75,
     "energy": 92,
     "value": 11865000,
-    "salary": 1158500
+    "salary": 1158500,
+    "pace": 73,
+    "shooting": 69,
+    "passing": 72,
+    "defending": 78,
+    "physical": 80,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p121-tomas-iturra",
+    "potential": 73
   },
   {
     "id": "p122",
@@ -1461,7 +2671,17 @@
     "morale": 76,
     "energy": 93,
     "value": 12130000,
-    "salary": 1187000
+    "salary": 1187000,
+    "pace": 69,
+    "shooting": 66,
+    "passing": 74,
+    "defending": 85,
+    "physical": 77,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p122-diego-jimenez",
+    "potential": 77
   },
   {
     "id": "p123",
@@ -1473,7 +2693,17 @@
     "morale": 77,
     "energy": 94,
     "value": 12395000,
-    "salary": 1215500
+    "salary": 1215500,
+    "pace": 74,
+    "shooting": 78,
+    "passing": 87,
+    "defending": 81,
+    "physical": 79,
+    "goalkeeping": 50,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p123-martin-henriquez",
+    "potential": 84
   },
   {
     "id": "p124",
@@ -1485,7 +2715,17 @@
     "morale": 78,
     "energy": 95,
     "value": 12065000,
-    "salary": 1198500
+    "salary": 1198500,
+    "pace": 72,
+    "shooting": 65,
+    "passing": 80,
+    "defending": 74,
+    "physical": 66,
+    "goalkeeping": 42,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p124-cristian-ibacache",
+    "potential": 76
   },
   {
     "id": "p125",
@@ -1497,7 +2737,17 @@
     "morale": 79,
     "energy": 82,
     "value": 12330000,
-    "salary": 1227000
+    "salary": 1227000,
+    "pace": 75,
+    "shooting": 77,
+    "passing": 75,
+    "defending": 69,
+    "physical": 74,
+    "goalkeeping": 46,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p125-javier-gallardo",
+    "potential": 75
   },
   {
     "id": "p126",
@@ -1509,7 +2759,17 @@
     "morale": 80,
     "energy": 83,
     "value": 12595000,
-    "salary": 1255500
+    "salary": 1255500,
+    "pace": 75,
+    "shooting": 78,
+    "passing": 69,
+    "defending": 63,
+    "physical": 71,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p126-raimundo-herrera",
+    "potential": 75
   },
   {
     "id": "p127",
@@ -1521,7 +2781,17 @@
     "morale": 81,
     "energy": 95,
     "value": 8104000,
-    "salary": 754400
+    "salary": 754400,
+    "pace": 67,
+    "shooting": 48,
+    "passing": 62,
+    "defending": 66,
+    "physical": 72,
+    "goalkeeping": 75,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p127-alonso-castillo",
+    "potential": 68
   },
   {
     "id": "p128",
@@ -1533,7 +2803,17 @@
     "morale": 68,
     "energy": 83,
     "value": 8342000,
-    "salary": 779200
+    "salary": 779200,
+    "pace": 69,
+    "shooting": 65,
+    "passing": 72,
+    "defending": 81,
+    "physical": 76,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p128-ismael-figueroa",
+    "potential": 78
   },
   {
     "id": "p129",
@@ -1545,7 +2825,17 @@
     "morale": 69,
     "energy": 85,
     "value": 8580000,
-    "salary": 804000
+    "salary": 804000,
+    "pace": 73,
+    "shooting": 66,
+    "passing": 69,
+    "defending": 82,
+    "physical": 77,
+    "goalkeeping": 41,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p129-victor-lara",
+    "potential": 77
   },
   {
     "id": "p130",
@@ -1557,7 +2847,17 @@
     "morale": 70,
     "energy": 87,
     "value": 8818000,
-    "salary": 828800
+    "salary": 828800,
+    "pace": 69,
+    "shooting": 65,
+    "passing": 72,
+    "defending": 83,
+    "physical": 76,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p130-ruben-medina",
+    "potential": 73
   },
   {
     "id": "p131",
@@ -1569,7 +2869,17 @@
     "morale": 71,
     "energy": 89,
     "value": 9056000,
-    "salary": 853600
+    "salary": 853600,
+    "pace": 69,
+    "shooting": 64,
+    "passing": 74,
+    "defending": 78,
+    "physical": 75,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p131-fabian-navarro",
+    "potential": 87
   },
   {
     "id": "p132",
@@ -1581,7 +2891,17 @@
     "morale": 72,
     "energy": 91,
     "value": 8826000,
-    "salary": 843600
+    "salary": 843600,
+    "pace": 70,
+    "shooting": 63,
+    "passing": 75,
+    "defending": 73,
+    "physical": 64,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p132-rodrigo-parra",
+    "potential": 71
   },
   {
     "id": "p133",
@@ -1593,7 +2913,17 @@
     "morale": 73,
     "energy": 93,
     "value": 9064000,
-    "salary": 868400
+    "salary": 868400,
+    "pace": 64,
+    "shooting": 69,
+    "passing": 77,
+    "defending": 74,
+    "physical": 70,
+    "goalkeeping": 40,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p133-hans-rios",
+    "potential": 68
   },
   {
     "id": "p134",
@@ -1605,7 +2935,17 @@
     "morale": 74,
     "energy": 95,
     "value": 9302000,
-    "salary": 893200
+    "salary": 893200,
+    "pace": 65,
+    "shooting": 70,
+    "passing": 76,
+    "defending": 69,
+    "physical": 71,
+    "goalkeeping": 40,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p134-cesar-saavedra",
+    "potential": 74
   },
   {
     "id": "p135",
@@ -1617,7 +2957,17 @@
     "morale": 75,
     "energy": 83,
     "value": 9540000,
-    "salary": 918000
+    "salary": 918000,
+    "pace": 74,
+    "shooting": 71,
+    "passing": 73,
+    "defending": 64,
+    "physical": 68,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p135-maximo-soto",
+    "potential": 71
   },
   {
     "id": "p136",
@@ -1629,7 +2979,17 @@
     "morale": 76,
     "energy": 85,
     "value": 9778000,
-    "salary": 942800
+    "salary": 942800,
+    "pace": 79,
+    "shooting": 75,
+    "passing": 73,
+    "defending": 65,
+    "physical": 72,
+    "goalkeeping": 42,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p136-claudio-vargas",
+    "potential": 73
   },
   {
     "id": "p137",
@@ -1641,7 +3001,17 @@
     "morale": 77,
     "energy": 87,
     "value": 10016000,
-    "salary": 967600
+    "salary": 967600,
+    "pace": 75,
+    "shooting": 81,
+    "passing": 75,
+    "defending": 64,
+    "physical": 74,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p137-adrian-aguirre",
+    "potential": 78
   },
   {
     "id": "p138",
@@ -1653,7 +3023,17 @@
     "morale": 78,
     "energy": 89,
     "value": 9786000,
-    "salary": 957600
+    "salary": 957600,
+    "pace": 66,
+    "shooting": 44,
+    "passing": 63,
+    "defending": 72,
+    "physical": 67,
+    "goalkeeping": 77,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p138-hugo-bravo",
+    "potential": 68
   },
   {
     "id": "p139",
@@ -1665,7 +3045,17 @@
     "morale": 79,
     "energy": 91,
     "value": 10024000,
-    "salary": 982400
+    "salary": 982400,
+    "pace": 63,
+    "shooting": 65,
+    "passing": 71,
+    "defending": 77,
+    "physical": 76,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p139-thiago-carrasco",
+    "potential": 81
   },
   {
     "id": "p140",
@@ -1677,7 +3067,17 @@
     "morale": 80,
     "energy": 93,
     "value": 10262000,
-    "salary": 1007200
+    "salary": 1007200,
+    "pace": 70,
+    "shooting": 59,
+    "passing": 71,
+    "defending": 75,
+    "physical": 70,
+    "goalkeeping": 42,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p140-patricio-cornejo",
+    "potential": 80
   },
   {
     "id": "p141",
@@ -1689,7 +3089,17 @@
     "morale": 81,
     "energy": 95,
     "value": 10500000,
-    "salary": 1032000
+    "salary": 1032000,
+    "pace": 73,
+    "shooting": 67,
+    "passing": 80,
+    "defending": 74,
+    "physical": 69,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p141-enzo-guajardo",
+    "potential": 74
   },
   {
     "id": "p142",
@@ -1701,7 +3111,17 @@
     "morale": 68,
     "energy": 83,
     "value": 10738000,
-    "salary": 1056800
+    "salary": 1056800,
+    "pace": 73,
+    "shooting": 74,
+    "passing": 75,
+    "defending": 71,
+    "physical": 76,
+    "goalkeeping": 50,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p142-rafael-lillo",
+    "potential": 80
   },
   {
     "id": "p143",
@@ -1713,7 +3133,17 @@
     "morale": 69,
     "energy": 85,
     "value": 10976000,
-    "salary": 1081600
+    "salary": 1081600,
+    "pace": 77,
+    "shooting": 75,
+    "passing": 75,
+    "defending": 64,
+    "physical": 73,
+    "goalkeeping": 44,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p143-gabriel-munoz",
+    "potential": 79
   },
   {
     "id": "p144",
@@ -1725,7 +3155,17 @@
     "morale": 70,
     "energy": 87,
     "value": 10746000,
-    "salary": 1071600
+    "salary": 1071600,
+    "pace": 70,
+    "shooting": 76,
+    "passing": 68,
+    "defending": 61,
+    "physical": 69,
+    "goalkeeping": 46,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p144-baltazar-olguin",
+    "potential": 67
   },
   {
     "id": "p145",
@@ -1737,7 +3177,17 @@
     "morale": 68,
     "energy": 82,
     "value": 8182000,
-    "salary": 760200
+    "salary": 760200,
+    "pace": 69,
+    "shooting": 48,
+    "passing": 66,
+    "defending": 75,
+    "physical": 72,
+    "goalkeeping": 75,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p145-simon-zamora",
+    "potential": 84
   },
   {
     "id": "p146",
@@ -1749,7 +3199,17 @@
     "morale": 69,
     "energy": 84,
     "value": 8420000,
-    "salary": 785000
+    "salary": 785000,
+    "pace": 68,
+    "shooting": 59,
+    "passing": 69,
+    "defending": 78,
+    "physical": 70,
+    "goalkeeping": 42,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p146-marcelo-benitez",
+    "potential": 81
   },
   {
     "id": "p147",
@@ -1761,7 +3221,17 @@
     "morale": 70,
     "energy": 86,
     "value": 8658000,
-    "salary": 809800
+    "salary": 809800,
+    "pace": 71,
+    "shooting": 60,
+    "passing": 70,
+    "defending": 79,
+    "physical": 71,
+    "goalkeeping": 42,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p147-elias-calderon",
+    "potential": 75
   },
   {
     "id": "p148",
@@ -1773,7 +3243,17 @@
     "morale": 71,
     "energy": 88,
     "value": 8896000,
-    "salary": 834600
+    "salary": 834600,
+    "pace": 71,
+    "shooting": 66,
+    "passing": 69,
+    "defending": 84,
+    "physical": 77,
+    "goalkeeping": 51,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p148-oliver-chandia",
+    "potential": 83
   },
   {
     "id": "p149",
@@ -1785,7 +3265,17 @@
     "morale": 72,
     "energy": 90,
     "value": 8666000,
-    "salary": 824600
+    "salary": 824600,
+    "pace": 62,
+    "shooting": 57,
+    "passing": 65,
+    "defending": 74,
+    "physical": 68,
+    "goalkeeping": 46,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p149-felipe-garrido",
+    "potential": 71
   },
   {
     "id": "p150",
@@ -1797,7 +3287,17 @@
     "morale": 73,
     "energy": 92,
     "value": 8904000,
-    "salary": 849400
+    "salary": 849400,
+    "pace": 72,
+    "shooting": 68,
+    "passing": 72,
+    "defending": 68,
+    "physical": 69,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p150-angel-leiva",
+    "potential": 68
   },
   {
     "id": "p151",
@@ -1809,7 +3309,17 @@
     "morale": 74,
     "energy": 94,
     "value": 9142000,
-    "salary": 874200
+    "salary": 874200,
+    "pace": 65,
+    "shooting": 72,
+    "passing": 74,
+    "defending": 73,
+    "physical": 73,
+    "goalkeeping": 44,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p151-jean-molina",
+    "potential": 78
   },
   {
     "id": "p152",
@@ -1821,7 +3331,17 @@
     "morale": 75,
     "energy": 82,
     "value": 9380000,
-    "salary": 899000
+    "salary": 899000,
+    "pace": 72,
+    "shooting": 71,
+    "passing": 80,
+    "defending": 72,
+    "physical": 73,
+    "goalkeeping": 41,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p152-yael-nunez",
+    "potential": 76
   },
   {
     "id": "p153",
@@ -1833,7 +3353,17 @@
     "morale": 76,
     "energy": 84,
     "value": 9618000,
-    "salary": 923800
+    "salary": 923800,
+    "pace": 78,
+    "shooting": 74,
+    "passing": 79,
+    "defending": 63,
+    "physical": 71,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p153-sergio-perez",
+    "potential": 74
   },
   {
     "id": "p154",
@@ -1845,7 +3375,17 @@
     "morale": 77,
     "energy": 86,
     "value": 9856000,
-    "salary": 948600
+    "salary": 948600,
+    "pace": 77,
+    "shooting": 78,
+    "passing": 74,
+    "defending": 65,
+    "physical": 75,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p154-fernando-rivera",
+    "potential": 78
   },
   {
     "id": "p155",
@@ -1857,7 +3397,17 @@
     "morale": 78,
     "energy": 88,
     "value": 9626000,
-    "salary": 938600
+    "salary": 938600,
+    "pace": 71,
+    "shooting": 81,
+    "passing": 69,
+    "defending": 57,
+    "physical": 74,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p155-samuel-sandoval",
+    "potential": 73
   },
   {
     "id": "p156",
@@ -1869,7 +3419,17 @@
     "morale": 79,
     "energy": 90,
     "value": 9864000,
-    "salary": 963400
+    "salary": 963400,
+    "pace": 61,
+    "shooting": 45,
+    "passing": 69,
+    "defending": 73,
+    "physical": 68,
+    "goalkeeping": 82,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p156-julian-toledo",
+    "potential": 72
   },
   {
     "id": "p157",
@@ -1881,7 +3441,17 @@
     "morale": 80,
     "energy": 92,
     "value": 10102000,
-    "salary": 988200
+    "salary": 988200,
+    "pace": 71,
+    "shooting": 61,
+    "passing": 66,
+    "defending": 82,
+    "physical": 73,
+    "goalkeeping": 42,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p157-cristopher-vidal",
+    "potential": 77
   },
   {
     "id": "p158",
@@ -1893,7 +3463,17 @@
     "morale": 81,
     "energy": 94,
     "value": 10340000,
-    "salary": 1013000
+    "salary": 1013000,
+    "pace": 68,
+    "shooting": 65,
+    "passing": 73,
+    "defending": 81,
+    "physical": 76,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p158-milovan-alvarez",
+    "potential": 72
   },
   {
     "id": "p159",
@@ -1905,7 +3485,17 @@
     "morale": 68,
     "energy": 82,
     "value": 10578000,
-    "salary": 1037800
+    "salary": 1037800,
+    "pace": 73,
+    "shooting": 73,
+    "passing": 79,
+    "defending": 71,
+    "physical": 75,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p159-eduardo-cabrera",
+    "potential": 86
   },
   {
     "id": "p160",
@@ -1917,7 +3507,17 @@
     "morale": 69,
     "energy": 84,
     "value": 10816000,
-    "salary": 1062600
+    "salary": 1062600,
+    "pace": 71,
+    "shooting": 76,
+    "passing": 79,
+    "defending": 72,
+    "physical": 77,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p160-angel-figueroa",
+    "potential": 77
   },
   {
     "id": "p161",
@@ -1929,7 +3529,17 @@
     "morale": 70,
     "energy": 86,
     "value": 10586000,
-    "salary": 1052600
+    "salary": 1052600,
+    "pace": 75,
+    "shooting": 67,
+    "passing": 72,
+    "defending": 62,
+    "physical": 64,
+    "goalkeeping": 38,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p161-jean-lara",
+    "potential": 67
   },
   {
     "id": "p162",
@@ -1941,7 +3551,17 @@
     "morale": 71,
     "energy": 88,
     "value": 10824000,
-    "salary": 1077400
+    "salary": 1077400,
+    "pace": 72,
+    "shooting": 78,
+    "passing": 65,
+    "defending": 59,
+    "physical": 71,
+    "goalkeeping": 42,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p162-yael-medina",
+    "potential": 78
   },
   {
     "id": "p163",
@@ -1953,7 +3573,17 @@
     "morale": 69,
     "energy": 83,
     "value": 8338000,
-    "salary": 771800
+    "salary": 771800,
+    "pace": 71,
+    "shooting": 54,
+    "passing": 67,
+    "defending": 77,
+    "physical": 77,
+    "goalkeeping": 83,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p163-cristopher-soto",
+    "potential": 76
   },
   {
     "id": "p164",
@@ -1965,7 +3595,17 @@
     "morale": 70,
     "energy": 85,
     "value": 8576000,
-    "salary": 796600
+    "salary": 796600,
+    "pace": 73,
+    "shooting": 64,
+    "passing": 77,
+    "defending": 78,
+    "physical": 75,
+    "goalkeeping": 46,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p164-milovan-vargas",
+    "potential": 79
   },
   {
     "id": "p165",
@@ -1977,7 +3617,17 @@
     "morale": 71,
     "energy": 87,
     "value": 8814000,
-    "salary": 821400
+    "salary": 821400,
+    "pace": 73,
+    "shooting": 68,
+    "passing": 71,
+    "defending": 84,
+    "physical": 79,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p165-eduardo-aguirre",
+    "potential": 83
   },
   {
     "id": "p166",
@@ -1989,7 +3639,17 @@
     "morale": 72,
     "energy": 89,
     "value": 8584000,
-    "salary": 811400
+    "salary": 811400,
+    "pace": 70,
+    "shooting": 61,
+    "passing": 68,
+    "defending": 73,
+    "physical": 72,
+    "goalkeeping": 40,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p166-alonso-bravo",
+    "potential": 74
   },
   {
     "id": "p167",
@@ -2001,7 +3661,17 @@
     "morale": 73,
     "energy": 91,
     "value": 8822000,
-    "salary": 836200
+    "salary": 836200,
+    "pace": 66,
+    "shooting": 60,
+    "passing": 68,
+    "defending": 76,
+    "physical": 72,
+    "goalkeeping": 42,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p167-ismael-carrasco",
+    "potential": 69
   },
   {
     "id": "p168",
@@ -2013,7 +3683,17 @@
     "morale": 74,
     "energy": 93,
     "value": 9060000,
-    "salary": 861000
+    "salary": 861000,
+    "pace": 67,
+    "shooting": 71,
+    "passing": 75,
+    "defending": 71,
+    "physical": 72,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p168-victor-cornejo",
+    "potential": 79
   },
   {
     "id": "p169",
@@ -2025,7 +3705,17 @@
     "morale": 75,
     "energy": 95,
     "value": 9298000,
-    "salary": 885800
+    "salary": 885800,
+    "pace": 74,
+    "shooting": 68,
+    "passing": 77,
+    "defending": 72,
+    "physical": 69,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p169-ruben-guajardo",
+    "potential": 76
   },
   {
     "id": "p170",
@@ -2037,7 +3727,17 @@
     "morale": 76,
     "energy": 83,
     "value": 9536000,
-    "salary": 910600
+    "salary": 910600,
+    "pace": 75,
+    "shooting": 75,
+    "passing": 81,
+    "defending": 74,
+    "physical": 77,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p170-fabian-lillo",
+    "potential": 73
   },
   {
     "id": "p171",
@@ -2049,7 +3749,17 @@
     "morale": 77,
     "energy": 85,
     "value": 9774000,
-    "salary": 935400
+    "salary": 935400,
+    "pace": 85,
+    "shooting": 73,
+    "passing": 73,
+    "defending": 68,
+    "physical": 70,
+    "goalkeeping": 44,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p171-rodrigo-munoz",
+    "potential": 84
   },
   {
     "id": "p172",
@@ -2061,7 +3771,17 @@
     "morale": 78,
     "energy": 87,
     "value": 9544000,
-    "salary": 925400
+    "salary": 925400,
+    "pace": 78,
+    "shooting": 75,
+    "passing": 75,
+    "defending": 68,
+    "physical": 72,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p172-hans-olguin",
+    "potential": 72
   },
   {
     "id": "p173",
@@ -2073,7 +3793,17 @@
     "morale": 79,
     "energy": 89,
     "value": 9782000,
-    "salary": 950200
+    "salary": 950200,
+    "pace": 73,
+    "shooting": 78,
+    "passing": 73,
+    "defending": 58,
+    "physical": 71,
+    "goalkeeping": 41,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p173-cesar-ramirez",
+    "potential": 72
   },
   {
     "id": "p174",
@@ -2085,7 +3815,17 @@
     "morale": 80,
     "energy": 91,
     "value": 10020000,
-    "salary": 975000
+    "salary": 975000,
+    "pace": 68,
+    "shooting": 46,
+    "passing": 70,
+    "defending": 74,
+    "physical": 69,
+    "goalkeeping": 80,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p174-leonardo-ramirez",
+    "potential": 75
   },
   {
     "id": "p175",
@@ -2097,7 +3837,17 @@
     "morale": 81,
     "energy": 93,
     "value": 10258000,
-    "salary": 999800
+    "salary": 999800,
+    "pace": 74,
+    "shooting": 65,
+    "passing": 69,
+    "defending": 77,
+    "physical": 76,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p175-ariel-rojas",
+    "potential": 75
   },
   {
     "id": "p176",
@@ -2109,7 +3859,17 @@
     "morale": 68,
     "energy": 95,
     "value": 10496000,
-    "salary": 1024600
+    "salary": 1024600,
+    "pace": 71,
+    "shooting": 61,
+    "passing": 70,
+    "defending": 77,
+    "physical": 72,
+    "goalkeeping": 44,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p176-yahir-silva",
+    "potential": 75
   },
   {
     "id": "p177",
@@ -2121,7 +3881,17 @@
     "morale": 69,
     "energy": 83,
     "value": 10734000,
-    "salary": 1049400
+    "salary": 1049400,
+    "pace": 69,
+    "shooting": 76,
+    "passing": 79,
+    "defending": 75,
+    "physical": 77,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p177-guillermo-valdes",
+    "potential": 84
   },
   {
     "id": "p178",
@@ -2133,7 +3903,17 @@
     "morale": 70,
     "energy": 85,
     "value": 10504000,
-    "salary": 1039400
+    "salary": 1039400,
+    "pace": 69,
+    "shooting": 69,
+    "passing": 74,
+    "defending": 74,
+    "physical": 70,
+    "goalkeeping": 41,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p178-thiago-benitez",
+    "potential": 75
   },
   {
     "id": "p179",
@@ -2145,7 +3925,17 @@
     "morale": 71,
     "energy": 87,
     "value": 10742000,
-    "salary": 1064200
+    "salary": 1064200,
+    "pace": 75,
+    "shooting": 73,
+    "passing": 76,
+    "defending": 69,
+    "physical": 70,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p179-patricio-calderon",
+    "potential": 80
   },
   {
     "id": "p180",
@@ -2157,7 +3947,17 @@
     "morale": 72,
     "energy": 89,
     "value": 10980000,
-    "salary": 1089000
+    "salary": 1089000,
+    "pace": 76,
+    "shooting": 77,
+    "passing": 71,
+    "defending": 66,
+    "physical": 70,
+    "goalkeeping": 44,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p180-enzo-chandia",
+    "potential": 80
   },
   {
     "id": "p181",
@@ -2169,7 +3969,17 @@
     "morale": 70,
     "energy": 84,
     "value": 8416000,
-    "salary": 777600
+    "salary": 777600,
+    "pace": 71,
+    "shooting": 54,
+    "passing": 71,
+    "defending": 74,
+    "physical": 77,
+    "goalkeeping": 78,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p181-ariel-perez",
+    "potential": 73
   },
   {
     "id": "p182",
@@ -2181,7 +3991,17 @@
     "morale": 71,
     "energy": 86,
     "value": 8654000,
-    "salary": 802400
+    "salary": 802400,
+    "pace": 72,
+    "shooting": 62,
+    "passing": 74,
+    "defending": 85,
+    "physical": 73,
+    "goalkeeping": 50,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p182-yahir-rivera",
+    "potential": 77
   },
   {
     "id": "p183",
@@ -2193,7 +4013,17 @@
     "morale": 72,
     "energy": 88,
     "value": 8424000,
-    "salary": 792400
+    "salary": 792400,
+    "pace": 67,
+    "shooting": 59,
+    "passing": 72,
+    "defending": 75,
+    "physical": 70,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p183-guillermo-sandoval",
+    "potential": 76
   },
   {
     "id": "p184",
@@ -2205,7 +4035,17 @@
     "morale": 73,
     "energy": 90,
     "value": 8662000,
-    "salary": 817200
+    "salary": 817200,
+    "pace": 67,
+    "shooting": 59,
+    "passing": 72,
+    "defending": 74,
+    "physical": 70,
+    "goalkeeping": 46,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p184-simon-toledo",
+    "potential": 76
   },
   {
     "id": "p185",
@@ -2217,7 +4057,17 @@
     "morale": 74,
     "energy": 92,
     "value": 8900000,
-    "salary": 842000
+    "salary": 842000,
+    "pace": 66,
+    "shooting": 64,
+    "passing": 69,
+    "defending": 81,
+    "physical": 75,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p185-marcelo-vidal",
+    "potential": 81
   },
   {
     "id": "p186",
@@ -2229,7 +4079,17 @@
     "morale": 75,
     "energy": 94,
     "value": 9138000,
-    "salary": 866800
+    "salary": 866800,
+    "pace": 69,
+    "shooting": 72,
+    "passing": 82,
+    "defending": 71,
+    "physical": 74,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p186-elias-alvarez",
+    "potential": 77
   },
   {
     "id": "p187",
@@ -2241,7 +4101,17 @@
     "morale": 76,
     "energy": 82,
     "value": 9376000,
-    "salary": 891600
+    "salary": 891600,
+    "pace": 68,
+    "shooting": 72,
+    "passing": 83,
+    "defending": 73,
+    "physical": 73,
+    "goalkeeping": 51,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p187-oliver-cabrera",
+    "potential": 75
   },
   {
     "id": "p188",
@@ -2253,7 +4123,17 @@
     "morale": 77,
     "energy": 84,
     "value": 9614000,
-    "salary": 916400
+    "salary": 916400,
+    "pace": 72,
+    "shooting": 69,
+    "passing": 78,
+    "defending": 71,
+    "physical": 70,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p188-felipe-castillo",
+    "potential": 85
   },
   {
     "id": "p189",
@@ -2265,7 +4145,17 @@
     "morale": 78,
     "energy": 86,
     "value": 9384000,
-    "salary": 906400
+    "salary": 906400,
+    "pace": 74,
+    "shooting": 72,
+    "passing": 72,
+    "defending": 62,
+    "physical": 69,
+    "goalkeeping": 40,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p189-baltazar-lara",
+    "potential": 72
   },
   {
     "id": "p190",
@@ -2277,7 +4167,17 @@
     "morale": 79,
     "energy": 88,
     "value": 9622000,
-    "salary": 931200
+    "salary": 931200,
+    "pace": 81,
+    "shooting": 75,
+    "passing": 71,
+    "defending": 69,
+    "physical": 72,
+    "goalkeeping": 44,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p190-leonardo-medina",
+    "potential": 69
   },
   {
     "id": "p191",
@@ -2289,7 +4189,17 @@
     "morale": 80,
     "energy": 90,
     "value": 9860000,
-    "salary": 956000
+    "salary": 956000,
+    "pace": 78,
+    "shooting": 76,
+    "passing": 72,
+    "defending": 64,
+    "physical": 69,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p191-ariel-navarro",
+    "potential": 85
   },
   {
     "id": "p192",
@@ -2301,7 +4211,17 @@
     "morale": 81,
     "energy": 92,
     "value": 10098000,
-    "salary": 980800
+    "salary": 980800,
+    "pace": 65,
+    "shooting": 55,
+    "passing": 68,
+    "defending": 69,
+    "physical": 70,
+    "goalkeeping": 80,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p192-sergio-navarro",
+    "potential": 78
   },
   {
     "id": "p193",
@@ -2313,7 +4233,17 @@
     "morale": 68,
     "energy": 94,
     "value": 10336000,
-    "salary": 1005600
+    "salary": 1005600,
+    "pace": 70,
+    "shooting": 66,
+    "passing": 74,
+    "defending": 84,
+    "physical": 77,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p193-fernando-parra",
+    "potential": 72
   },
   {
     "id": "p194",
@@ -2325,7 +4255,17 @@
     "morale": 69,
     "energy": 82,
     "value": 10574000,
-    "salary": 1030400
+    "salary": 1030400,
+    "pace": 76,
+    "shooting": 68,
+    "passing": 74,
+    "defending": 82,
+    "physical": 79,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p194-samuel-rios",
+    "potential": 82
   },
   {
     "id": "p195",
@@ -2337,7 +4277,17 @@
     "morale": 70,
     "energy": 84,
     "value": 10344000,
-    "salary": 1020400
+    "salary": 1020400,
+    "pace": 65,
+    "shooting": 70,
+    "passing": 75,
+    "defending": 72,
+    "physical": 71,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p195-marcelo-soto",
+    "potential": 75
   },
   {
     "id": "p196",
@@ -2349,7 +4299,17 @@
     "morale": 71,
     "energy": 86,
     "value": 10582000,
-    "salary": 1045200
+    "salary": 1045200,
+    "pace": 67,
+    "shooting": 69,
+    "passing": 76,
+    "defending": 73,
+    "physical": 70,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p196-elias-vargas",
+    "potential": 69
   },
   {
     "id": "p197",
@@ -2361,7 +4321,17 @@
     "morale": 72,
     "energy": 88,
     "value": 10820000,
-    "salary": 1070000
+    "salary": 1070000,
+    "pace": 81,
+    "shooting": 71,
+    "passing": 72,
+    "defending": 70,
+    "physical": 68,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p197-oliver-aguirre",
+    "potential": 75
   },
   {
     "id": "p198",
@@ -2373,7 +4343,17 @@
     "morale": 73,
     "energy": 90,
     "value": 11058000,
-    "salary": 1094800
+    "salary": 1094800,
+    "pace": 78,
+    "shooting": 83,
+    "passing": 70,
+    "defending": 62,
+    "physical": 76,
+    "goalkeeping": 42,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p198-felipe-bravo",
+    "potential": 73
   },
   {
     "id": "p199",
@@ -2385,7 +4365,17 @@
     "morale": 71,
     "energy": 85,
     "value": 8572000,
-    "salary": 789200
+    "salary": 789200,
+    "pace": 71,
+    "shooting": 52,
+    "passing": 71,
+    "defending": 72,
+    "physical": 75,
+    "goalkeeping": 80,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p199-fernando-munoz",
+    "potential": 77
   },
   {
     "id": "p200",
@@ -2397,7 +4387,17 @@
     "morale": 72,
     "energy": 87,
     "value": 8342000,
-    "salary": 779200
+    "salary": 779200,
+    "pace": 66,
+    "shooting": 58,
+    "passing": 68,
+    "defending": 77,
+    "physical": 69,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p200-samuel-olguin",
+    "potential": 75
   },
   {
     "id": "p201",
@@ -2409,7 +4409,17 @@
     "morale": 73,
     "energy": 89,
     "value": 8580000,
-    "salary": 804000
+    "salary": 804000,
+    "pace": 70,
+    "shooting": 67,
+    "passing": 75,
+    "defending": 81,
+    "physical": 78,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p201-julian-ramirez",
+    "potential": 73
   },
   {
     "id": "p202",
@@ -2421,7 +4431,17 @@
     "morale": 74,
     "energy": 91,
     "value": 8818000,
-    "salary": 828800
+    "salary": 828800,
+    "pace": 66,
+    "shooting": 63,
+    "passing": 76,
+    "defending": 81,
+    "physical": 74,
+    "goalkeeping": 46,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p202-cristopher-rojas",
+    "potential": 73
   },
   {
     "id": "p203",
@@ -2433,7 +4453,17 @@
     "morale": 75,
     "energy": 93,
     "value": 9056000,
-    "salary": 853600
+    "salary": 853600,
+    "pace": 70,
+    "shooting": 64,
+    "passing": 70,
+    "defending": 85,
+    "physical": 75,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p203-maximo-rojas",
+    "potential": 79
   },
   {
     "id": "p204",
@@ -2445,7 +4475,17 @@
     "morale": 76,
     "energy": 95,
     "value": 9294000,
-    "salary": 878400
+    "salary": 878400,
+    "pace": 77,
+    "shooting": 72,
+    "passing": 79,
+    "defending": 78,
+    "physical": 73,
+    "goalkeeping": 49,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p204-claudio-silva",
+    "potential": 74
   },
   {
     "id": "p205",
@@ -2457,7 +4497,17 @@
     "morale": 77,
     "energy": 83,
     "value": 9532000,
-    "salary": 903200
+    "salary": 903200,
+    "pace": 71,
+    "shooting": 71,
+    "passing": 84,
+    "defending": 73,
+    "physical": 72,
+    "goalkeeping": 51,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p205-adrian-valdes",
+    "potential": 84
   },
   {
     "id": "p206",
@@ -2469,7 +4519,17 @@
     "morale": 78,
     "energy": 85,
     "value": 9302000,
-    "salary": 893200
+    "salary": 893200,
+    "pace": 65,
+    "shooting": 71,
+    "passing": 78,
+    "defending": 73,
+    "physical": 72,
+    "goalkeeping": 40,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p206-hugo-zamora",
+    "potential": 75
   },
   {
     "id": "p207",
@@ -2481,7 +4541,17 @@
     "morale": 79,
     "energy": 87,
     "value": 9540000,
-    "salary": 918000
+    "salary": 918000,
+    "pace": 81,
+    "shooting": 77,
+    "passing": 72,
+    "defending": 66,
+    "physical": 74,
+    "goalkeeping": 41,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p207-victor-calderon",
+    "potential": 71
   },
   {
     "id": "p208",
@@ -2493,7 +4563,17 @@
     "morale": 80,
     "energy": 89,
     "value": 9778000,
-    "salary": 942800
+    "salary": 942800,
+    "pace": 79,
+    "shooting": 76,
+    "passing": 76,
+    "defending": 63,
+    "physical": 74,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p208-ruben-chandia",
+    "potential": 85
   },
   {
     "id": "p209",
@@ -2505,7 +4585,17 @@
     "morale": 81,
     "energy": 91,
     "value": 10016000,
-    "salary": 967600
+    "salary": 967600,
+    "pace": 72,
+    "shooting": 84,
+    "passing": 69,
+    "defending": 65,
+    "physical": 77,
+    "goalkeeping": 51,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p209-fabian-garrido",
+    "potential": 76
   },
   {
     "id": "p210",
@@ -2517,7 +4607,17 @@
     "morale": 68,
     "energy": 93,
     "value": 10254000,
-    "salary": 992400
+    "salary": 992400,
+    "pace": 65,
+    "shooting": 56,
+    "passing": 73,
+    "defending": 71,
+    "physical": 79,
+    "goalkeeping": 86,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p210-rafael-garrido",
+    "potential": 73
   },
   {
     "id": "p211",
@@ -2529,7 +4629,17 @@
     "morale": 69,
     "energy": 95,
     "value": 10492000,
-    "salary": 1017200
+    "salary": 1017200,
+    "pace": 69,
+    "shooting": 63,
+    "passing": 77,
+    "defending": 82,
+    "physical": 74,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p211-gabriel-leiva",
+    "potential": 84
   },
   {
     "id": "p212",
@@ -2541,7 +4651,17 @@
     "morale": 70,
     "energy": 83,
     "value": 10262000,
-    "salary": 1007200
+    "salary": 1007200,
+    "pace": 69,
+    "shooting": 59,
+    "passing": 74,
+    "defending": 78,
+    "physical": 70,
+    "goalkeeping": 40,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p212-baltazar-molina",
+    "potential": 76
   },
   {
     "id": "p213",
@@ -2553,7 +4673,17 @@
     "morale": 71,
     "energy": 85,
     "value": 10500000,
-    "salary": 1032000
+    "salary": 1032000,
+    "pace": 73,
+    "shooting": 70,
+    "passing": 81,
+    "defending": 73,
+    "physical": 71,
+    "goalkeeping": 42,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p213-leonardo-nunez",
+    "potential": 73
   },
   {
     "id": "p214",
@@ -2565,7 +4695,17 @@
     "morale": 72,
     "energy": 87,
     "value": 10738000,
-    "salary": 1056800
+    "salary": 1056800,
+    "pace": 75,
+    "shooting": 69,
+    "passing": 77,
+    "defending": 74,
+    "physical": 70,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p214-claudio-rivera",
+    "potential": 79
   },
   {
     "id": "p215",
@@ -2577,7 +4717,17 @@
     "morale": 73,
     "energy": 89,
     "value": 10976000,
-    "salary": 1081600
+    "salary": 1081600,
+    "pace": 83,
+    "shooting": 76,
+    "passing": 78,
+    "defending": 70,
+    "physical": 73,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p215-adrian-sandoval",
+    "potential": 77
   },
   {
     "id": "p216",
@@ -2589,7 +4739,17 @@
     "morale": 74,
     "energy": 91,
     "value": 11214000,
-    "salary": 1106400
+    "salary": 1106400,
+    "pace": 74,
+    "shooting": 81,
+    "passing": 70,
+    "defending": 66,
+    "physical": 75,
+    "goalkeeping": 52,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p216-hugo-toledo",
+    "potential": 77
   },
   {
     "id": "p217",
@@ -2601,7 +4761,17 @@
     "morale": 72,
     "energy": 86,
     "value": 8026000,
-    "salary": 748600
+    "salary": 748600,
+    "pace": 65,
+    "shooting": 46,
+    "passing": 69,
+    "defending": 72,
+    "physical": 69,
+    "goalkeeping": 79,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p217-gabriel-figueroa",
+    "potential": 80
   },
   {
     "id": "p218",
@@ -2613,7 +4783,17 @@
     "morale": 73,
     "energy": 88,
     "value": 8264000,
-    "salary": 773400
+    "salary": 773400,
+    "pace": 70,
+    "shooting": 60,
+    "passing": 69,
+    "defending": 75,
+    "physical": 71,
+    "goalkeeping": 44,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p218-cesar-medina",
+    "potential": 73
   },
   {
     "id": "p219",
@@ -2625,7 +4805,17 @@
     "morale": 74,
     "energy": 90,
     "value": 8502000,
-    "salary": 798200
+    "salary": 798200,
+    "pace": 65,
+    "shooting": 65,
+    "passing": 66,
+    "defending": 75,
+    "physical": 76,
+    "goalkeeping": 44,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p219-maximo-navarro",
+    "potential": 69
   },
   {
     "id": "p220",
@@ -2637,7 +4827,17 @@
     "morale": 75,
     "energy": 92,
     "value": 8740000,
-    "salary": 823000
+    "salary": 823000,
+    "pace": 70,
+    "shooting": 62,
+    "passing": 71,
+    "defending": 78,
+    "physical": 74,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p220-claudio-parra",
+    "potential": 80
   },
   {
     "id": "p221",
@@ -2649,7 +4849,17 @@
     "morale": 76,
     "energy": 94,
     "value": 8978000,
-    "salary": 847800
+    "salary": 847800,
+    "pace": 71,
+    "shooting": 63,
+    "passing": 69,
+    "defending": 78,
+    "physical": 74,
+    "goalkeeping": 43,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p221-yahir-parra",
+    "potential": 78
   },
   {
     "id": "p222",
@@ -2661,7 +4871,17 @@
     "morale": 77,
     "energy": 82,
     "value": 9216000,
-    "salary": 872600
+    "salary": 872600,
+    "pace": 70,
+    "shooting": 68,
+    "passing": 77,
+    "defending": 71,
+    "physical": 70,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p222-guillermo-rios",
+    "potential": 75
   },
   {
     "id": "p223",
@@ -2673,7 +4893,17 @@
     "morale": 78,
     "energy": 84,
     "value": 8986000,
-    "salary": 862600
+    "salary": 862600,
+    "pace": 66,
+    "shooting": 64,
+    "passing": 75,
+    "defending": 65,
+    "physical": 65,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p223-simon-saavedra",
+    "potential": 78
   },
   {
     "id": "p224",
@@ -2685,7 +4915,17 @@
     "morale": 79,
     "energy": 86,
     "value": 9224000,
-    "salary": 887400
+    "salary": 887400,
+    "pace": 66,
+    "shooting": 66,
+    "passing": 72,
+    "defending": 66,
+    "physical": 67,
+    "goalkeeping": 41,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p224-patricio-vargas",
+    "potential": 71
   },
   {
     "id": "p225",
@@ -2697,7 +4937,17 @@
     "morale": 80,
     "energy": 88,
     "value": 9462000,
-    "salary": 912200
+    "salary": 912200,
+    "pace": 80,
+    "shooting": 71,
+    "passing": 69,
+    "defending": 61,
+    "physical": 68,
+    "goalkeeping": 47,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p225-enzo-aguirre",
+    "potential": 81
   },
   {
     "id": "p226",
@@ -2709,7 +4959,17 @@
     "morale": 81,
     "energy": 90,
     "value": 9700000,
-    "salary": 937000
+    "salary": 937000,
+    "pace": 75,
+    "shooting": 77,
+    "passing": 77,
+    "defending": 66,
+    "physical": 74,
+    "goalkeeping": 42,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p226-rafael-bravo",
+    "potential": 76
   },
   {
     "id": "p227",
@@ -2721,7 +4981,17 @@
     "morale": 68,
     "energy": 92,
     "value": 9938000,
-    "salary": 961800
+    "salary": 961800,
+    "pace": 73,
+    "shooting": 85,
+    "passing": 71,
+    "defending": 59,
+    "physical": 70,
+    "goalkeeping": 44,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p227-gabriel-carrasco",
+    "potential": 71
   },
   {
     "id": "p228",
@@ -2733,7 +5003,17 @@
     "morale": 69,
     "energy": 94,
     "value": 10176000,
-    "salary": 986600
+    "salary": 986600,
+    "pace": 69,
+    "shooting": 56,
+    "passing": 66,
+    "defending": 74,
+    "physical": 79,
+    "goalkeeping": 85,
+    "nationality": "Chile",
+    "contractEnd": "2029-12-31",
+    "avatarSeed": "p228-angel-carrasco",
+    "potential": 87
   },
   {
     "id": "p229",
@@ -2745,7 +5025,17 @@
     "morale": 70,
     "energy": 82,
     "value": 9946000,
-    "salary": 976600
+    "salary": 976600,
+    "pace": 70,
+    "shooting": 64,
+    "passing": 70,
+    "defending": 80,
+    "physical": 67,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p229-jean-cornejo",
+    "potential": 70
   },
   {
     "id": "p230",
@@ -2757,7 +5047,17 @@
     "morale": 71,
     "energy": 84,
     "value": 10184000,
-    "salary": 1001400
+    "salary": 1001400,
+    "pace": 70,
+    "shooting": 61,
+    "passing": 69,
+    "defending": 74,
+    "physical": 72,
+    "goalkeeping": 39,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p230-yael-guajardo",
+    "potential": 69
   },
   {
     "id": "p231",
@@ -2769,7 +5069,17 @@
     "morale": 72,
     "energy": 86,
     "value": 10422000,
-    "salary": 1026200
+    "salary": 1026200,
+    "pace": 72,
+    "shooting": 68,
+    "passing": 81,
+    "defending": 71,
+    "physical": 70,
+    "goalkeeping": 40,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p231-sergio-lillo",
+    "potential": 84
   },
   {
     "id": "p232",
@@ -2781,7 +5091,17 @@
     "morale": 73,
     "energy": 88,
     "value": 10660000,
-    "salary": 1051000
+    "salary": 1051000,
+    "pace": 74,
+    "shooting": 69,
+    "passing": 74,
+    "defending": 69,
+    "physical": 70,
+    "goalkeeping": 45,
+    "nationality": "Chile",
+    "contractEnd": "2028-12-31",
+    "avatarSeed": "p232-guillermo-olguin",
+    "potential": 71
   },
   {
     "id": "p233",
@@ -2793,7 +5113,17 @@
     "morale": 74,
     "energy": 90,
     "value": 10898000,
-    "salary": 1075800
+    "salary": 1075800,
+    "pace": 82,
+    "shooting": 71,
+    "passing": 73,
+    "defending": 67,
+    "physical": 68,
+    "goalkeeping": 44,
+    "nationality": "Chile",
+    "contractEnd": "2030-12-31",
+    "avatarSeed": "p233-simon-ramirez",
+    "potential": 75
   },
   {
     "id": "p234",
@@ -2805,6 +5135,16 @@
     "morale": 75,
     "energy": 92,
     "value": 11136000,
-    "salary": 1100600
+    "salary": 1100600,
+    "pace": 76,
+    "shooting": 85,
+    "passing": 69,
+    "defending": 65,
+    "physical": 78,
+    "goalkeeping": 48,
+    "nationality": "Chile",
+    "contractEnd": "2027-12-31",
+    "avatarSeed": "p234-marcelo-rojas",
+    "potential": 77
   }
 ]

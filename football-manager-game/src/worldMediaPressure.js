@@ -35,6 +35,31 @@
     };
   }
 
+  function headlinePattern(title) {
+    const text = String(title || "").toLowerCase();
+    if (text.includes("?")) return "pregunta";
+    if (text.includes("!")) return "exclamacion";
+    if (text.includes(":")) return "dos-puntos";
+    return text.split(/\s+/).slice(0, 3).join(" ");
+  }
+
+  function headlineSimilarity(left, right) {
+    const a = String(left || "").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "").split(/\s+/).filter(Boolean);
+    const b = String(right || "").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "").split(/\s+/).filter(Boolean);
+    if (!a.length || !b.length) return 0;
+    const shared = a.filter((word) => b.includes(word)).length / Math.max(a.length, b.length);
+    return shared + (a[0] === b[0] ? 0.25 : 0) + (headlinePattern(left) === headlinePattern(right) ? 0.22 : 0);
+  }
+
+  function chooseMediaHeadline(world, templates, seed) {
+    const recent = (world.media?.headlineMemory || []).slice(0, 3).map((item) => item.title);
+    for (let offset = 0; offset < templates.length; offset += 1) {
+      const title = templates[(seed + offset) % templates.length];
+      if (!recent.some((oldTitle) => headlineSimilarity(title, oldTitle) >= 0.62)) return title;
+    }
+    return templates[seed % templates.length];
+  }
+
   function ensureClubWorldRecord(state, teamId) {
     state.managerEcosystem = state.managerEcosystem || {};
     state.managerEcosystem.worldMedia = state.managerEcosystem.worldMedia || {};
@@ -118,13 +143,15 @@
       const topic = context.topic || (pressure > 72 ? "presion" : world.fans.pressure > 68 ? "hinchada" : state.market?.windowOpen ? "mercado" : "identidad");
       const pundit = pickByHash(world.media.pundits, `${state.seasonNumber}-${state.currentWeek}-${topic}`);
       const templates = {
-        presion: [`${club.name} queda bajo lupa total`, `La semana que puede cambiar el clima en ${club.name}`],
-        hinchada: [`La hinchada eleva el tono en ${club.name}`, `${club.name} y una tribuna que ya pide senales`],
-        mercado: [`Mercado, rumores y urgencias alrededor de ${club.name}`, `${club.name} mide su pulso en la ventana`],
-        identidad: [`El debate sobre la identidad de ${club.name} no se apaga`, `${club.name} busca que su idea convenza al entorno`]
+        presion: [`${club.name} queda bajo lupa total`, `La semana que puede cambiar el clima en ${club.name}`, `¿Responde ${club.name} cuando aprieta la tribuna?`, `El banco de ${club.name} siente el ruido externo`],
+        hinchada: [`La hinchada eleva el tono en ${club.name}`, `${club.name} y una tribuna que ya pide senales`, `El tablon se hace escuchar en ${club.name}`, `¿Paciencia o exigencia alrededor de ${club.name}?`],
+        mercado: [`Mercado, rumores y urgencias alrededor de ${club.name}`, `${club.name} mide su pulso en la ventana`, `La carpeta de fichajes no descansa en ${club.name}`, `¿Se mueve la dirigencia antes del cierre?`],
+        identidad: [`El debate sobre la identidad de ${club.name} no se apaga`, `${club.name} busca que su idea convenza al entorno`, `Una semana para reconocer la mano del entrenador`, `¿Tiene sello este ${club.name}?`],
+        sponsors: [`Los auspiciadores miran de cerca a ${club.name}`, `La marca ${club.name} necesita calma`, `¿Puede el club ordenar el ruido comercial?`, `La estabilidad tambien se juega fuera de la cancha`],
+        prestigio: [`La liga empieza a mirar distinto a ${club.name}`, `El proyecto gana respeto fuera de casa`, `¿Hay salto de prestigio en camino?`, `${club.name} juega por algo mas que puntos`]
       };
-      const title = pickByHash(templates[topic] || templates.identidad, `${state.currentWeek}-${topic}-title`);
-      const body = `${pundit?.name || "La mesa de analisis"} instala el eje ${topic}: presion mediatica ${pressure}/100, expectativa fan ${world.fans.pressure}/100 y reputacion tactica ${world.reputation.tacticalReputation}.`;
+      const title = chooseMediaHeadline(world, templates[topic] || templates.identidad, hashText(`${state.currentWeek}-${topic}-title`));
+      const body = `${pundit?.name || "La mesa de analisis"} instala el eje ${topic}: presion de prensa ${pressure}/100, expectativa de hinchas ${world.fans.pressure}/100 y reputacion tactica ${world.reputation.tacticalReputation}.`;
       const item = {
         id: deterministicId("headline", [state.seasonNumber, state.currentWeek, topic]),
         type: "world-reaction",

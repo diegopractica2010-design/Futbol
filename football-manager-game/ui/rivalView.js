@@ -21,7 +21,7 @@
         <div class="panel hero-main club-hero" style="--club-primary:${identity.primary};--club-secondary:${identity.secondary};--club-accent:${identity.accent};">
           <span class="eyebrow">Informe rival</span>
           <div class="club-heading">${FMG.clubBadge(rival, "lg")}<h1 class="hero-title">${FMG.escapeHtml(rival.name)}</h1></div>
-          <p class="hero-copy">${FMG.escapeHtml(rival.city)} | ${FMG.escapeHtml(rival.stadium)} | Estilo ${FMG.escapeHtml(rival.style)}</p>
+          <p class="hero-copy">${FMG.escapeHtml(rival.city)} | ${FMG.escapeHtml(rival.stadium)} | Estilo ${FMG.escapeHtml(rival.style)}. Un informe para leer su momento, su orgullo y donde puede doler.</p>
           <div class="chips">
             <span class="chip">Posicion ${standingIndex + 1 || "-"}</span>
             <span class="chip">${standing.points} pts</span>
@@ -30,7 +30,7 @@
         </div>
         <div class="side-stack">
           <section class="panel">
-            <div class="section-title"><h2>Cambiar rival</h2></div>
+            <div class="section-title"><h2>Mirar otro rival</h2></div>
             <div class="button-row">
               ${rivals.map((team) => `<button class="${team.id === rival.id ? "active" : "btn-ghost"}" data-action="select-rival-club" data-team-id="${team.id}" title="Ver informe de ${FMG.escapeHtml(team.name)}">${FMG.escapeHtml(team.name)}</button>`).join("")}
             </div>
@@ -48,15 +48,18 @@
             ${topPlayers.map((player) => `<div class="list-row compact"><div><strong>${FMG.escapeHtml(player.name)}</strong><p class="muted">${player.position} | OVR ${player.overall} | POT ${player.potential}</p></div><button class="btn-ghost" data-action="select-squad-player" data-player-id="${player.id}">Ficha</button></div>`).join("")}
           </div>
         </section>
-        <section class="card">
-          <div class="section-title"><h2>Lectura deportiva</h2></div>
-          <div class="stats-grid">
-            <article class="stat-card"><div class="muted">Media</div><div class="stat-value">${need ? need.averageOverall : 0}</div></article>
-            <article class="stat-card"><div class="muted">Necesidad</div><div class="stat-value">${FMG.escapeHtml(need ? need.targetPosition : "-")}</div></article>
-            <article class="stat-card"><div class="muted">Presupuesto IA</div><div class="stat-value">${FMG.currency(need ? need.budget : 0)}</div></article>
-            <article class="stat-card"><div class="muted">DG</div><div class="stat-value">${standing.goalDifference}</div></article>
-          </div>
-        </section>
+        <details class="ux-disclosure">
+          <summary>Lectura deportiva del rival</summary>
+          <section class="card">
+            <div class="section-title"><h2>Lectura deportiva</h2></div>
+            <div class="stats-grid">
+              <article class="stat-card"><div class="muted">Media</div><div class="stat-value">${need ? need.averageOverall : 0}</div></article>
+              <article class="stat-card"><div class="muted">Necesidad</div><div class="stat-value">${FMG.escapeHtml(need ? need.targetPosition : "-")}</div></article>
+              <article class="stat-card"><div class="muted">Presupuesto rival</div><div class="stat-value">${FMG.currency(need ? need.budget : 0)}</div></article>
+              <article class="stat-card"><div class="muted">DG</div><div class="stat-value">${standing.goalDifference}</div></article>
+            </div>
+          </section>
+        </details>
       </section>
     `;
   };

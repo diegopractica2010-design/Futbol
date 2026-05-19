@@ -15,8 +15,10 @@
   ];
 
   function renderNewsCard(item) {
+    const teamId = item.entities?.teamId || item.entities?.homeTeamId || item.entities?.awayTeamId;
+    const identity = teamId ? FMG.getClubIdentity(teamId) : null;
     return `
-      <article class="log-item">
+      <article class="log-item ${identity ? "club-tinted-row subtle" : ""}" ${identity ? `style="--club-primary:${identity.primary};--club-secondary:${identity.secondary};--club-accent:${identity.accent};"` : ""}>
         <div class="section-title" style="margin-bottom:8px;">
           <strong>${FMG.escapeHtml(item.title)}</strong>
           <span class="chip">${FMG.escapeHtml(item.type)}</span>
@@ -46,9 +48,9 @@
         <section class="card world-media-card">
           <div class="section-title"><h2>Presion del mundo futbolero</h2><span class="chip">${FMG.escapeHtml(world.fans?.atmosphere || "expectante")}</span></div>
           <div class="ecosystem-kpis">
-            <article><span>Media</span><strong>${world.media?.pressure || 0}/100</strong></article>
+            <article><span>Prensa</span><strong>${world.media?.pressure || 0}/100</strong></article>
             <article><span>Hinchas</span><strong>${world.fans?.pressure || 0}/100</strong></article>
-            <article><span>Sponsors</span><strong>${world.sponsors?.pressure || 0}/100</strong></article>
+            <article><span>Auspiciadores</span><strong>${world.sponsors?.pressure || 0}/100</strong></article>
             <article><span>Prestigio liga</span><strong>${world.reputation?.leaguePrestige || 0}/100</strong></article>
           </div>
           <div class="world-pressure-bars">
@@ -92,7 +94,7 @@
     return `
       <section class="hero">
         <div class="panel hero-main">
-          <span class="eyebrow">Centro de noticias</span>
+          <span class="eyebrow">Prensa y tribuna</span>
           <h1 class="hero-title">Mundo vivo</h1>
           <p class="hero-copy">${top ? FMG.escapeHtml(top.title) : "La temporada aun no tiene titulares publicados."}</p>
           <div class="chips">
@@ -101,7 +103,7 @@
             <span class="chip">${state.worldNews.rivalries.length} rivalidades</span>
           </div>
           <div class="hero-actions">
-            <button class="btn-primary" data-action="generate-world-news">Actualizar mundo</button>
+            <button class="btn-primary" data-action="generate-world-news">Mover la agenda</button>
             <button class="btn-secondary" data-action="generate-market-rumors">Rumores de mercado</button>
           </div>
         </div>
@@ -124,20 +126,26 @@
           </section>
         </div>
       </section>
-      ${renderWorldMediaPulse(state)}
+      <details class="ux-disclosure">
+        <summary>Presión del mundo futbolero</summary>
+        ${renderWorldMediaPulse(state)}
+      </details>
       <section class="content-grid">
-        <section class="card">
+        <section class="card football-priority">
           <div class="section-title"><h2>Titulares</h2><span class="chip">${FMG.escapeHtml(selected)}</span></div>
           <div class="log-list">
             ${news.length ? news.map(renderNewsCard).join("") : `<div class="empty-state">No hay noticias para este filtro.</div>`}
           </div>
         </section>
-        <section class="card">
-          <div class="section-title"><h2>Preguntas de prensa</h2></div>
-          <div class="log-list">
-            ${pendingQuestions.length ? pendingQuestions.map(renderQuestion).join("") : `<div class="empty-state">La prensa no tiene preguntas pendientes.</div>`}
-          </div>
-        </section>
+        <details class="ux-disclosure">
+          <summary>Preguntas de prensa</summary>
+          <section class="card">
+            <div class="section-title"><h2>Preguntas de prensa</h2></div>
+            <div class="log-list">
+              ${pendingQuestions.length ? pendingQuestions.map(renderQuestion).join("") : `<div class="empty-state">La prensa no tiene preguntas pendientes.</div>`}
+            </div>
+          </section>
+        </details>
       </section>
     `;
   };

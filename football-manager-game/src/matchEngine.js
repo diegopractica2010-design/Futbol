@@ -94,7 +94,7 @@
 
   function createSummary(homeTeam, awayTeam, homeGoals, awayGoals, homeStats, awayStats) {
     if (homeGoals === awayGoals) {
-      return `Partido parejo: ${homeTeam.name} genero ${homeStats.xg.toFixed(1)} xG y ${awayTeam.name} respondio con ${awayStats.xg.toFixed(1)}.`;
+      return `Partido parejo: ${homeTeam.name} genero ${homeStats.xg.toFixed(1)} llegadas peligrosas y ${awayTeam.name} respondio con ${awayStats.xg.toFixed(1)}.`;
     }
     const winner = homeGoals > awayGoals ? homeTeam : awayTeam;
     const winnerStats = homeGoals > awayGoals ? homeStats : awayStats;

@@ -3,7 +3,8 @@
 
   function renderRanking(title, items) {
     return `
-      <section class="card">
+      <section class="screen-rhythm">
+      <section class="card football-priority">
         <div class="section-title"><h2>${title}</h2></div>
         <div class="log-list">
           ${
@@ -59,12 +60,14 @@
           ${visibleStandings.map((entry, index) => {
             const club = state.teams.find((team) => team.id === entry.teamId);
             return `
-            <div class="table-row">
+            <div class="table-row club-tinted-row subtle" style="--club-primary:${FMG.getClubIdentity(entry.teamId).primary};--club-secondary:${FMG.getClubIdentity(entry.teamId).secondary};--club-accent:${FMG.getClubIdentity(entry.teamId).accent};">
               <span>${index + 1}</span><span>${FMG.clubBadge(club, "sm")} ${FMG.escapeHtml(entry.name)}${entry.teamId === state.userTeamId ? " (Tu club)" : ""}</span><span>${entry.points}</span><span>${entry.goalDifference}</span><span>${entry.goalsFor}</span><span>${entry.played}</span>
             </div>`;
           }).join("")}
         </div>
       </section>
+      <details class="ux-disclosure">
+        <summary>Copas, clasificación y rankings</summary>
       <section class="content-grid">
         ${renderCup("Copa Chile", competitions.nationalCup)}
         ${renderCup("Copa Internacional", competitions.international)}
@@ -97,6 +100,8 @@
       <section class="content-grid">
         ${renderRanking("Tarjetas", competitions.rankings?.cards || [])}
         ${renderRanking("Arqueros", competitions.rankings?.keepers || [])}
+      </section>
+      </details>
       </section>
     `;
   };

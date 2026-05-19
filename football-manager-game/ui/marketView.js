@@ -35,7 +35,7 @@
           const wage = FMG.estimatePlayerWageDemand(player, player.overall >= 76 ? "starter" : "rotation");
           const band = playerValueBand(player);
           return `
-            <article class="market-player-card">
+            <article class="market-player-card club-tinted-row subtle" style="--club-primary:${FMG.getClubIdentity(player.teamId).primary};--club-secondary:${FMG.getClubIdentity(player.teamId).secondary};--club-accent:${FMG.getClubIdentity(player.teamId).accent};">
               <div class="market-player-card__main">
                 <div class="market-avatar">${FMG.escapeHtml(player.position)}</div>
                 <div>
@@ -43,7 +43,7 @@
                   <p>${FMG.escapeHtml(listing.sellerTeamName)} | ${player.age} anos</p>
                   <div class="market-tags">
                     <span class="chip chip-${band.className}">${band.label}</span>
-                    <span>Scout ${listing.scoutingLevel}%</span>
+                    <span>Seguimiento ${listing.scoutingLevel}%</span>
                     <span>${listing.loanAvailable ? "Cesion viable" : "Solo compra"}</span>
                     ${listing.marketHeat ? `<span>Calor ${listing.marketHeat}/100</span>` : ""}
                   </div>
@@ -71,7 +71,7 @@
           const player = state.players.find((item) => item.id === negotiation.playerId);
           const context = negotiation.advanced || advanced.negotiations?.[negotiation.id] || {};
           return `
-            <div class="log-item">
+            <div class="log-item club-tinted-row subtle" style="--club-primary:${FMG.getClubIdentity(player?.teamId).primary};--club-secondary:${FMG.getClubIdentity(player?.teamId).secondary};--club-accent:${FMG.getClubIdentity(player?.teamId).accent};">
               <strong>${FMG.escapeHtml(player ? player.name : "Jugador")} | ${FMG.escapeHtml(negotiation.status)}</strong>
               <p class="muted">${FMG.escapeHtml(negotiation.type)} | Prima ${FMG.currency(negotiation.fee)} | Salario ${FMG.currency(negotiation.wage)} | ${negotiation.years}a | ${FMG.escapeHtml(negotiation.message)}</p>
               ${context.agentId || negotiation.agent ? `<p class="muted">Agente: ${FMG.escapeHtml(negotiation.agent?.name || context.agentId)} | Intencion: ${FMG.escapeHtml(context.hiddenIntention || "negociar")} | Presion ${context.pressure || 0}/100 | Imagen ${FMG.currency(context.imageRights || 0)}</p>` : ""}
@@ -86,7 +86,7 @@
       ? state.market.incomingOffers.map((offer) => {
           const player = state.players.find((item) => item.id === offer.playerId);
           return `
-            <div class="log-item">
+            <div class="log-item club-tinted-row subtle" style="--club-primary:${FMG.getClubIdentity(player?.teamId).primary};--club-secondary:${FMG.getClubIdentity(player?.teamId).secondary};--club-accent:${FMG.getClubIdentity(player?.teamId).accent};">
               <strong>${FMG.escapeHtml(offer.buyerTeamName)} por ${FMG.escapeHtml(player ? player.name : "Jugador")}</strong>
               <p class="muted">${FMG.currency(offer.fee)} | ${FMG.escapeHtml(offer.status)}</p>
               ${offer.advanced ? `<p class="muted">${FMG.escapeHtml(offer.advanced.buyerIdentity)} | ${FMG.escapeHtml(offer.advanced.hiddenIntention)} | Presion ${offer.advanced.pressure}/100</p>` : ""}
@@ -116,19 +116,19 @@
     return `
       <section class="content-grid transfer-economy-grid">
         <section class="card transfer-economy-card">
-          <div class="section-title"><h2>Economia del mercado</h2><span class="chip">Momentum ${advanced.economy?.momentum || 0}</span></div>
+          <div class="section-title"><h2>Economia del mercado</h2><span class="chip">Pulso ${advanced.economy?.momentum || 0}</span></div>
           <div class="ecosystem-kpis">
             <article><span>Liquidez</span><strong>${advanced.economy?.liquidity || 0}/100</strong></article>
             <article><span>Presion financiera</span><strong>${advanced.economy?.financialPressure || 0}/100</strong></article>
-            <article><span>Presion sponsor</span><strong>${sponsorPressure}/100</strong></article>
-            <article><span>Riesgo corrupcion</span><strong>${advanced.reputation?.corruptionRisk || 0}/100</strong></article>
+            <article><span>Presion de auspiciadores</span><strong>${sponsorPressure}/100</strong></article>
+            <article><span>Ruido institucional</span><strong>${advanced.reputation?.corruptionRisk || 0}/100</strong></article>
           </div>
           <div class="log-list">
             ${latestRumor ? `<div class="log-item"><strong>${FMG.escapeHtml(latestRumor.playerName)}</strong><p class="muted">${FMG.escapeHtml(latestRumor.topic)} | Credibilidad ${latestRumor.credibility}/100</p></div>` : `<div class="empty-state">El mercado aun no tiene un rumor dominante.</div>`}
           </div>
         </section>
         <section class="card transfer-economy-card">
-          <div class="section-title"><h2>Vestuario contractual</h2><span class="chip">Wage pressure ${advanced.contracts?.lockerRoomWagePressure || 0}/100</span></div>
+          <div class="section-title"><h2>Vestuario contractual</h2><span class="chip">Tension salarial ${advanced.contracts?.lockerRoomWagePressure || 0}/100</span></div>
           <div class="log-list">
             ${topWage ? `<div class="log-item"><strong>${FMG.escapeHtml(topWage.name)}</strong><p class="muted">Mayor salario: ${FMG.currency(topWage.salary)} | Rol ${FMG.escapeHtml(topWage.role)}</p></div>` : `<div class="empty-state">Sin jerarquia salarial definida.</div>`}
             ${latestDrama ? `<div class="log-item"><strong>${FMG.escapeHtml(latestDrama.playerName)}</strong><p class="muted">${FMG.escapeHtml(latestDrama.detail)} | Calor ${latestDrama.heat}/100</p></div>` : ""}
@@ -142,26 +142,34 @@
     state.market.incomingOffers = state.market.incomingOffers || [];
     state.market.transferHistory = state.market.transferHistory || [];
     return `
-      <section class="card market-hero">
+      <section class="screen-rhythm">
+      <section class="card market-hero football-priority">
         <div class="section-title">
           <div>
             <span class="eyebrow">Direccion deportiva</span>
             <h2>Mercado de fichajes</h2>
           </div>
           <div class="button-row">
-            <button class="btn-secondary" data-action="refresh-market" ${state.market.windowOpen ? "" : "disabled"}>Actualizar scouting</button>
+            <button class="btn-secondary" data-action="refresh-market" ${state.market.windowOpen ? "" : "disabled"}>Actualizar seguimiento</button>
             <button class="btn-ghost" data-action="generate-incoming-offers" ${state.market.windowOpen ? "" : "disabled"}>Buscar ofertas</button>
           </div>
         </div>
         ${renderMarketKpis(state)}
         <div class="market-board">${renderListings(state)}</div>
       </section>
-      ${renderAdvancedMarketPulse(state)}
+      <details class="ux-disclosure">
+        <summary>Pulso económico y vestuario contractual</summary>
+        ${renderAdvancedMarketPulse(state)}
+      </details>
       <section class="content-grid">
         <section class="card"><div class="section-title"><h2>Negociaciones</h2></div><div class="log-list">${renderNegotiations(state)}</div></section>
         <section class="card"><div class="section-title"><h2>Ofertas recibidas</h2></div><div class="log-list">${renderIncomingOffers(state)}</div></section>
       </section>
-      <section class="card"><div class="section-title"><h2>Historial de mercado</h2></div><div class="log-list">${renderHistory(state)}</div></section>
+      <details class="ux-disclosure">
+        <summary>Historial de mercado</summary>
+        <section class="card"><div class="section-title"><h2>Historial de mercado</h2></div><div class="log-list">${renderHistory(state)}</div></section>
+      </details>
+      </section>
     `;
   };
 })();

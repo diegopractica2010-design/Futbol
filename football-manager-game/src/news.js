@@ -90,10 +90,128 @@
     return `${prefix}-${(hash >>> 0).toString(36)}`;
   }
 
+  function titleHash(value) {
+    const text = String(value || "");
+    let hash = 0;
+    for (let index = 0; index < text.length; index += 1) {
+      hash = (hash * 33 + text.charCodeAt(index)) >>> 0;
+    }
+    return hash;
+  }
+
+  function headlineContext(state, item) {
+    const teamId = item.entities?.teamId || item.entities?.homeTeamId || item.entities?.awayTeamId || state.userTeamId;
+    const club = team(state, teamId) || state.userClub || { name: "El club", city: "la ciudad" };
+    const player = item.entities?.playerId ? state.players.find((entry) => entry.id === item.entities.playerId) : null;
+    return {
+      club: club.name || "El club",
+      city: club.city || "la ciudad",
+      player: player?.name || "el protagonista",
+      title: item.title
+    };
+  }
+
+  /* eslint-disable no-unused-vars */
+  const headlineTemplates = {
+    preview: [
+      (ctx) => `¿Que partido se viene para ${ctx.club}?`,
+      (ctx) => `${ctx.city} ya palpita la previa`,
+      (ctx) => `La semana pone a prueba a ${ctx.club}`,
+      (ctx) => `${ctx.club} mira el proximo duelo con tension`
+    ],
+    chronicle: [
+      (ctx) => `${ctx.club} firma una noche para comentar`,
+      (ctx) => `La fecha deja lectura fuerte para ${ctx.club}`,
+      (ctx) => `¿Cambio de animo tras el pitazo final?`,
+      (ctx) => `El resultado mueve el clima en ${ctx.city}`
+    ],
+    rumor: [
+      (ctx) => `${ctx.player} vuelve a sonar en el mercado`,
+      (ctx) => `La carpeta de ${ctx.player} empieza a circular`,
+      (ctx) => `¿Movimiento en puerta por ${ctx.player}?`,
+      (ctx) => `El mercado mira de reojo a ${ctx.player}`
+    ],
+    fans: [
+      (ctx) => `La hinchada de ${ctx.club} marca el pulso`,
+      (ctx) => `${ctx.city} habla del momento del equipo`,
+      (ctx) => `El animo popular se mueve en ${ctx.club}`,
+      (ctx) => `¿Se enciende la tribuna de ${ctx.club}?`
+    ],
+    "player-story": [
+      (ctx) => `${ctx.player} pide lugar en la conversacion`,
+      (ctx) => `La semana de ${ctx.player} no pasa inadvertida`,
+      (ctx) => `¿Hasta donde puede llegar ${ctx.player}?`,
+      (ctx) => `${ctx.player} empieza a cambiar el relato`
+    ],
+    classic: [
+      (ctx) => `El clasico deja ruido hasta el lunes`,
+      (ctx) => `Una rivalidad que vuelve a pesar`,
+      (ctx) => `El barrio futbolero no suelta el resultado`,
+      (ctx) => `¿Otro capitulo caliente para la memoria?`
+    ],
+    "dressing-room": [
+      (ctx) => `El camarin de ${ctx.club} queda bajo observacion`,
+      (ctx) => `Puertas adentro se mueve el ambiente`,
+      (ctx) => `¿Hay ruido interno en ${ctx.club}?`,
+      (ctx) => `El vestuario exige manejo fino esta semana`
+    ],
+    "world-reaction": [
+      (ctx) => `${ctx.club} vuelve al centro de la discusion`,
+      (ctx) => `La prensa cambia el tono con ${ctx.club}`,
+      (ctx) => `¿Proyecto firme o semana de dudas?`,
+      (ctx) => `El entorno futbolero mira hacia ${ctx.city}`
+    ],
+    general: [
+      (ctx) => `${ctx.club} suma un nuevo capitulo`,
+      (ctx) => `La semana deja una senal en ${ctx.city}`,
+      (ctx) => `¿Que lectura queda para el cuerpo tecnico?`,
+      (ctx) => `El torneo vuelve a mover el tablero emocional`
+    ]
+  };
+
+  /* eslint-enable no-unused-vars */
+
+  function headlinePattern(title) {
+    const text = String(title || "").toLowerCase();
+    if (text.includes("?")) return "question";
+    if (text.includes("!")) return "exclaim";
+    if (text.includes(":")) return "colon";
+    return text.split(/\s+/).slice(0, 3).join(" ");
+  }
+
+  function headlineSimilarity(left, right) {
+    const a = String(left || "").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "").split(/\s+/).filter(Boolean);
+    const b = String(right || "").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "").split(/\s+/).filter(Boolean);
+    if (!a.length || !b.length) return 0;
+    const shared = a.filter((word) => b.includes(word)).length / Math.max(a.length, b.length);
+    const sameSubject = a[0] && a[0] === b[0] ? 0.28 : 0;
+    const samePattern = headlinePattern(left) === headlinePattern(right) ? 0.24 : 0;
+    return shared + sameSubject + samePattern;
+  }
+
+  function chooseHeadline(state, item) {
+    const recent = (state.worldNews?.items || []).slice(0, 3).map((news) => news.title);
+    const ctx = headlineContext(state, item);
+    const templates = headlineTemplates[item.type] || headlineTemplates.general;
+    const candidates = [item.title, ...templates.map((template) => template(ctx))]
+      .filter(Boolean)
+      .filter((title, index, list) => list.indexOf(title) === index);
+    if (candidates.length <= 1) return item.title;
+    if (!recent.some((oldTitle) => headlineSimilarity(item.title, oldTitle) >= 0.62)) return item.title;
+    const seed = titleHash(`${state.seasonNumber}-${state.currentWeek}-${item.type}-${item.dedupeKey || item.title}`);
+    for (let offset = 0; offset < candidates.length; offset += 1) {
+      const title = candidates[(seed + offset) % candidates.length];
+      const tooSimilar = recent.some((oldTitle) => headlineSimilarity(title, oldTitle) >= 0.62);
+      if (!tooSimilar) return title;
+    }
+    return candidates[seed % candidates.length];
+  }
+
   function addNews(state, item) {
     FMG.ensureWorldNews(state);
     if (!item || !item.title || !item.body) return null;
     if (item.dedupeKey && state.worldNews.items.some((news) => news.dedupeKey === item.dedupeKey)) return null;
+    item.title = chooseHeadline(state, item);
     const news = {
       id: item.id || (item.dedupeKey ? stableId("news", item.dedupeKey) : FMG.uid("news")),
       week: state.currentWeek,
@@ -239,8 +357,8 @@
       type: "chronicle",
       title: winner ? `${winner.name} firma la cronica grande: ${score}` : `Empate trabajado en ${score}`,
       body: winner
-        ? `${winner.name} supero a ${loser.name} en la semana ${result.week || state.currentWeek}. ${scorer ? `${scorer} abrio una historia propia en el marcador.` : "El partido se resolvio sin un goleador dominante."} Remates al arco: ${stats.home?.shotsOnTarget || 0}-${stats.away?.shotsOnTarget || 0}; xG: ${stats.home?.xg || 0}-${stats.away?.xg || 0}.`
-        : `${home.name} y ${away.name} repartieron puntos. El xG termino ${stats.home?.xg || 0}-${stats.away?.xg || 0} y las areas dejaron mas preguntas que certezas.`,
+        ? `${winner.name} supero a ${loser.name} en la semana ${result.week || state.currentWeek}. ${scorer ? `${scorer} abrio una historia propia en el marcador.` : "El partido se resolvio sin un goleador dominante."} Remates al arco: ${stats.home?.shotsOnTarget || 0}-${stats.away?.shotsOnTarget || 0}; llegadas peligrosas: ${stats.home?.xg || 0}-${stats.away?.xg || 0}.`
+        : `${home.name} y ${away.name} repartieron puntos. Las llegadas peligrosas terminaron ${stats.home?.xg || 0}-${stats.away?.xg || 0} y las areas dejaron mas preguntas que certezas.`,
       tags: ["post-partido"],
       importance: winner && (winner.id === state.userTeamId || loser.id === state.userTeamId) ? 78 : 60,
       entities: { homeTeamId: home.id, awayTeamId: away.id },

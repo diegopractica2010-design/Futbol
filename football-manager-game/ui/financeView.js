@@ -36,9 +36,10 @@
     const totalExpenses = Math.abs(finances.expenseHistory.reduce((sum, entry) => sum + entry.amount, 0));
     const ffp = FMG.evaluateFinancialFairPlay(state);
     return `
+      <section class="screen-rhythm">
       <section class="content-grid">
-        <section class="card">
-          <div class="section-title"><h2>Resumen financiero</h2><span class="chip">${FMG.escapeHtml(ffp.status)}</span></div>
+        <section class="card football-priority">
+          <div class="section-title"><h2>Estado economico del club</h2><span class="chip">${FMG.escapeHtml(ffp.status)}</span></div>
           <div class="stats-grid">
             <article class="stat-card"><div class="muted">Saldo actual</div><div class="stat-value">${FMG.currency(finances.balance)}</div></article>
             <article class="stat-card"><div class="muted">Ingresos acumulados</div><div class="stat-value">${FMG.currency(totalIncome)}</div></article>
@@ -48,7 +49,7 @@
           <div class="log-list" style="margin-top:18px;">${renderEntries(finances.weeklyReport)}</div>
         </section>
         <section class="card">
-          <div class="section-title"><h2>Presupuestos</h2><button class="btn-secondary" data-action="take-bank-loan" data-confirm="Solicitar prestamo bancario por 30.000.000 CLP?">Prestamo</button></div>
+          <div class="section-title"><h2>Caja para competir</h2><button class="btn-secondary" data-action="take-bank-loan" data-confirm="Solicitar prestamo bancario por 30.000.000 CLP?">Prestamo</button></div>
           <div class="log-list">
             ${Object.entries(finances.budgets).map(([key, value]) => `<div class="log-item"><strong>${FMG.escapeHtml(key)}</strong><p class="muted">${FMG.currency(value)}</p></div>`).join("")}
           </div>
@@ -56,22 +57,24 @@
       </section>
       <section class="content-grid">
         <section class="card">
-          <div class="section-title"><h2>Contratos comerciales</h2><button class="btn-primary" data-action="negotiate-sponsor">Negociar sponsor</button></div>
+          <div class="section-title"><h2>Acuerdos comerciales</h2><button class="btn-primary" data-action="negotiate-sponsor">Negociar auspicio</button></div>
           <div class="log-list">
             <div class="log-item"><strong>${FMG.escapeHtml(finances.sponsorDeal.name)}</strong><p class="muted">Semana ${FMG.currency(finances.sponsorDeal.weeklyAmount)} | Bono victoria ${FMG.currency(finances.sponsorDeal.bonusPerWin)}</p></div>
             <div class="log-item"><strong>${FMG.escapeHtml(finances.tvDeal.name)}</strong><p class="muted">Semana ${FMG.currency(finances.tvDeal.weeklyAmount)} | Bono ${FMG.currency(finances.tvDeal.performanceBonus)}</p></div>
           </div>
         </section>
         <section class="card">
-          <div class="section-title"><h2>Deuda y fair play</h2></div>
+          <div class="section-title"><h2>Deuda y disciplina financiera</h2></div>
           <div class="log-list">
             <div class="log-item"><strong>Deuda total</strong><p class="muted">${FMG.currency(finances.debt)}</p></div>
             <div class="log-item"><strong>Limite salarial</strong><p class="muted">${FMG.currency(finances.financialFairPlay.wageLimit)}</p></div>
-            ${finances.financialFairPlay.warnings.length ? finances.financialFairPlay.warnings.map((warning) => `<div class="log-item"><strong>Advertencia</strong><p class="muted">${FMG.escapeHtml(warning)}</p></div>`).join("") : `<div class="empty-state">Sin advertencias financieras.</div>`}
+            ${finances.financialFairPlay.warnings.length ? finances.financialFairPlay.warnings.map((warning) => `<div class="log-item"><strong>Advertencia</strong><p class="muted">${FMG.escapeHtml(warning)}</p></div>`).join("") : `<div class="empty-state">Las finanzas del club están estables.</div>`}
             ${finances.crisis ? `<div class="log-item"><strong>Crisis activa</strong><p class="muted">${FMG.escapeHtml(finances.crisis.reason)}</p></div>` : ""}
           </div>
         </section>
       </section>
+      <details class="ux-disclosure">
+        <summary>Infraestructura, staff y eventos del club</summary>
       <section class="content-grid">
         ${renderLevelControls("Infraestructura", finances.infrastructure, "upgrade-infrastructure", [["stadium", "Estadio"], ["training", "Entrenamiento"], ["medical", "Medicina"]])}
         ${renderLevelControls("Staff", finances.staff, "upgrade-staff", [["coaching", "Cuerpo tecnico"], ["scouting", "Scouting"], ["medical", "Medico"]])}
@@ -90,6 +93,8 @@
               : `<div class="empty-state">Aun no se registran eventos aleatorios.</div>`
           }
         </div>
+      </section>
+      </details>
       </section>
     `;
   };

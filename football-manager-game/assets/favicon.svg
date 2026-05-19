@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Football Manager Chile">
+  <rect width="64" height="64" rx="12" fill="#0f7a5a"/>
+  <path d="M12 18h40v28H12z" fill="#f4f8f1"/>
+  <path d="M32 18v28M12 32h40" stroke="#0f7a5a" stroke-width="2" opacity=".55"/>
+  <circle cx="32" cy="32" r="8" fill="none" stroke="#0f7a5a" stroke-width="2"/>
+  <circle cx="32" cy="32" r="5" fill="#111"/>
+  <path d="M29 27h6l3 4-2 6h-8l-2-6z" fill="#fff"/>
+  <path d="M22 10h20l8 8H14z" fill="#d71920"/>
+</svg>

@@ -69,10 +69,10 @@
   FMG.refreshTransferMarket = function (state) {
     ensureMarketState(state);
     if (!state.market.windowOpen) return { ok: false, message: "El mercado esta cerrado esta semana." };
-    if (state.finances.balance < state.market.refreshCost) return { ok: false, message: "No hay saldo suficiente para actualizar el scouting." };
-    FMG.registerFinanceEntry(state.finances, "expense", "Informe extra de scouting", -state.market.refreshCost);
+    if (state.finances.balance < state.market.refreshCost) return { ok: false, message: "No hay saldo suficiente para actualizar el seguimiento." };
+    FMG.registerFinanceEntry(state.finances, "expense", "Informe extra de observacion", -state.market.refreshCost);
     FMG.buildTransferMarket(state);
-    return { ok: true, message: "El area de scouting publico una nueva tanda de jugadores." };
+    return { ok: true, message: "El area de observacion publico una nueva tanda de jugadores." };
   };
 
   FMG.createTransferOffer = function (state, playerId, options = {}) {

@@ -71,7 +71,7 @@
             <article><span>Reputacion club</span><strong>${club.reputation || 50}/100</strong></article>
             <article><span>Presion politica</span><strong>${FMG.escapeHtml(politics.topic || "resultados")}</strong></article>
             <article><span>Burnout manager</span><strong>${manager.burnout || 0}/100</strong></article>
-            <article><span>Media mundial</span><strong>${world?.media?.pressure || 0}/100</strong></article>
+            <article><span>Prensa mundial</span><strong>${world?.media?.pressure || 0}/100</strong></article>
             <article><span>Hinchas</span><strong>${world?.fans?.pressure || 0}/100</strong></article>
           </div>
           <div class="log-list ecosystem-list">
@@ -104,7 +104,7 @@
       </section>
       <section class="content-grid manager-ecosystem-grid">
         <section class="card">
-          <div class="section-title"><h2>Prensa y mundo</h2><span class="chip">Media rep ${manager.mediaReputation || 50}/100</span></div>
+          <div class="section-title"><h2>Prensa y mundo</h2><span class="chip">Reputacion publica ${manager.mediaReputation || 50}/100</span></div>
           <div class="log-list">
             ${latestWorldStory ? `
               <div class="log-item">
@@ -125,13 +125,13 @@
           </div>
         </section>
         <section class="card">
-          <div class="section-title"><h2>Scouting y cantera</h2><span class="chip">${eco.scouting?.reports?.length || 0} informes</span></div>
+          <div class="section-title"><h2>Seguimiento y cantera</h2><span class="chip">${eco.scouting?.reports?.length || 0} informes</span></div>
           <div class="log-list">
             ${latestReport ? `
               <div class="log-item">
                 <strong>${FMG.escapeHtml(latestReport.playerName)} | ${FMG.escapeHtml(latestReport.position)}</strong>
                 <p class="muted">Encaje ${latestReport.fit}/100 | Riesgo ${latestReport.risk}/100 | ${FMG.escapeHtml(latestReport.note)}</p>
-              </div>` : `<div class="empty-state">La red de scouting prepara informes.</div>`}
+              </div>` : `<div class="empty-state">La red de observación prepara informes.</div>`}
             ${latestYouth ? `
               <div class="log-item">
                 <strong>Ultima camada juvenil</strong>
@@ -208,7 +208,10 @@
           </div>
         </section>
       </section>
-      ${renderEcosystemSnapshot(state)}
+      <details class="ux-disclosure">
+        <summary>Entorno del club, prensa y seguimiento</summary>
+        ${renderEcosystemSnapshot(state)}
+      </details>
       <section class="content-grid">
         <section class="card">
           <div class="section-title"><h2>Decisiones narrativas</h2></div>
@@ -231,35 +234,40 @@
           </div>
         </section>
       </section>
-      <section class="card">
-        <div class="section-title"><h2>Historial de carrera</h2><span class="chip">${career.history.length} temporada(s)</span></div>
-        <div class="log-list">
-          ${
-            career.history.length
-              ? career.history.map((entry) => `
-                <div class="log-item">
-                  <strong>${FMG.escapeHtml(entry.teamName)} | Temporada ${entry.seasonNumber}</strong>
-                  <p class="muted">Posicion ${entry.position || "-"} | ${entry.points} pts | Reputacion ${entry.reputation} | Directorio ${entry.boardTrust}/100</p>
-                </div>`).join("")
-              : `<div class="empty-state">Completa una temporada para iniciar el historial profesional.</div>`
-          }
-        </div>
-      </section>
-      <section class="card">
-        <div class="section-title"><h2>Bitacora de carrera</h2></div>
-        <div class="log-list">
-          ${
-            career.narrativeLog.length
-              ? career.narrativeLog.slice(0, 10).map((entry) => `
-                <div class="log-item">
-                  <strong>${FMG.escapeHtml(entry.title)}</strong>
-                  <p class="muted">T${entry.seasonNumber} | Semana ${entry.week}</p>
-                  <p class="muted">${FMG.escapeHtml(entry.detail)}</p>
-                </div>`).join("")
-              : `<div class="empty-state">Aun no hay hitos de carrera.</div>`
-          }
-        </div>
-      </section>
+      <details class="ux-disclosure">
+        <summary>Historial y bitácora de carrera</summary>
+        <section class="content-grid">
+          <section class="card">
+            <div class="section-title"><h2>Historial de carrera</h2><span class="chip">${career.history.length} temporada(s)</span></div>
+            <div class="log-list">
+              ${
+                career.history.length
+                  ? career.history.map((entry) => `
+                    <div class="log-item">
+                      <strong>${FMG.escapeHtml(entry.teamName)} | Temporada ${entry.seasonNumber}</strong>
+                      <p class="muted">Posicion ${entry.position || "-"} | ${entry.points} pts | Reputacion ${entry.reputation} | Directorio ${entry.boardTrust}/100</p>
+                    </div>`).join("")
+                  : `<div class="empty-state">Completa una temporada para iniciar el historial profesional.</div>`
+              }
+            </div>
+          </section>
+          <section class="card">
+            <div class="section-title"><h2>Bitacora de carrera</h2></div>
+            <div class="log-list">
+              ${
+                career.narrativeLog.length
+                  ? career.narrativeLog.slice(0, 10).map((entry) => `
+                    <div class="log-item">
+                      <strong>${FMG.escapeHtml(entry.title)}</strong>
+                      <p class="muted">T${entry.seasonNumber} | Semana ${entry.week}</p>
+                      <p class="muted">${FMG.escapeHtml(entry.detail)}</p>
+                    </div>`).join("")
+                  : `<div class="empty-state">Aun no hay hitos de carrera.</div>`
+              }
+            </div>
+          </section>
+        </section>
+      </details>
     `;
   };
 })();

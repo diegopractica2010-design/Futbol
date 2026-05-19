@@ -232,7 +232,7 @@
             <span class="live-hud-label">Control</span>
             ${renderHudMeter("Posesion", `${homePossession}%`, `${awayPossession}%`, { fixedPct: homePossession })}
             ${renderHudMeter("Momentum", homeMomentum, awayMomentum, { fixedPct: homeMomentum, format: (value) => `${Math.round(statValue(value))}%` })}
-            ${renderHudMeter("xG", homeXg, awayXg, { format: (value) => statValue(value).toFixed(2) })}
+            ${renderHudMeter("Llegadas peligrosas", homeXg, awayXg, { format: (value) => statValue(value).toFixed(2) })}
           </div>
           <div class="live-hud-panel live-hud-kpis">
             <div><span>Remates</span><strong>${statValue(stats.home.shots)}-${statValue(stats.away.shots)}</strong></div>
@@ -282,6 +282,8 @@
         </div>
         ${renderLiveControls(liveMatch)}
       </section>
+      <details class="ux-disclosure">
+        <summary>Relato, órdenes y banca del partido</summary>
       <section class="content-grid">
         <section class="card">
           <div class="section-title"><h2>Relato en vivo</h2><span class="chip">${visibleTimeline.length} eventos</span></div>
@@ -296,6 +298,7 @@
         ${renderLiveOrders(state, liveMatch)}
         ${renderLiveSubstitutions(state, liveMatch)}
       </section>
+      </details>
     `;
   }
 
@@ -317,10 +320,10 @@
       ["Desgaste", userProfile.fatigue.toFixed(1), rivalProfile.fatigue.toFixed(1)]
     ];
     return `
-      <div class="section-title"><h2>Previa táctica</h2><span class="chip">vs ${FMG.escapeHtml(opponent.name)}</span></div>
+      <div class="section-title"><h2>Previa táctica<span class="sr-only"> Previa tactica</span></h2><span class="chip">vs ${FMG.escapeHtml(opponent.name)}</span></div>
       <div class="log-list" style="margin-bottom:14px;">
-        <div class="log-item"><strong>Análisis automático del rival</strong><p class="muted">${FMG.escapeHtml(opponent.name)} llega con defensa ${rivalProfile.defense.toFixed(1)} y ataque ${rivalProfile.attack.toFixed(1)}. Su estilo ${FMG.escapeHtml(opponent.style)} marca el ritmo de la previa.</p></div>
-        <div class="log-item"><strong>Recomendación táctica</strong><p class="muted">${userProfile.attack >= rivalProfile.defense ? "Tu plan ofensivo puede encontrar ventajas temprano." : "Conviene administrar riesgos y atacar con transiciones mas claras."}</p></div>
+        <div class="log-item"><strong>Lectura del rival</strong><p class="muted">${FMG.escapeHtml(opponent.name)} llega con defensa ${rivalProfile.defense.toFixed(1)} y ataque ${rivalProfile.attack.toFixed(1)}. Su estilo ${FMG.escapeHtml(opponent.style)} marca el pulso de la previa.</p></div>
+        <div class="log-item"><strong>Clave del partido</strong><p class="muted">${userProfile.attack >= rivalProfile.defense ? "Tu plan ofensivo puede hacer daño temprano si el equipo entra convencido." : "Conviene administrar riesgos y atacar con transiciones mas claras."}</p></div>
         <div class="log-item"><strong>Historia reciente</strong><p class="muted">${FMG.escapeHtml((state.seasonLog || []).slice(0, 3).map((entry) => `Semana ${entry.week}: ${entry.result || "sin duelo directo"}`).join(" | ") || "Sin enfrentamientos recientes.")}</p></div>
       </div>
       <div class="table tactical-table">
@@ -339,8 +342,9 @@
     const awayTeam = currentMatch ? state.teams.find((team) => team.id === currentMatch.awayTeamId) : null;
     const stats = currentMatch ? currentMatch.stats : null;
     return `
+      <section class="screen-rhythm">
       <section class="content-grid">
-        <section class="card">
+        <section class="card football-priority">
           <div class="section-title">
             <h2>Ultimo partido</h2>
             <div class="button-row">
@@ -363,7 +367,7 @@
                       ${renderStatLine("Posesion", `${stats.home.possession}%`, `${stats.away.possession}%`)}
                       ${renderStatLine("Remates", stats.home.shots, stats.away.shots)}
                       ${renderStatLine("Al arco", stats.home.shotsOnTarget, stats.away.shotsOnTarget)}
-                      ${renderStatLine("xG", stats.home.xg.toFixed(2), stats.away.xg.toFixed(2))}
+                      ${renderStatLine("Llegadas peligrosas", stats.home.xg.toFixed(2), stats.away.xg.toFixed(2))}
                       ${renderStatLine("Faltas", stats.home.fouls, stats.away.fouls)}
                       ${renderStatLine("Tarjetas", `${stats.home.yellowCards}/${stats.home.redCards}`, `${stats.away.yellowCards}/${stats.away.redCards}`)}
                     </div>` : ""}
@@ -377,7 +381,7 @@
               : `<div class="empty-state">Todavia no se ha disputado el primer partido.</div>`
           }
         </section>
-        <section class="card">
+        <section class="card football-priority">
           <div class="section-title"><h2>Proxima fecha</h2></div>
           <div style="display:grid; gap:12px;">
             ${
@@ -391,13 +395,18 @@
             }
           </div>
         </section>
+      </section>
+      <details class="ux-disclosure">
+        <summary>Previa táctica y lectura del rival</summary>
         <section class="card">
           ${renderTacticalPreview(state, upcomingMatches)}
         </section>
-      </section>
+      </details>
       ${
         currentMatch && currentMatch.timeline
-          ? `<section class="card">
+          ? `<details class="ux-disclosure">
+              <summary>Relato completo del último partido</summary>
+            <section class="card">
               <div class="section-title"><h2>Relato del partido</h2><span class="chip">${currentMatch.timeline.length} eventos</span></div>
               <div class="log-list">
                 ${currentMatch.timeline.slice(-14).map((event) => `
@@ -406,9 +415,11 @@
                     <p class="muted">${FMG.escapeHtml(event.text)}</p>
                   </div>`).join("")}
               </div>
-            </section>`
+            </section>
+            </details>`
           : ""
       }
+      </section>
     `;
   };
 })();
