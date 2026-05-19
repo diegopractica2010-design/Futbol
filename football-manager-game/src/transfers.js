@@ -570,3 +570,43 @@
     return actions;
   };
 })();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TRANSFERS — PROMISE UI + LOYALTY CONFLICT HOOKS (Fase 6)
+// ═══════════════════════════════════════════════════════════════════════════
+(function () {
+  "use strict";
+
+  const FMG = (window.FMG = window.FMG || {});
+
+  FMG.getActivePromises = function (state) {
+    const adv = state.market && state.market.advanced;
+    if (!adv || !adv.contracts || !adv.contracts.promises) return [];
+    const userPlayers = new Set((state.players || []).filter(function (p) { return p.teamId === state.userTeamId && !p.retired; }).map(function (p) { return p.id; }));
+    return adv.contracts.promises.filter(function (p) {
+      return p.status === "active" && userPlayers.has(p.playerId);
+    }).map(function (p) {
+      const player = (state.players || []).find(function (x) { return x.id === p.playerId; });
+      return {
+        id: p.id,
+        playerId: p.playerId,
+        playerName: player ? player.name : p.playerId,
+        text: p.text,
+        week: p.week,
+        seasonNumber: p.seasonNumber,
+        weeksActive: (state.currentWeek || 1) - (p.week || 1)
+      };
+    });
+  };
+
+  FMG.getLoyaltyConflicts = function (state) {
+    return ((state.market && state.market.loyaltyConflicts) || []).filter(function (c) { return c.status === "pending"; });
+  };
+
+  FMG.contactAgent = function (state, agentId) {
+    if (FMG.TransferDramaExtended && FMG.TransferDramaExtended.agentContactAcknowledged) {
+      FMG.TransferDramaExtended.agentContactAcknowledged(state, agentId);
+    }
+    return { ok: true, message: "Contacto registrado con el agente." };
+  };
+})();

@@ -574,3 +574,458 @@
 
   FMG.ensureAdvancedTransferMarket = ensureAdvancedTransferMarket;
 })();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ADVANCED TRANSFER MARKET — EXTENDED DRAMA SYSTEMS (Fase 6)
+// Deadline Day, Broken Promises Active Effects, Agent Behavior, Loyalty Drama
+// ═══════════════════════════════════════════════════════════════════════════
+(function () {
+  "use strict";
+
+  const FMG = (window.FMG = window.FMG || {});
+  const clamp = FMG.clamp;
+  const hashText = FMG.hashText;
+  const deterministicId = FMG.deterministicId;
+  const boundedPush = FMG.boundedPush;
+
+  function getSquad(state) {
+    return (state.players || []).filter(function (p) { return p.teamId === state.userTeamId && !p.retired; });
+  }
+
+  function getPlayer(state, playerId) {
+    return (state.players || []).find(function (p) { return p.id === playerId; }) || null;
+  }
+
+  function getAdvanced(state) {
+    return FMG.ensureAdvancedTransferMarket ? FMG.ensureAdvancedTransferMarket(state) : (state.market && state.market.advanced) || {};
+  }
+
+  // ═══════════════════════════
+  // DEADLINE DAY CONTROLLER
+  // ═══════════════════════════
+
+  function isDeadlineWeek(state) {
+    if (!state.market || !state.market.windowOpen) return false;
+    const adv = getAdvanced(state);
+    return (adv.economy && adv.economy.deadlinePressure) >= 80;
+  }
+
+  function generateDeadlinePanicOffer(state) {
+    if (!isDeadlineWeek(state)) return null;
+    const adv = getAdvanced(state);
+    const pressure = (adv.economy && adv.economy.deadlinePressure) || 0;
+    if (pressure < 60) return null;
+
+    const squad = getSquad(state);
+    const seed = hashText("deadline-panic-" + (state.seasonNumber || 1) + "-" + (state.currentWeek || 1));
+    const sellable = squad.filter(function (p) { return p.squadRole !== "key" && (p.overall || 0) >= 65; });
+    if (!sellable.length) return null;
+    const target = sellable[seed % sellable.length];
+    const buyer = (state.teams || []).filter(function (t) { return t.id !== state.userTeamId; })[seed % Math.max(1, (state.teams || []).length - 1)];
+    if (!buyer) return null;
+
+    const baseValue = FMG.calculatePlayerValue ? FMG.calculatePlayerValue(target) : 0;
+    const panicPremium = pressure > 80 ? 1.2 : 1.1;
+    const offerId = deterministicId("deadline-offer", [state.seasonNumber || 1, state.currentWeek || 1, target.id, buyer.id]);
+    const alreadyExists = (state.market.incomingOffers || []).some(function (o) { return o.id === offerId; });
+    if (alreadyExists) return null;
+
+    const offer = {
+      id: offerId,
+      playerId: target.id,
+      buyerTeamId: buyer.id,
+      buyerTeamName: buyer.name,
+      fee: Math.round(baseValue * panicPremium),
+      status: "pending",
+      week: state.currentWeek || 1,
+      deadlineOffer: true,
+      urgent: pressure > 80
+    };
+    state.market.incomingOffers = state.market.incomingOffers || [];
+    state.market.incomingOffers.unshift(offer);
+    state.market.incomingOffers = state.market.incomingOffers.slice(0, 8);
+
+    if (pressure > 80 && FMG.addNewsItem) {
+      FMG.addNewsItem(state, {
+        type: "rumor",
+        title: "Ultima hora: " + buyer.name + " presiona por " + target.name,
+        body: buyer.name + " hace un movimiento de ultimo momento por " + target.name + ". La oferta de " + (FMG.currency ? FMG.currency(offer.fee) : offer.fee) + " llega con el mercado a punto de cerrar.",
+        tags: ["mercado", "deadline", "urgente"],
+        importance: 88,
+        entities: { playerId: target.id, teamId: state.userTeamId },
+        dedupeKey: "deadline-offer-news-" + offerId
+      });
+    }
+    return offer;
+  }
+
+  function generateDeadlineAngerEvent(state, offer) {
+    if (!offer || !offer.deadlineOffer) return null;
+    const adv = getAdvanced(state);
+    const player = getPlayer(state, offer.playerId);
+    const playerName = player ? player.name : "Jugador";
+    const buyerName = offer.buyerTeamName || "Club";
+    const entry = {
+      id: deterministicId("deadline-anger", [state.seasonNumber || 1, state.currentWeek || 1, offer.playerId, offer.buyerTeamId]),
+      week: state.currentWeek || 1,
+      seasonNumber: state.seasonNumber || 1,
+      type: "deadline-anger",
+      playerId: offer.playerId,
+      playerName: playerName,
+      detail: buyerName + " muestra enojo tras el rechazo de ultima hora por " + playerName + ". El agente amenaza con represalias.",
+      heat: 75
+    };
+    if (adv.drama) {
+      const alreadyExists = adv.drama.some(function (d) { return d.id === entry.id; });
+      if (!alreadyExists) {
+        adv.drama.unshift(entry);
+        adv.drama = adv.drama.slice(0, 24);
+      }
+    }
+    if (FMG.addNewsItem) {
+      FMG.addNewsItem(state, {
+        type: "transfer-drama",
+        title: "El fichaje que no fue: " + playerName + " se queda",
+        body: "La operacion por " + playerName + " se cerro en falso. " + buyerName + " no logro cerrar el traspaso antes del cierre de mercado.",
+        tags: ["mercado", "deadline", "drama"],
+        importance: 72,
+        entities: { playerId: offer.playerId },
+        dedupeKey: "deadline-failed-" + (state.seasonNumber || 1) + "-" + (state.currentWeek || 1) + "-" + offer.playerId
+      });
+    }
+    return entry;
+  }
+
+  const _origRespondIncomingOffer = FMG.respondIncomingOffer;
+  FMG.respondIncomingOffer = function (state, offerId, accept) {
+    const offer = (state.market && state.market.incomingOffers || []).find(function (o) { return o.id === offerId; });
+    const result = _origRespondIncomingOffer ? _origRespondIncomingOffer(state, offerId, accept) : { ok: false, message: "No disponible." };
+    if (!accept && offer && offer.deadlineOffer) generateDeadlineAngerEvent(state, offer);
+    return result;
+  };
+
+  // ═══════════════════════════
+  // BROKEN PROMISES — FULL CONSEQUENCES
+  // ═══════════════════════════
+
+  function applyBrokenPromiseFullConsequences(state, brokenPromise) {
+    const player = getPlayer(state, brokenPromise.playerId);
+    if (!player) return;
+    player.confidence = clamp((player.confidence || 55) - 15, 0, 100);
+    const psych = state.psychology;
+    if (psych && psych.players && psych.players[player.id]) {
+      psych.players[player.id].managerTrust = clamp((psych.players[player.id].managerTrust || 50) - 20, 0, 100);
+    }
+    const adv = getAdvanced(state);
+    const agentId = Object.keys(adv.agents || {}).find(function (id) { return (adv.agents[id].clients || []).includes(player.id); });
+    if (agentId && adv.agents[agentId]) {
+      adv.agents[agentId].relationship = clamp((adv.agents[agentId].relationship || 50) - 25, 0, 100);
+    }
+    if ((player.ego || 0) > 70 && FMG.addNewsItem) {
+      FMG.addNewsItem(state, {
+        type: "dressing-room",
+        title: "Traicion en el vestuario: " + player.name + " no olvida la promesa rota",
+        body: player.name + " no oculta su malestar tras el incumplimiento de los compromisos del cuerpo tecnico.",
+        tags: ["promesa", "drama", "vestuario"],
+        importance: 78,
+        entities: { playerId: player.id, teamId: state.userTeamId },
+        dedupeKey: "broken-promise-news-" + brokenPromise.id
+      });
+    }
+  }
+
+  function checkBrokenPromisesExtended(state) {
+    const adv = getAdvanced(state);
+    if (!adv.contracts || !adv.contracts.promises) return;
+    const week = state.currentWeek || 1;
+    adv.contracts.promises.filter(function (p) { return p.status === "active"; }).forEach(function (promise) {
+      const player = getPlayer(state, promise.playerId);
+      if (!player || player.teamId !== state.userTeamId) return;
+      const age = week - (promise.week || 1);
+      if (age < 4) return;
+      let isBroken = false;
+      if (promise.text && promise.text.includes("minutos") && (player.seasonStats && player.seasonStats.starts || 0) < 2) isBroken = true;
+      if (promise.text && promise.text.includes("titular") && player.squadRole === "bench") isBroken = true;
+      if (promise.text && promise.text.includes("no venta") && player.teamId !== state.userTeamId) isBroken = true;
+      if (!isBroken) return;
+      if (adv.contracts.brokenPromises && adv.contracts.brokenPromises.some(function (b) { return b.playerId === promise.playerId && b.text === promise.text; })) return;
+      promise.status = "broken";
+      applyBrokenPromiseFullConsequences(state, {
+        id: promise.id,
+        playerId: promise.playerId,
+        playerName: player.name,
+        text: promise.text
+      });
+    });
+  }
+
+  // ═══════════════════════════
+  // AGENT ACTIVE BEHAVIOR
+  // ═══════════════════════════
+
+  function agentForPlayer(state, player) {
+    const adv = getAdvanced(state);
+    if (!adv.agents) return null;
+    return Object.values(adv.agents).find(function (a) { return (a.clients || []).includes(player.id); }) || null;
+  }
+
+  function runAgentWeeklyBehavior(state) {
+    const adv = getAdvanced(state);
+    if (!adv.agents) return;
+    const week = state.currentWeek || 1;
+    const season = state.seasonNumber || 1;
+    const players = getSquad(state);
+
+    players.forEach(function (player) {
+      const agent = agentForPlayer(state, player);
+      if (!agent) return;
+
+      // mediatico: weekly rumor about client
+      if (agent.personality === "mediatico") {
+        const seed = hashText("mediatico-" + agent.id + "-" + season + "-" + week);
+        if (seed % 3 === 0 && FMG.addNewsItem) {
+          const interestClub = (state.teams || []).filter(function (t) { return t.id !== state.userTeamId; })[seed % Math.max(1, (state.teams || []).length - 1)];
+          const clubName = interestClub ? interestClub.name : "club exterior";
+          FMG.addNewsItem(state, {
+            type: "rumor",
+            title: agent.name + " coloca a " + player.name + " en el mercado de ruidos",
+            body: "El representante de " + player.name + " deja trascender que " + clubName + " habria mostrado interes. Sin confirmacion oficial.",
+            tags: ["mercado", "rumor", "agente"],
+            importance: 55,
+            entities: { playerId: player.id },
+            dedupeKey: "agent-rumor-" + season + "-" + week + "-" + player.id
+          });
+        }
+      }
+
+      // duro: demands contact — if not contacted in 2 weeks, relationship -15
+      if (agent.personality === "duro") {
+        if (!adv.agentContact) adv.agentContact = {};
+        const lastContact = adv.agentContact[agent.id] || 0;
+        const weeksIgnored = week - lastContact;
+        if (weeksIgnored >= 2 && week > 2) {
+          agent.relationship = clamp((agent.relationship || 50) - 5, 0, 100);
+          if (weeksIgnored === 2) {
+            boundedPush(adv.drama, {
+              id: deterministicId("agent-demand", [season, week, agent.id]),
+              week: week,
+              seasonNumber: season,
+              type: "agent-demand-contact",
+              playerId: player.id,
+              playerName: player.name,
+              detail: agent.name + " reclama una reunion con la direccion deportiva. Su paciencia tiene limites.",
+              heat: 55
+            }, 24);
+          }
+        }
+      }
+
+      // relacional: give insider info about rival clubs once per month
+      if (agent.personality === "relacional") {
+        const seed2 = hashText("relacional-" + agent.id + "-" + season + "-" + week);
+        if (seed2 % 4 === 0 && FMG.addNewsItem) {
+          const rivalTeam = (state.teams || []).filter(function (t) { return t.id !== state.userTeamId; })[seed2 % Math.max(1, (state.teams || []).length - 1)];
+          if (rivalTeam) {
+            FMG.addNewsItem(state, {
+              type: "world-reaction",
+              title: agent.name + " deja caer informacion sobre " + rivalTeam.name,
+              body: "Segun el representante de " + player.name + ", " + rivalTeam.name + " estaria reorganizando su mercado. Informacion de primera mano.",
+              tags: ["mercado", "insider", "agente"],
+              importance: 50,
+              dedupeKey: "agent-insider-" + season + "-" + week + "-" + agent.id
+            });
+          }
+        }
+      }
+
+      // pragmatico: when player has short contract, proactively suggests renewal
+      if (agent.personality === "pragmatico" && (player.contractYears || 0) <= 1) {
+        const seed3 = hashText("pragmatico-" + agent.id + "-" + season + "-" + week);
+        if (seed3 % 5 === 0) {
+          boundedPush(adv.drama, {
+            id: deterministicId("agent-renewal", [season, week, agent.id]),
+            week: week,
+            seasonNumber: season,
+            type: "agent-renewal-suggestion",
+            playerId: player.id,
+            playerName: player.name,
+            detail: agent.name + " propone renovacion de " + player.name + " en terminos razonables. Acepta contrato de 3 anyos sin drama.",
+            heat: 40
+          }, 24);
+        }
+      }
+    });
+  }
+
+  function agentContactAcknowledged(state, agentId) {
+    const adv = getAdvanced(state);
+    if (!adv.agentContact) adv.agentContact = {};
+    adv.agentContact[agentId] = state.currentWeek || 1;
+  }
+
+  // ═══════════════════════════
+  // LOYALTY DRAMA CONTROLLER
+  // ═══════════════════════════
+
+  function ensureLoyaltyConflicts(state) {
+    state.market = state.market || {};
+    state.market.loyaltyConflicts = state.market.loyaltyConflicts || [];
+    return state.market.loyaltyConflicts;
+  }
+
+  function checkLoyaltyConflict(state, offer) {
+    const player = getPlayer(state, offer.playerId);
+    if (!player) return null;
+    const adv = getAdvanced(state);
+    const profile = adv.players && adv.players[player.id];
+    const loyalty = profile ? profile.loyalty : (player.loyalty || 0);
+    if (loyalty < 70) return null;
+
+    const conflicts = ensureLoyaltyConflicts(state);
+    const id = deterministicId("loyalty-conflict", [state.seasonNumber || 1, state.currentWeek || 1, player.id, offer.buyerTeamId || ""]);
+    if (conflicts.some(function (c) { return c.id === id; })) return null;
+
+    const conflict = {
+      id: id,
+      week: state.currentWeek || 1,
+      seasonNumber: state.seasonNumber || 1,
+      playerId: player.id,
+      playerName: player.name,
+      offerId: offer.id,
+      offerFee: offer.fee || 0,
+      buyerTeamId: offer.buyerTeamId,
+      buyerTeamName: offer.buyerTeamName || "Club",
+      status: "pending",
+      decision: null,
+      conflictDuration: 2
+    };
+    conflicts.unshift(conflict);
+    state.market.loyaltyConflicts = conflicts.slice(0, 10);
+
+    player.morale = clamp((player.morale || 55) - 5, 0, 100);
+    player.happiness = clamp((player.happiness || 55) - 5, 0, 100);
+
+    const agentName = agentForPlayer(state, player);
+    if (FMG.addNewsItem) {
+      FMG.addNewsItem(state, {
+        type: "transfer-drama",
+        title: player.name + " vive un dilema: lealtad vs. oferta millonaria",
+        body: player.name + " recibio una oferta de " + conflict.buyerTeamName + ". " + (agentName ? agentName.name : "Su representante") + " presenta los pros y contras. La decision no es sencilla.",
+        tags: ["mercado", "lealtad", "drama"],
+        importance: 80,
+        entities: { playerId: player.id },
+        dedupeKey: "loyalty-conflict-news-" + id
+      });
+    }
+    return conflict;
+  }
+
+  FMG.resolveLoyaltyConflict = function (state, conflictId, decision) {
+    const conflicts = ensureLoyaltyConflicts(state);
+    const conflict = conflicts.find(function (c) { return c.id === conflictId; });
+    if (!conflict || conflict.status !== "pending") return { ok: false, message: "Conflicto no disponible." };
+    const player = getPlayer(state, conflict.playerId);
+    if (!player) return { ok: false, message: "Jugador no encontrado." };
+    conflict.status = "resolved";
+    conflict.decision = decision;
+
+    if (decision === "release") {
+      // sell with grace
+      if (state.career) state.career.reputation = clamp((state.career.reputation || 50) + 5, 0, 100);
+      if (FMG.addNewsItem) {
+        FMG.addNewsItem(state, {
+          type: "transfer-drama",
+          title: player.name + " sale con honores tras la decision del club",
+          body: "El cuerpo tecnico permitio la salida de " + player.name + " con total transparencia. Un gesto que eleva la imagen del club.",
+          tags: ["mercado", "lealtad"],
+          importance: 68,
+          dedupeKey: "loyalty-release-" + conflict.id
+        });
+      }
+      return { ok: true, message: "Venta con gracia aprobada. Reputacion +5." };
+    }
+
+    if (decision === "block") {
+      player.happiness = clamp((player.happiness || 55) - 8, 0, 100);
+      player.morale = clamp((player.morale || 55) - 5, 0, 100);
+      if (FMG.addNewsItem) {
+        FMG.addNewsItem(state, {
+          type: "dressing-room",
+          title: "El club bloquea la salida de " + player.name,
+          body: "La directiva decidio retener a " + player.name + " a pesar de la oferta. El jugador no oculta su descontento.",
+          tags: ["mercado", "lealtad", "vestuario"],
+          importance: 65,
+          dedupeKey: "loyalty-block-" + conflict.id
+        });
+      }
+      return { ok: true, message: "Jugador retenido. Estara 3 semanas con baja moral." };
+    }
+
+    // match offer
+    player.salary = clamp((player.salary || 0) * 1.15, 0, 99999999);
+    player.happiness = clamp((player.happiness || 55) + 5, 0, 100);
+    if (FMG.addNewsItem) {
+      FMG.addNewsItem(state, {
+        type: "transfer-drama",
+        title: player.name + " renueva al nivel de la oferta rival",
+        body: "El club igualo las condiciones de la propuesta exterior y " + player.name + " decidio quedarse.",
+        tags: ["mercado", "lealtad"],
+        importance: 70,
+        dedupeKey: "loyalty-match-" + conflict.id
+      });
+    }
+    return { ok: true, message: "Oferta igualada. " + player.name + " se queda." };
+  };
+
+  // ═══════════════════════════
+  // WEEKLY INTEGRATION HOOK
+  // ═══════════════════════════
+
+  const _prevWeekATM = FMG.runManagerEcosystemWeek;
+  FMG.runManagerEcosystemWeek = function (state, options) {
+    const result = _prevWeekATM ? _prevWeekATM(state, options) : {};
+    if (!state.userTeamId) return result;
+    generateDeadlinePanicOffer(state);
+    runAgentWeeklyBehavior(state);
+    checkBrokenPromisesExtended(state);
+    const conflicts = ensureLoyaltyConflicts(state);
+    conflicts.filter(function (c) { return c.status === "pending"; }).forEach(function (c) {
+      c.conflictDuration = (c.conflictDuration || 2) - 1;
+      if (c.conflictDuration <= 0) { c.status = "expired"; c.decision = "block"; }
+    });
+    return result;
+  };
+  if (FMG.ManagerEcosystem) FMG.ManagerEcosystem.runWeek = FMG.runManagerEcosystemWeek;
+
+  const _prevRespond = FMG.respondIncomingOffer;
+  if (_prevRespond && _prevRespond !== FMG.respondIncomingOffer) {
+    // Already patched above; skip double-wrap
+  }
+
+  // ═══════════════════════════
+  // HOOK INCOMING OFFERS FOR LOYALTY CHECK
+  // ═══════════════════════════
+
+  const _origGenerateIncomingOffers = FMG.generateIncomingOffers;
+  FMG.generateIncomingOffers = function (state) {
+    const result = _origGenerateIncomingOffers ? _origGenerateIncomingOffers(state) : [];
+    (result || []).forEach(function (offer) {
+      if (offer && offer.playerId) checkLoyaltyConflict(state, offer);
+    });
+    return result;
+  };
+
+  // ═══════════════════════════
+  // PUBLIC API
+  // ═══════════════════════════
+
+  FMG.TransferDramaExtended = {
+    generateDeadlinePanicOffer: generateDeadlinePanicOffer,
+    generateDeadlineAngerEvent: generateDeadlineAngerEvent,
+    checkBrokenPromisesExtended: checkBrokenPromisesExtended,
+    runAgentWeeklyBehavior: runAgentWeeklyBehavior,
+    agentContactAcknowledged: agentContactAcknowledged,
+    checkLoyaltyConflict: checkLoyaltyConflict,
+    ensureLoyaltyConflicts: ensureLoyaltyConflicts
+  };
+})();
