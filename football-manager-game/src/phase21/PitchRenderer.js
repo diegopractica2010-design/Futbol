@@ -14,27 +14,27 @@
 
   window.FMG.Phase21 = window.FMG.Phase21 || {};
 
-  var C = null;
-
-  var GRASS_DARK  = "#2a6b35";
-  var GRASS_LIGHT = "#2f7a3d";
-  var LINE_COLOR  = "rgba(255,255,255,0.92)";
-  var LINE_GLOW   = "rgba(255,255,255,0.18)";
+  var GRASS_DARK  = "#1e3d0f";
+  var GRASS_LIGHT = "#244d13";
+  var LINE_COLOR  = "rgba(255,255,255,0.75)";
 
   function PitchRenderer() {
     this._baked = null;
   }
 
   PitchRenderer.prototype.init = function (fw, fh) {
-    if (!C) C = window.FMG.Phase16.C;
-
     var baked = _makeCanvas(fw, fh);
     var ctx   = baked.getContext("2d");
 
     this._drawGrassStripes(ctx, fw, fh);
-    this._drawGrassTexture(ctx, fw, fh);
+    this._drawWornPatches(ctx, fw, fh);
     this._drawLightBake(ctx, fw, fh);
     this._drawFieldLines(ctx, fw, fh);
+    this._drawCrowdBand(ctx, fw, fh);
+    this._drawCornerVignette(ctx, fw, fh, 0, 0);
+    this._drawCornerVignette(ctx, fw, fh, fw, 0);
+    this._drawCornerVignette(ctx, fw, fh, 0, fh);
+    this._drawCornerVignette(ctx, fw, fh, fw, fh);
 
     this._baked = baked;
   };
@@ -47,70 +47,50 @@
     }
   };
 
-  PitchRenderer.prototype._drawGrassTexture = function (ctx, fw, fh) {
-    // Ruido de valor: muestrear en grid 8x8 e interpolar
-    var gridX = 24, gridY = 16;
-    var cellW = fw / gridX, cellH = fh / gridY;
-    var rng   = _seededRng(99);
-
-    // Generar grid de valores
-    var grid = [];
-    for (var gy = 0; gy <= gridY; gy++) {
-      grid[gy] = [];
-      for (var gx = 0; gx <= gridX; gx++) {
-        grid[gy][gx] = rng();
-      }
-    }
-
-    // Dibujar rectangulos con alpha variable (simula hierba)
-    for (var cy = 0; cy < gridY; cy++) {
-      for (var cx = 0; cx < gridX; cx++) {
-        var v = (grid[cy][cx] + grid[cy][cx+1] + grid[cy+1][cx] + grid[cy+1][cx+1]) / 4;
-        var alpha = (v - 0.5) * 0.12; // muy sutil
-        if (alpha > 0) {
-          ctx.fillStyle   = "rgba(255,255,255," + alpha + ")";
-        } else {
-          ctx.fillStyle   = "rgba(0,0,0," + (-alpha) + ")";
-        }
-        ctx.fillRect(cx * cellW, cy * cellH, cellW + 1, cellH + 1);
-      }
-    }
+  PitchRenderer.prototype._drawWornPatches = function (ctx, fw, fh) {
+    ctx.fillStyle = "rgba(101,67,33,0.06)";
+    ctx.fillRect(0, fh / 2 - 42, 70, 84);
+    ctx.fillRect(fw - 70, fh / 2 - 42, 70, 84);
+    ctx.beginPath();
+    ctx.ellipse(44, fh / 2, 28, 52, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(fw - 44, fh / 2, 28, 52, 0, 0, Math.PI * 2);
+    ctx.fill();
   };
 
   PitchRenderer.prototype._drawLightBake = function (ctx, fw, fh) {
-    // Normal map falso: gradiente radial desde las 4 esquinas (focos)
-    // Simula iluminacion de estadio nocturno
-    var corners = [[0,0],[fw,0],[0,fh],[fw,fh]];
-    corners.forEach(function (pos) {
-      var grd = ctx.createRadialGradient(pos[0], pos[1], 0, pos[0], pos[1], fw * 0.75);
-      grd.addColorStop(0,   "rgba(255,248,210,0.10)");
-      grd.addColorStop(0.5, "rgba(255,248,210,0.04)");
-      grd.addColorStop(1,   "rgba(0,0,0,0)");
-      ctx.fillStyle = grd;
-      ctx.fillRect(0, 0, fw, fh);
-    });
-
-    // Sombra central muy leve (centro del campo ligeramente mas oscuro)
-    var center = ctx.createRadialGradient(fw/2, fh/2, 0, fw/2, fh/2, fw * 0.4);
-    center.addColorStop(0,   "rgba(0,0,0,0.04)");
-    center.addColorStop(1,   "rgba(0,0,0,0)");
+    var center = ctx.createRadialGradient(fw / 2, fh / 2, 0, fw / 2, fh / 2, fw * 0.72);
+    center.addColorStop(0, "rgba(255,255,200,0.04)");
+    center.addColorStop(1, "rgba(0,0,0,0.25)");
     ctx.fillStyle = center;
     ctx.fillRect(0, 0, fw, fh);
   };
 
+  PitchRenderer.prototype._drawCrowdBand = function (ctx, fw, fh) {
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(0, 0, fw, 18);
+    ctx.fillRect(0, fh - 18, fw, 18);
+    ctx.fillRect(0, 0, 18, fh);
+    ctx.fillRect(fw - 18, 0, 18, fh);
+  };
+
+  PitchRenderer.prototype._drawCornerVignette = function (ctx, fw, fh, x, y) {
+    var r = Math.max(fw, fh) * 0.48;
+    var g = ctx.createRadialGradient(x, y, r * 0.14, x, y, r);
+    g.addColorStop(0, "rgba(0,0,0,0.24)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, fw, fh);
+  };
+
   PitchRenderer.prototype._drawFieldLines = function (ctx, fw, fh) {
-    var goalH  = C.GOAL_H;
-    var goalT  = (fh - goalH) / 2;
     var areaH  = 120, areaW = 60;
     var smallH = 60,  smallW = 26;
     var penX   = 50;  // punto de penal desde linea de gol
 
-    // Glow sutil bajo las lineas
-    ctx.shadowColor = LINE_GLOW;
-    ctx.shadowBlur  = 4;
-
     ctx.strokeStyle = LINE_COLOR;
-    ctx.lineWidth   = 1.8;
+    ctx.lineWidth   = 1.2;
 
     // Borde exterior
     ctx.strokeRect(1, 1, fw - 2, fh - 2);
@@ -165,8 +145,6 @@
       ctx.arc(q[0], q[1], cr, q[2], q[3]);
       ctx.stroke();
     });
-
-    ctx.shadowBlur = 0;
   };
 
   PitchRenderer.prototype.draw = function (ctx, offsetX, offsetY) {
@@ -178,14 +156,6 @@
     var c = document.createElement("canvas");
     c.width = w; c.height = h;
     return c;
-  }
-
-  function _seededRng(seed) {
-    var s = seed;
-    return function () {
-      s = (s * 1664525 + 1013904223) & 0xffffffff;
-      return (s >>> 0) / 0xffffffff;
-    };
   }
 
   window.FMG.Phase21.PitchRenderer = PitchRenderer;

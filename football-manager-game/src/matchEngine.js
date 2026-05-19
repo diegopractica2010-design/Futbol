@@ -113,6 +113,7 @@
   }
 
   function addLiveMinuteEvent(liveMatch, state, minute) {
+    const timelineStart = liveMatch.result?.timeline?.length || 0;
     const homeTeam = state.teams.find((team) => team.id === liveMatch.homeTeamId);
     const awayTeam = state.teams.find((team) => team.id === liveMatch.awayTeamId);
     const { homePlayers, awayPlayers } = getLiveSquads(liveMatch, state);
@@ -120,10 +121,16 @@
     const awayProfile = FMG.getTacticalMatchProfile(state, liveMatch.awayTeamId);
     applyLiveOrders(liveMatch.liveOrders?.home, homeProfile);
     applyLiveOrders(liveMatch.liveOrders?.away, awayProfile);
-    const homeStrength = FMG.computeTeamStrength(homeTeam, state.players, state) + 4 + (liveMatch.tacticalBoost.home || 0) + liveOrderStrength(liveMatch.liveOrders?.home);
-    const awayStrength = FMG.computeTeamStrength(awayTeam, state.players, state) + (liveMatch.tacticalBoost.away || 0) + liveOrderStrength(liveMatch.liveOrders?.away);
+    const humanModifiers = FMG.humanFootballAI?.applyMinuteModifiers
+      ? FMG.humanFootballAI.applyMinuteModifiers(state, { liveMatch, minute, homeProfile, awayProfile })
+      : { home: {}, away: {} };
+    const homeHuman = humanModifiers.home || {};
+    const awayHuman = humanModifiers.away || {};
+    const homeStrength = FMG.computeTeamStrength(homeTeam, state.players, state) + 4 + (liveMatch.tacticalBoost.home || 0) + liveOrderStrength(liveMatch.liveOrders?.home) + (homeHuman.strengthBonus || 0);
+    const awayStrength = FMG.computeTeamStrength(awayTeam, state.players, state) + (liveMatch.tacticalBoost.away || 0) + liveOrderStrength(liveMatch.liveOrders?.away) + (awayHuman.strengthBonus || 0);
     const strengthDelta = FMG.clamp(homeStrength - awayStrength, -24, 24);
-    const baseHomePossession = FMG.clamp(Math.round(50 + strengthDelta * 0.38 + (homeProfile.possession - awayProfile.possession) * 0.75 + FMG.randomInt(-4, 4)), 32, 68);
+    const emotionalPossessionShift = (homeHuman.possessionShift || 0) + (awayHuman.possessionShift || 0);
+    const baseHomePossession = FMG.clamp(Math.round(50 + strengthDelta * 0.38 + (homeProfile.possession - awayProfile.possession) * 0.75 + emotionalPossessionShift + FMG.randomInt(-4, 4)), 32, 68);
     const homePossession = FMG.clamp(Math.round((liveMatch.result.stats.home.possession * 0.85) + (baseHomePossession * 0.15)), 32, 68);
     const result = liveMatch.result;
 
@@ -154,7 +161,11 @@
 
     if (!attacker || !defender) return;
 
-    if (FMG.rng() < FMG.clamp(MATCH_CONSTANTS.foulBase + (defendProfile.fouls + defendProfile.risk * 0.18) / 360, 0.025, MATCH_CONSTANTS.foulMax)) {
+    const attackHuman = isHomeAttack ? homeHuman : awayHuman;
+    const defendHuman = isHomeAttack ? awayHuman : homeHuman;
+    const foulProbability = FMG.clamp(MATCH_CONSTANTS.foulBase + (defendProfile.fouls + defendProfile.risk * 0.18) / 360, 0.025, MATCH_CONSTANTS.foulMax) * (defendHuman.foulMultiplier || 1);
+
+    if (FMG.rng() < FMG.clamp(foulProbability, 0.01, 0.18)) {
       const cardRoll = FMG.rng();
       const color = cardRoll > 0.965 ? "red" : cardRoll > 0.74 ? "yellow" : null;
       defendStats.fouls += 1;
@@ -171,22 +182,31 @@
       } else {
         addTimeline(result.timeline, minute, "foul", defendTeam.id, `${defender.name} corta el avance de ${attacker.name}.`);
       }
+      if (FMG.humanFootballAI?.applyPostEventModifiers) {
+        result.timeline.slice(timelineStart).forEach((event) => FMG.humanFootballAI.applyPostEventModifiers(state, event));
+      }
       return;
     }
 
-    if (FMG.rng() < pressure) {
+    if (FMG.rng() < FMG.clamp(pressure + (attackHuman.pressureBonus || 0), 0.05, 0.9)) {
+      const confidence = FMG.humanFootballAI?.confidenceModifier ? FMG.humanFootballAI.confidenceModifier(attacker) : { shot: 1, target: 1 };
+      const mental = FMG.humanFootballAI?.mentalModifier ? FMG.humanFootballAI.mentalModifier(attacker) : { decision: 0 };
       const shotQuality = FMG.clamp(
-        0.06 + (attacker.overall - 62) / 225 + (attacker.energy - 70) / 900 + (attackProfile.attack + defendProfile.risk - defendProfile.defense) / 560 + FMG.randomInt(0, 10) / 100,
-        0.035,
-        0.4
+        FMG.clamp(
+          0.06 + (attacker.overall - 62) / 225 + (attacker.energy - 70) / 900 + (attackProfile.attack + defendProfile.risk - defendProfile.defense) / 560 + FMG.randomInt(0, 10) / 100,
+          0.035,
+          0.4
+        ) * (attackHuman.shotQualityMultiplier || 1) * confidence.shot * (1 + (mental.decision || 0)) * (1 + (defendHuman.savePenalty || 0)),
+        0.02,
+        0.52
       );
-      const onTargetChance = FMG.clamp(0.28 + attacker.overall / 270 + shotQuality * 0.4, 0.3, 0.76);
+      const onTargetChance = FMG.clamp((0.28 + attacker.overall / 270 + shotQuality * 0.4) * (attackHuman.onTargetMultiplier || 1) * confidence.target, 0.22, 0.8);
       const isGoal = FMG.rng() < shotQuality;
       const isOnTarget = isGoal || FMG.rng() < onTargetChance;
       attackStats.shots += 1;
       attackStats.xg += shotQuality;
       if (isOnTarget) attackStats.shotsOnTarget += 1;
-      if (FMG.rng() < 0.16) attackStats.corners += 1;
+      if (FMG.rng() < FMG.clamp(0.16 + (defendHuman.cornerBonus || 0), 0.04, 0.34)) attackStats.corners += 1;
 
       if (isGoal) {
         const goal = { minute, scorer: attacker.name, playerId: attacker.id, xg: shotQuality };
@@ -217,6 +237,10 @@
         result.injuries.push({ minute, teamId: injured.teamId, playerId: injured.id, playerName: injured.name, duration });
         addTimeline(result.timeline, minute, "injury", injured.teamId, `${injured.name} queda sentido y sera baja ${duration} semana(s).`, { playerId: injured.id });
       }
+    }
+
+    if (FMG.humanFootballAI?.applyPostEventModifiers) {
+      result.timeline.slice(timelineStart).forEach((event) => FMG.humanFootballAI.applyPostEventModifiers(state, event));
     }
   }
 
@@ -462,6 +486,7 @@
   FMG.advanceLiveMatch = function (state, minutes) {
     const liveMatch = state.liveMatch;
     if (!liveMatch || liveMatch.completed) return { ok: false, message: "No hay partido en vivo activo." };
+    if (FMG.humanFootballAI?.applyPreMatchModifiers) FMG.humanFootballAI.applyPreMatchModifiers(state);
     const step = Number.isFinite(minutes) ? Math.max(1, Math.min(90, minutes)) : liveMatch.speed;
     const targetMinute = Math.min(90, liveMatch.minute + step);
 
@@ -502,6 +527,7 @@
         liveMatch.result.stats.home,
         liveMatch.result.stats.away
       );
+      if (FMG.humanFootballAI?.applyPostMatchModifiers) FMG.humanFootballAI.applyPostMatchModifiers(state);
     }
 
     return { ok: true, message: liveMatch.completed ? "Partido finalizado." : `Partido avanzado al minuto ${liveMatch.minute}.` };

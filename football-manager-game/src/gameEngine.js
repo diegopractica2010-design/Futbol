@@ -312,6 +312,7 @@
     state.players.forEach((player) => {
       player.energy = FMG.clamp(player.energy + FMG.randomInt(4, 8), 0, 100);
     });
+    FMG.humanFootballAI?.applyRestWeekRecovery?.(state);
     FMG.runRivalAIWeek(state, { beforeMatches: true });
     state.teams.forEach((team) => FMG.autoSelectLineup(state, team.id));
   }
@@ -497,6 +498,7 @@
       revived.tactics = revived.tactics || {};
       revived.presentation = revived.presentation || {};
       revived.saveMeta = revived.saveMeta || {};
+      revived.humanAI = revived.humanAI || {};
     });
 
     if (applied.length) {
@@ -543,6 +545,7 @@
     FMG.ensureAdvancedTransferMarket?.(revived);
     FMG.ensureFootballGenerationState?.(revived);
     FMG.ensureSquadPsychologyState?.(revived);
+    FMG.humanFootballAI?.ensureHumanAIState?.(revived);
     if (revived.userTeamId && !revived.career.objectives.length) FMG.createBoardObjectives(revived);
     FMG.preparePlayersForSeason(revived.players);
     FMG.initializeTeamPlans(revived);
@@ -596,6 +599,7 @@
         userClub: null,
         currentMatch: null,
         liveMatch: null,
+        humanAI: {},
         lastResults: [],
         standings: FMG.createInitialStandings(expandedTeams),
         market: { listings: [], negotiations: [], incomingOffers: [], transferHistory: [], refreshCost: 2500000, windowOpen: true },

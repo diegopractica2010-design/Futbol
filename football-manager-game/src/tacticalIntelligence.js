@@ -116,6 +116,13 @@
       const tempo = orders.tempo === "fast" ? 1.15 : orders.tempo === "slow" ? 0.72 : 0.92;
       const press = orders.press === "high" ? 1 : orders.press === "low" ? -0.55 : 0;
       const risk = orders.risk === "direct" ? 1 : orders.risk === "safe" ? -0.7 : 0;
+      const human = match?.humanAI || {};
+      const sideKey = player.isHome ? "home" : "away";
+      const desperation = clamp(Number(human.desperation?.[sideKey]) || 0, 0, 1);
+      const positionError = clamp(Number(human.positionError?.[sideKey]) || 0, -1, 4);
+      const panic = clamp(Number(human.panic?.[sideKey]) || 0, 0, 80) / 80;
+      const visualSeed = hashId(`${player.id}:${Math.floor(Number(match?.minute) || 0)}:human-ai`);
+      const errorSign = visualSeed % 2 === 0 ? 1 : -1;
       const phaseWave = phaseFrom(match, player.id, 0.32 * tempo);
       const laneWave = Math.cos(phaseWave) * (2.4 + role.width * 1.8);
       const offBallRun = teamHasBall ? Math.sin(phaseWave * 0.7) * role.support * 5 : 0;
@@ -126,11 +133,20 @@
       const defensiveDrop = teamHasBall ? 0 : role.press * 5 + (press < 0 ? 4 : 0);
       const supportPocket = teamHasBall && role.line === "midfield" ? -sideSign * 2.6 : 0;
 
-      const x = base.x + ballPullX + laneWave * role.width + (teamHasBall ? risk * laneWave * 0.25 : 0);
+      const desperationLift = desperation * sideSign * (role.line === "defense" ? 7 : role.line === "wing" ? 9 : role.line === "midfield" ? 6 : 4);
+      const clusterPull = desperation * clamp(1 - Math.abs(ball.z - base.z) / FIELD_HEIGHT, 0.12, 0.82);
+      const errorX = errorSign * positionError * (0.6 + (visualSeed % 7) * 0.18);
+      const errorZ = (errorSign * -1) * (positionError + panic) * (0.5 + (visualSeed % 5) * 0.16);
+      const wingbackPush = desperation > 0 && role.line === "defense" && Math.abs(base.x) > FIELD_WIDTH * 0.24 ? sideSign * desperation * 4 : 0;
+
+      const x = base.x + ballPullX + laneWave * role.width + (teamHasBall ? risk * laneWave * 0.25 : 0) + (ball.x - base.x) * clusterPull * 0.22 + errorX;
       const z = base.z
         + ballPullZ
         + sideSign * (possessionBias * 0.11 + momentumBias * 0.1 + attackIntent * 5 + transitionLift + offBallRun - defensiveDrop)
-        + supportPocket;
+        + supportPocket
+        + desperationLift
+        + wingbackPush
+        + errorZ;
 
       return {
         x: clamp(x, -this.fieldWidth / 2 + 4, this.fieldWidth / 2 - 4),

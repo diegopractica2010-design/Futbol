@@ -58,15 +58,15 @@
   BallRenderer.prototype.draw = function (ctx, ball) {
     if (!C) C = window.FMG.Phase16.C;
 
-    var r = C.BALL_R;
+    var r = 6;
     var h = Math.min(this._height, 12); // altura maxima visual
 
     // Estela
     for (var i = 0; i < this._trail.length; i++) {
       var tr = this._trail[i];
-      var trAlpha = tr.alpha * (i / this._trail.length);
+      var trAlpha = 0.02 + (i / Math.max(1, this._trail.length - 1)) * 0.16;
       ctx.beginPath();
-      ctx.arc(tr.x, tr.y, r * 0.6 * (i / this._trail.length), 0, Math.PI * 2);
+      ctx.arc(tr.x, tr.y, r * 0.6, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(255,255,255," + trAlpha + ")";
       ctx.fill();
     }
@@ -88,36 +88,27 @@
 
     ctx.save();
     ctx.translate(ball.x, drawY);
+    var speed = Math.hypot(ball.vx || 0, ball.vy || 0);
+    var angle = speed > 0.1 ? Math.atan2(ball.vy, ball.vx) : 0;
+    ctx.rotate(angle);
+    if (speed > 7) ctx.scale(1.45, 0.78);
     ctx.rotate(this._rotation);
 
     // Cuerpo blanco
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.fillStyle = "#f5f5f0";
+    ctx.fillStyle = "#ffffff";
     ctx.fill();
 
-    // Pentagono central (simula costura)
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.38, 0, Math.PI * 2);
-    ctx.fillStyle = "#222222";
-    ctx.fill();
-
-    // 5 hexagonos alrededor (simplificados como lineas radiales)
-    ctx.strokeStyle = "rgba(0,0,0,0.25)";
+    // 5 arcos negros sugieren paneles.
+    ctx.strokeStyle = "rgba(0,0,0,0.78)";
     ctx.lineWidth   = 0.8;
     for (var j = 0; j < 5; j++) {
       var a = (j / 5) * Math.PI * 2;
       ctx.beginPath();
-      ctx.moveTo(Math.cos(a) * r * 0.38, Math.sin(a) * r * 0.38);
-      ctx.lineTo(Math.cos(a) * r * 0.88, Math.sin(a) * r * 0.88);
+      ctx.arc(Math.cos(a) * r * 0.18, Math.sin(a) * r * 0.18, r * 0.58, a - 0.7, a + 0.7);
       ctx.stroke();
     }
-
-    // Brillo
-    ctx.beginPath();
-    ctx.arc(-r * 0.28, -r * 0.28, r * 0.22, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.fill();
 
     ctx.restore();
   };

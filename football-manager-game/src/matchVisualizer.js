@@ -12,6 +12,10 @@
   // DETERMINISTIC RNG — mulberry32
   // ============================================================
   function mulberry32(seed) {
+    return FMG.mulberry32 ? FMG.mulberry32(seed >>> 0) : fallbackMulberry32(seed);
+  }
+
+  function fallbackMulberry32(seed) {
     let s = (seed >>> 0) || 1;
     return function () {
       s |= 0; s = (s + 0x6D2B79F5) | 0;
@@ -22,6 +26,7 @@
   }
 
   function hashSeed(value) {
+    if (FMG.hashText) return FMG.hashText(value) || 1;
     const text = String(value || "");
     let h = 0;
     for (let i = 0; i < text.length; i++) h = ((h * 31) + text.charCodeAt(i)) >>> 0;
@@ -33,14 +38,13 @@
     return color || fallback;
   }
 
-  function lightenHex(hex, amt) {
-    try {
-      const c = hex.replace("#", "");
-      const r = clamp(parseInt(c.substring(0, 2), 16) + Math.round(255 * amt), 0, 255);
-      const g = clamp(parseInt(c.substring(2, 4), 16) + Math.round(255 * amt), 0, 255);
-      const b = clamp(parseInt(c.substring(4, 6), 16) + Math.round(255 * amt), 0, 255);
-      return "rgb(" + r + "," + g + "," + b + ")";
-    } catch (e) { void e; return hex; }
+  function resolveClubIdentity(teamId, fallback) {
+    const identity = FMG.getClubIdentity ? FMG.getClubIdentity(teamId) : null;
+    return {
+      primary: colorToCss(identity?.primary, colorToCss(fallback, "#f6f6f1")),
+      secondary: colorToCss(identity?.secondary, "#1763a6"),
+      accent: colorToCss(identity?.accent, "#f9a825")
+    };
   }
 
   function makePosition(x, y, z) {
@@ -104,11 +108,9 @@
       // Mow stripes — alternating ~38 px bands with slight irregularity
       const strH = 38;
       const nStripes = Math.ceil(H / strH) + 2;
-      const strRng = mulberry32(hashSeed("stripes"));
       for (let i = 0; i < nStripes; i++) {
-        const irreg = (strRng() - 0.5) * 3.5;
         ctx.fillStyle = i % 2 === 0 ? "#1e3d0f" : "#244d13";
-        ctx.fillRect(0, i * strH + irreg, W, strH);
+        ctx.fillRect(0, i * strH, W, strH);
       }
 
       // Vertical depth darkening toward far (top) side
@@ -131,19 +133,19 @@
 
       // Wear zones — penalty areas slightly lighter
       const areaW = 40.32 * mX, areaH = 16.5 * mY;
-      ctx.fillStyle = "rgba(40,79,21,0.42)";
+      ctx.fillStyle = "rgba(101,67,33,0.06)";
       ctx.fillRect((W - areaW) / 2, 0, areaW, areaH);
       ctx.fillRect((W - areaW) / 2, H - areaH, areaW, areaH);
 
       // Center circle worn patch
-      ctx.fillStyle = "rgba(36,68,18,0.38)";
+      ctx.fillStyle = "rgba(101,67,33,0.035)";
       ctx.beginPath();
       ctx.arc(W / 2, H / 2, 9.15 * Math.min(mX, mY) * 1.1, 0, Math.PI * 2);
       ctx.fill();
 
       // Goalmouth dirt patches
       const gmW = 7.32 * mX * 2.6;
-      ctx.fillStyle = "rgba(101,67,33,0.07)";
+      ctx.fillStyle = "rgba(101,67,33,0.06)";
       ctx.fillRect((W - gmW) / 2, 0, gmW, 9 * mY);
       ctx.fillRect((W - gmW) / 2, H - 9 * mY, gmW, 9 * mY);
 
@@ -181,6 +183,32 @@
       // === PSEUDO-3D GOALS ===
       this._goal3D(ctx, W, H, mX, mY, "top");
       this._goal3D(ctx, W, H, mX, mY, "bottom");
+
+      const light = ctx.createRadialGradient(W / 2, H / 2, H * 0.08, W / 2, H / 2, W * 0.72);
+      light.addColorStop(0, "rgba(255,255,200,0.04)");
+      light.addColorStop(1, "rgba(0,0,0,0.25)");
+      ctx.fillStyle = light;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      ctx.fillRect(0, 0, W, 18);
+      ctx.fillRect(0, H - 18, W, 18);
+      ctx.fillRect(0, 0, 18, H);
+      ctx.fillRect(W - 18, 0, 18, H);
+
+      this._drawCornerVignette(ctx, W, H, 0, 0);
+      this._drawCornerVignette(ctx, W, H, W, 0);
+      this._drawCornerVignette(ctx, W, H, 0, H);
+      this._drawCornerVignette(ctx, W, H, W, H);
+    }
+
+    _drawCornerVignette(ctx, W, H, x, y) {
+      const r = Math.max(W, H) * 0.48;
+      const g = ctx.createRadialGradient(x, y, r * 0.14, x, y, r);
+      g.addColorStop(0, "rgba(0,0,0,0.24)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
     }
 
     _penaltyZone(ctx, map, mX, mY, gz, dir, LC) {
@@ -426,7 +454,7 @@
   // BALL TRAIL  (Phase 4)
   // ============================================================
   class BallTrail {
-    constructor() { this.pts = []; this.maxPts = 14; }
+    constructor() { this.pts = []; this.maxPts = 6; }
 
     push(x, y, speed) {
       this.pts.push({ x, y, speed, age: 0 });
@@ -435,7 +463,7 @@
 
     update(dt) {
       this.pts.forEach(p => p.age += dt);
-      this.pts = this.pts.filter(p => p.age < 200);
+      this.pts = this.pts.filter(p => p.age < 260);
     }
 
     draw(ctx) {
@@ -443,10 +471,10 @@
       ctx.save();
       for (let i = 1; i < this.pts.length; i++) {
         const p = this.pts[i], q = this.pts[i - 1];
-        const a = clamp((1 - p.age / 200) * (p.speed / 22), 0, 0.6);
-        const w = clamp(p.speed * 0.15, 0.8, 4.5);
-        ctx.strokeStyle = p.speed > 14 ? "rgba(255,200,55," + a + ")" : "rgba(255,255,255," + (a * 0.65) + ")";
-        ctx.lineWidth = w;
+        const rank = i / Math.max(1, this.pts.length - 1);
+        const a = clamp(0.02 + rank * 0.16, 0.02, 0.18) * clamp(1 - p.age / 260, 0, 1);
+        ctx.strokeStyle = "rgba(255,255,255," + a + ")";
+        ctx.lineWidth = clamp(p.speed * 0.08, 0.8, 3.2);
         ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(p.x, p.y); ctx.stroke();
       }
       ctx.restore();
@@ -513,24 +541,19 @@
       this.flashAlpha = 0.72;
       this.flashColor = teamColor || "rgba(255,220,80,1)";
       const rng = mulberry32(hashSeed("goalfx" + Math.round(x + y)));
-      const cols = ["#f9a825","#e53935","#ffffff","#1565c0","#43a047","#ff7043","#ffd54f"];
-      for (let i = 0; i < 88; i++) {
+      const cols = [teamColor || "#f9a825", "#ffffff", "#ffd54f"];
+      for (let i = 0; i < 30; i++) {
         const angle = rng() * Math.PI * 2;
-        const spd = 4.5 + rng() * 9;
-        particles.emit(x, y, Math.cos(angle) * spd, Math.sin(angle) * spd - 4.5,
-          cols[Math.floor(rng() * cols.length)], 900 + rng() * 700, 3.5 + rng() * 4.5);
+        const spd = 3.5 + rng() * 6.5;
+        particles.emit(x, y, Math.cos(angle) * spd, Math.sin(angle) * spd - 5.5,
+          cols[Math.floor(rng() * cols.length)], 1200 + rng() * 800, 3 + rng() * 3);
       }
       this.events.push({ type: "goal", life: 2600, maxLife: 2600 });
     }
 
     triggerShot(x, y, particles) {
-      const rng = mulberry32(hashSeed("shotfx" + Math.round(x + y)));
-      for (let i = 0; i < 14; i++) {
-        const angle = rng() * Math.PI * 2;
-        const spd = 2.5 + rng() * 5;
-        particles.emit(x, y, Math.cos(angle) * spd, Math.sin(angle) * spd - 2,
-          "rgba(255,185,55,0.85)", 340, 2.5);
-      }
+      void particles;
+      this.events.push({ type: "shot", x, y, life: 500, maxLife: 500 });
     }
 
     // Phase 7 — foul/card flash
@@ -538,6 +561,16 @@
       this.flashAlpha = isRed ? 0.28 : 0.18;
       this.flashColor = isRed ? "rgba(180,30,20,1)" : "rgba(220,160,0,1)";
       this.events.push({ type: isRed ? "red-card" : "yellow-card", life: 1800, maxLife: 1800 });
+    }
+
+    triggerFoulAt(x, y) {
+      this.flashAlpha = 0.18;
+      this.flashColor = "rgba(220,160,0,1)";
+      this.events.push({ type: "foul-hex", x, y, life: 800, maxLife: 800 });
+    }
+
+    triggerOffside(y, text) {
+      this.events.push({ type: "offside", y, text: text || "FUERA DE JUEGO", life: 1500, maxLife: 1500 });
     }
 
     // Phase 7 — VAR freeze style
@@ -578,7 +611,72 @@
       ctx.shadowColor = "rgba(0,0,0,0.85)";
       ctx.shadowBlur = 24;
       ctx.fillStyle = "#f9a825";
-      ctx.fillText("GOL", 0, 0);
+      ctx.fillText("⚽ GOL!", 0, 0);
+      ctx.restore();
+    }
+
+    drawEventOverlays(ctx, W, H) {
+      this.events.forEach(ev => {
+        if (ev.type === "shot") this._drawShotRipple(ctx, ev);
+        if (ev.type === "foul-hex") this._drawFoulHex(ctx, ev);
+        if (ev.type === "offside") this._drawOffside(ctx, W, H, ev);
+      });
+    }
+
+    _drawShotRipple(ctx, ev) {
+      const p = 1 - ev.life / ev.maxLife;
+      ctx.save();
+      ctx.globalAlpha = clamp(1 - p, 0, 1);
+      ctx.strokeStyle = "rgba(220,35,35,0.86)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(ev.x, ev.y, p * 40, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    _drawFoulHex(ctx, ev) {
+      const p = 1 - ev.life / ev.maxLife;
+      const r = 12 + p * 18;
+      ctx.save();
+      ctx.globalAlpha = clamp(1 - p, 0, 1);
+      ctx.fillStyle = "rgba(255,210,40,0.35)";
+      ctx.strokeStyle = "rgba(255,225,70,0.9)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = Math.PI / 6 + i * Math.PI / 3;
+        const x = ev.x + Math.cos(a) * r;
+        const y = ev.y + Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    _drawOffside(ctx, W, H, ev) {
+      const p = 1 - ev.life / ev.maxLife;
+      const alpha = p < 0.12 ? p / 0.12 : ev.life / ev.maxLife;
+      const y = clamp(ev.y || H / 2, 72, H - 32);
+      ctx.save();
+      ctx.globalAlpha = clamp(alpha, 0, 1);
+      ctx.strokeStyle = "rgba(255,255,255,0.82)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([9, 7]);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = "900 26px \"Segoe UI\", Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.fillStyle = "#f2f5ee";
+      ctx.shadowColor = "rgba(0,0,0,0.75)";
+      ctx.shadowBlur = 10;
+      ctx.fillText(ev.text, W / 2, y - 8);
       ctx.restore();
     }
 
@@ -681,6 +779,10 @@
       this.tacticalOverlays = { supportLines: [], pressZones: [], shapeLines: { home: [], away: [] }, phase: null };
       this.presentation = null;
       this.teamColors = { home: "#f6f6f1", away: "#1763a6" };
+      this.teamIdentities = {
+        home: { primary: "#f6f6f1", secondary: "#111111", accent: "#f9a825" },
+        away: { primary: "#1763a6", secondary: "#ffffff", accent: "#f9a825" }
+      };
 
       this._cssWidth = 0;
       this._cssHeight = 0;
@@ -726,8 +828,10 @@
     setTeamInfo(homeTeamId, homeTeamColor, awayTeamId, awayTeamColor) {
       this.matchState.homeTeamId = homeTeamId;
       this.matchState.awayTeamId = awayTeamId;
-      this.teamColors.home = colorToCss(homeTeamColor, "#f6f6f1");
-      this.teamColors.away = colorToCss(awayTeamColor, "#1763a6");
+      this.teamIdentities.home = resolveClubIdentity(homeTeamId, homeTeamColor);
+      this.teamIdentities.away = resolveClubIdentity(awayTeamId, awayTeamColor);
+      this.teamColors.home = this.teamIdentities.home.primary;
+      this.teamColors.away = this.teamIdentities.away.secondary;
     }
 
     addPlayer(playerId, startPos, isHome, meta) {
@@ -735,6 +839,9 @@
       const pid = String(playerId);
       const pos = makePosition(startPos?.x, startPos?.y, startPos?.z);
       const rng = mulberry32(hashSeed(pid + "init"));
+      const driftSeed = hashSeed(pid);
+      const driftPeriod = driftSeed % 6 + 7;
+      const driftPhase = driftSeed * 1.3;
       this.players[pid] = {
         id: pid, isHome,
         name: meta.name || pid,
@@ -745,11 +852,14 @@
         targetPosition: makePosition(pos.x, pos.y, pos.z),
         basePosition: makePosition(pos.x, pos.y, pos.z),
         // Layer 2 — role drift
-        driftPhX: rng() * Math.PI * 2, driftPhZ: rng() * Math.PI * 2,
-        driftRX: 0.17 + rng() * 0.13, driftRZ: 0.13 + rng() * 0.09,
-        driftAX: 0.9 + rng() * 1.1, driftAZ: 0.7 + rng() * 0.9,
+        driftPeriod, driftPhase,
+        driftPhX: driftPhase, driftPhZ: driftPhase + Math.PI / 2,
+        driftRX: (Math.PI * 2) / driftPeriod, driftRZ: (Math.PI * 2) / driftPeriod,
+        driftAX: 1.2, driftAZ: 1,
         // Layer 3 — micro restlessness
         restPh: rng() * Math.PI * 2, restRate: 0.55 + rng() * 0.9,
+        jitterX: 0, jitterZ: 0, jitterSlot: -1,
+        number: meta.number || meta.shirtNumber || String(pid).slice(-2),
         // Kinematics
         facing: 0, speed: 0, prevX: pos.x, prevZ: pos.z,
         // FIX 1: render positions computed every frame (drift + rest layered here)
@@ -819,11 +929,14 @@
           this.cinematic.triggerFoul(true);
           this.cinematic.triggerVAR("Tarjeta roja — revision completada");
         } else if (ev.type === "yellow-card") {
-          this.cinematic.triggerFoul(false);
+          const fs = this._eventScreenPosition(ev);
+          this.cinematic.triggerFoulAt(fs.x, fs.y);
         } else if (ev.type === "foul") {
-          this.cinematic.triggerFoul(false);
+          const fs = this._eventScreenPosition(ev);
+          this.cinematic.triggerFoulAt(fs.x, fs.y);
         } else if (ev.type === "offside") {
-          this.cinematic.triggerVAR("Offside confirmado por VAR");
+          const fs = this._eventScreenPosition(ev);
+          this.cinematic.triggerOffside(fs.y, "FUERA DE JUEGO");
         }
       }
 
@@ -836,7 +949,7 @@
       if (this.tacticalEngine) {
         const t = this.tacticalEngine.compute(liveMatch, this.players, this.ball?.position);
         this.tacticalOverlays = t.overlays;
-        Object.keys(t.targets).forEach(id => this.animatePlayerMove(id, t.targets[id], 520));
+        Object.keys(t.targets).forEach(id => this.animatePlayerMove(id, t.targets[id], 1400));
         if (this.ball && t.ball) this.animateBallMove(t.ball, 420);
         return;
       }
@@ -903,7 +1016,7 @@
           x: clamp(base.x + driftX + hasBallBias * 0.08 + fatX + ballAttrX + chaos.x, -FIELD_WIDTH / 2 + 5, FIELD_WIDTH / 2 - 5),
           y: 0,
           z: clamp(base.z + driftZ * 0.6 + sideSign * (hasBallBias * 0.16 + momBias * 0.12 + evLift + roleDepth) + fatZ + ballAttrZ + chaos.z, -FIELD_HEIGHT / 2 + 2, FIELD_HEIGHT / 2 - 2)
-        }, 520);
+        }, 1400);
       });
     }
 
@@ -917,7 +1030,7 @@
     animatePlayerMove(playerId, targetPos, duration) {
       const pl = this.players[playerId];
       if (!pl) return;
-      duration = duration || 1000;
+      duration = duration || 1400;
       const blended = this._blendTarget(playerId, targetPos);
       const dist = Math.hypot(blended.x - (pl.mesh.position.x || 0), blended.z - (pl.mesh.position.z || 0));
       const rng = mulberry32(hashSeed(playerId + ":stag:" + this.matchState.minute));
@@ -1013,6 +1126,17 @@
       this.ballTrail = new BallTrail();
     }
 
+    _eventScreenPosition(event) {
+      if (event?.playerId && this.players[event.playerId]) {
+        const pl = this.players[event.playerId];
+        return this.pitchRenderer.toScreen({ x: pl.renderX || pl.mesh.position.x, z: pl.renderZ || pl.mesh.position.z }, this.bounds);
+      }
+      if (this.ball) {
+        return this.pitchRenderer.toScreen({ x: this.ball.renderX, z: this.ball.renderZ }, this.bounds);
+      }
+      return { x: this.bounds.x + this.bounds.width / 2, y: this.bounds.y + this.bounds.height / 2 };
+    }
+
     updateAnimations(deltaMs) {
       const dt = Math.max(0, Number(deltaMs) || this.config.targetFrameTime);
       this.animationSystem.update(dt);
@@ -1055,22 +1179,41 @@
         if (spd > 0.008) pl.facing = Math.atan2(nx - pl.prevX, -(nz - pl.prevZ));
         pl.prevX = nx; pl.prevZ = nz;
 
-        // Layer 2: continuous role drift applied to render position each frame
-        const driftX = Math.sin(t * pl.driftRX + pl.driftPhX) * pl.driftAX;
-        const driftZ = Math.cos(t * pl.driftRZ + pl.driftPhZ) * pl.driftAZ * 0.5;
+        const slotSize = 0.7 + (hashSeed(pl.id + ":jitter-period") % 8) / 10;
+        const jitterSlot = Math.floor(t / slotSize);
+        if (pl.jitterSlot !== jitterSlot) {
+          const jr = mulberry32(hashSeed(pl.id + Math.floor(performance.now() / 900)));
+          pl.jitterX = (jr() - 0.5) * 0.6;
+          pl.jitterZ = (jr() - 0.5) * 0.6;
+          pl.jitterSlot = jitterSlot;
+        }
 
-        // Layer 3: micro restlessness
-        const restX = Math.sin(t * pl.restRate + pl.restPh) * 0.7;
-        const restZ = Math.cos(t * pl.restRate * 0.72 + pl.restPh) * 0.45;
+        const fatigueAmp = (this.matchState.minute || 0) > 60 ? 1.15 : 1;
+        const driftX = Math.sin(t * pl.driftRX + pl.driftPhX) * pl.driftAX * fatigueAmp;
+        const driftZ = Math.cos(t * pl.driftRZ + pl.driftPhZ) * pl.driftAZ * fatigueAmp;
+
+        let forwardBiasX = 0;
+        let forwardBiasZ = 0;
+        if (pl.hasBall) {
+          const travel = this.ball
+            ? { x: this.ball.targetPosition.x - this.ball.position.x, z: this.ball.targetPosition.z - this.ball.position.z }
+            : { x: Math.sin(pl.facing), z: -Math.cos(pl.facing) };
+          const dist = Math.hypot(travel.x, travel.z) || 1;
+          forwardBiasX = (travel.x / dist) * 1;
+          forwardBiasZ = (travel.z / dist) * 1;
+        }
 
         // Combine: physics position + continuous visual layers
-        pl.renderX = clamp(nx + driftX + restX, -FIELD_WIDTH / 2 + 2, FIELD_WIDTH / 2 - 2);
-        pl.renderZ = clamp(nz + driftZ + restZ, -FIELD_HEIGHT / 2 + 2, FIELD_HEIGHT / 2 - 2);
+        pl.renderX = clamp(nx + driftX + pl.jitterX + forwardBiasX, -FIELD_WIDTH / 2 + 2, FIELD_WIDTH / 2 - 2);
+        pl.renderZ = clamp(nz + driftZ + pl.jitterZ + forwardBiasZ, -FIELD_HEIGHT / 2 + 2, FIELD_HEIGHT / 2 - 2);
 
         // Keep restlessness values for GK weight shift override
-        pl._restX = restX;
-        pl._restY = restZ;
+        pl._restX = pl.jitterX;
+        pl._restY = pl.jitterZ;
       });
+
+      this._updateBallCarrier();
+      this._resolveRenderCollisions();
 
       // Phase 3 — collision resolution (soft nudge)
       this._resolveCollisions();
@@ -1145,6 +1288,7 @@
       this.particles.draw(ctx);
       this.cinematic.drawFlash(ctx, W, H);
       this.cinematic.drawGoalOverlay(ctx, W, H);
+      this.cinematic.drawEventOverlays(ctx, W, H);
       // Phase 7 — card / VAR overlays
       this.cinematic.drawCardOverlay(ctx, W, H);
       this.cinematic.drawVAROverlay(ctx, W, H);
@@ -1286,8 +1430,7 @@
 
     _drawPlayers(ctx, bounds) {
       const minute = this.matchState.minute || 0;
-      const scale = bounds.width / FIELD_WIDTH;
-      const baseR = clamp(scale * 1.38, 7, 13);
+      const baseR = 14;
 
       Object.values(this.players).forEach(pl => {
         // FIX 1: use renderX/renderZ — updated every frame with drift+rest baked in
@@ -1298,7 +1441,8 @@
         const energy = clamp(pl.energy, 0, 100) / 100;
         const isSprint = pl.speed > 0.1;
         const fatigueA = minute > 75 ? 0.76 + energy * 0.24 : 1;
-        const color = pl.isHome ? this.teamColors.home : this.teamColors.away;
+        const identity = pl.isHome ? this.teamIdentities.home : this.teamIdentities.away;
+        const color = pl.isHome ? identity.primary : identity.secondary;
         const r = baseR;
 
         ctx.save();
@@ -1306,24 +1450,29 @@
         ctx.translate(sx, sy);
         ctx.rotate(pl.facing);
 
-        // Sprint squash/stretch
-        if (isSprint) ctx.scale(0.82, 1.22);
+        void isSprint;
 
         // Drop shadow
-        ctx.shadowColor = "rgba(0,0,0,0.55)";
-        ctx.shadowBlur = 9;
-        ctx.shadowOffsetX = 1.5;
-        ctx.shadowOffsetY = 2.5;
+        ctx.shadowColor = "rgba(0,0,0,0.6)";
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 2;
 
-        // Body fill with subtle radial shading
-        const grad = ctx.createRadialGradient(-r * 0.32, -r * 0.32, 0, 0, 0, r);
-        grad.addColorStop(0, lightenHex(color, 0.28));
-        grad.addColorStop(1, lightenHex(color, -0.18));
-        ctx.fillStyle = grad;
-        ctx.strokeStyle = pl.isHome ? "rgba(255,255,255,0.75)" : "rgba(0,0,0,0.55)";
-        ctx.lineWidth = 1.5;
+        ctx.fillStyle = color;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
         ctx.fill(); ctx.stroke();
+
+        if (pl.hasBall) {
+          const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.01);
+          ctx.shadowColor = "transparent";
+          ctx.strokeStyle = "rgba(255,255,0," + (0.25 + pulse * 0.15) + ")";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, r + 5 + pulse * 3, 0, Math.PI * 2);
+          ctx.stroke();
+        }
 
         // GK diamond marker
         if (isGK) {
@@ -1335,24 +1484,16 @@
 
         ctx.shadowColor = "transparent";
 
-        // Direction chevron
-        if (pl.speed > 0.06) {
-          ctx.fillStyle = "rgba(255,255,255,0.55)";
-          ctx.beginPath();
-          ctx.moveTo(0, -(r + 3.5)); ctx.lineTo(-2.8, -(r)); ctx.lineTo(2.8, -(r));
-          ctx.closePath(); ctx.fill();
-        }
-
         ctx.restore();
 
         // Label & energy bar (not rotated)
         ctx.save();
         ctx.translate(sx, sy);
         ctx.shadowColor = "rgba(0,0,0,0.65)"; ctx.shadowBlur = 3;
-        ctx.fillStyle = pl.isHome ? "#111" : "#fff";
-        ctx.font = "700 " + Math.round(r * 0.76) + "px \"Segoe UI\", sans-serif";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "800 10px \"Segoe UI\", sans-serif";
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(String(pl.id).slice(-2), 0, 0.5);
+        ctx.fillText(String(pl.number).slice(-2), 0, 0.5);
         ctx.shadowColor = "transparent";
 
         const bW = r * 2.3;
@@ -1372,7 +1513,7 @@
       const bounce = lift < 0.5 ? Math.abs(Math.sin(this.ball.bouncePhase)) * 1.8 : 0;
       const bX = scr.x;
       const bY = scr.y - lift * 5 - bounce;
-      const r = clamp(bounds.width / FIELD_WIDTH * 2.2, 4.5, 8.5);
+      const r = 6;
       const sq = this.ball.squash || 1;
 
       // Trail
@@ -1387,23 +1528,25 @@
 
       // Body
       ctx.translate(bX, bY);
-      ctx.scale(1 / sq, sq);
+      ctx.rotate(Math.atan2(this.ball.targetPosition.z - this.ball.position.z, this.ball.targetPosition.x - this.ball.position.x));
+      ctx.scale(sq, 1 / sq);
 
-      const g = ctx.createRadialGradient(-r * 0.36, -r * 0.36, 0, 0, 0, r);
-      g.addColorStop(0, "#fffef5");
-      g.addColorStop(0.55, "#f2e8c8");
-      g.addColorStop(1, "#c4ae78");
-      ctx.fillStyle = g;
-      ctx.strokeStyle = "rgba(40,25,8,0.65)";
-      ctx.lineWidth = 1.1;
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "rgba(0,0,0,0.72)";
+      ctx.lineWidth = 0.9;
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fill(); ctx.stroke();
 
-      // Spin seam
+      // Five black arcs suggesting football panels.
       const sp = this.ball.spin || 0;
-      ctx.strokeStyle = "rgba(80,45,12,0.28)"; ctx.lineWidth = 0.7;
-      ctx.beginPath(); ctx.ellipse(0, 0, r * 0.48, r, sp, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.48, sp + Math.PI / 2, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = "rgba(0,0,0,0.78)";
+      ctx.lineWidth = 0.8;
+      for (let i = 0; i < 5; i++) {
+        const a = sp + i * Math.PI * 0.4;
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * r * 0.18, Math.sin(a) * r * 0.18, r * 0.58, a - 0.7, a + 0.7);
+        ctx.stroke();
+      }
 
       ctx.restore();
     }
@@ -1545,6 +1688,40 @@
       });
     }
 
+    _updateBallCarrier() {
+      let best = null;
+      let bestD = Infinity;
+      Object.values(this.players).forEach(pl => {
+        pl.hasBall = false;
+        if (!this.ball) return;
+        const d = Math.hypot(pl.mesh.position.x - this.ball.position.x, pl.mesh.position.z - this.ball.position.z);
+        if (d < bestD) { bestD = d; best = pl; }
+      });
+      if (best && bestD < 4.2) best.hasBall = true;
+    }
+
+    _resolveRenderCollisions() {
+      const ids = Object.keys(this.players);
+      const minDist = Math.max(1.9, 18 / Math.max(1, this.bounds.width / FIELD_WIDTH));
+      for (let i = 0; i < ids.length; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          const a = this.players[ids[i]];
+          const b = this.players[ids[j]];
+          const dx = a.renderX - b.renderX;
+          const dz = a.renderZ - b.renderZ;
+          const dist = Math.hypot(dx, dz);
+          if (dist >= minDist || dist <= 0.001) continue;
+          const push = (minDist - dist) * 0.52;
+          const nx = dx / dist;
+          const nz = dz / dist;
+          a.renderX = clamp(a.renderX + nx * push, -FIELD_WIDTH / 2 + 2, FIELD_WIDTH / 2 - 2);
+          a.renderZ = clamp(a.renderZ + nz * push, -FIELD_HEIGHT / 2 + 2, FIELD_HEIGHT / 2 - 2);
+          b.renderX = clamp(b.renderX - nx * push, -FIELD_WIDTH / 2 + 2, FIELD_WIDTH / 2 - 2);
+          b.renderZ = clamp(b.renderZ - nz * push, -FIELD_HEIGHT / 2 + 2, FIELD_HEIGHT / 2 - 2);
+        }
+      }
+    }
+
     // ================================================================
     // PHASE 3 — COLLISION RESOLUTION
     // ================================================================
@@ -1581,18 +1758,19 @@
         const base = pl.basePosition;
         const isHome = pl.isHome;
         // GK stays on goal line + patrol range ±4m
-        const patrolX = Math.sin(t * 0.55 + (isHome ? 0 : Math.PI)) * 4;
+        const ballFar = !this.ball || Math.abs(this.ball.position.z - base.z) > 18;
+        const patrolX = ballFar ? Math.sin(t * 0.55 + (isHome ? 0 : Math.PI)) * 4 : 0;
         // Track ball: shift slightly toward ball x
         let ballTrackX = 0;
         if (this.ball) {
           const bdx = this.ball.position.x - pl.mesh.position.x;
-          ballTrackX = clamp(bdx * 0.18, -5, 5);
+          ballTrackX = clamp(bdx * (ballFar ? 0.12 : 0.32), -5, 5);
         }
         // Weight shift oscillation (alive feel)
         const weightShift = Math.sin(t * 1.2 + (isHome ? 1.4 : 2.8)) * 0.6;
         const targetX = clamp(base.x + patrolX + ballTrackX + weightShift, -3.66 * 2, 3.66 * 2);
         // GK z: stay close to goal line but step out on danger
-        const danger = this.ball && Math.abs(this.ball.position.z - base.z) < 20;
+        const danger = this.ball && Math.abs(this.ball.position.z - base.z) < 18;
         const stepOut = danger ? (isHome ? 2 : -2) : 0;
         const targetZ = clamp(base.z + stepOut, -FIELD_HEIGHT / 2 + 1, FIELD_HEIGHT / 2 - 1);
         // Urgency: move faster if ball is close
