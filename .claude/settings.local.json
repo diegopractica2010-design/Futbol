@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(timeout 3)",
+      "Bash(Start-Process node *)",
+      "Bash(Select-Object -ExpandProperty Id)",
+      "Bash(node dev-server.js)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(npx eslint *)",
+      "Bash(node tests/run-all.js)"
+    ]
+  }
+}

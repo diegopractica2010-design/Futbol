@@ -883,17 +883,16 @@ textarea {
 /* Match Visualizer 3D */
 #match-visualizer-container {
   width: 100%;
-  height: 500px;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08), transparent 34%),
-    linear-gradient(135deg, color-mix(in srgb, var(--club-primary, var(--primary)) 28%, #0f2a21), #0f2a21);
+  height: 520px;
+  background: #040b06;
   border-radius: var(--radius-md);
-  border: 1px solid var(--club-primary, var(--line));
+  border: 1px solid rgba(15,122,90,0.22);
   position: relative;
   overflow: hidden;
   margin: 16px 0;
   opacity: 1;
   transition: opacity 0.3s ease;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.04);
 }
 
 .match-renderer-loading,
@@ -919,7 +918,7 @@ textarea {
 
 @media (max-width: 768px) {
   #match-visualizer-container {
-    height: 320px;
+    height: 340px;
   }
 }
 
