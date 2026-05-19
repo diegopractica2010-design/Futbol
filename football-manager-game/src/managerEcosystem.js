@@ -529,3 +529,226 @@
   FMG.ensureManagerEcosystemState = ensureManagerEcosystemState;
   FMG.runManagerEcosystemWeek = runManagerEcosystemWeek;
 })();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MANAGER ECOSYSTEM — INTERACTIVE PRESS CONFERENCES (Fase 5)
+// ═══════════════════════════════════════════════════════════════════════════
+(function () {
+  "use strict";
+
+  const FMG = (window.FMG = window.FMG || {});
+  const clamp = FMG.clamp;
+  const hashText = FMG.hashText;
+  const deterministicId = FMG.deterministicId;
+  const boundedPush = FMG.boundedPush;
+
+  const PRESS_QUESTIONS = {
+    tactica: [
+      {
+        question: "¿Que cambios tacticos planea para las proximas semanas?",
+        choices: [
+          { label: "Seguiremos con lo establecido", tone: "diplomatic", text: "El sistema funciona y los jugadores lo entienden bien." },
+          { label: "Hay que cambiar ya", tone: "combative", text: "Si no cambiamos seguiremos cediendo terreno. El equipo necesita un sacudon." },
+          { label: "Necesitamos adaptarnos", tone: "honest", text: "El rival nos ha obligado a repensar algunas cosas. Estamos trabajando en ello." }
+        ]
+      },
+      {
+        question: "¿Como valora el rendimiento individual de sus jugadores?",
+        choices: [
+          { label: "El grupo trabaja con dedicacion", tone: "diplomatic", text: "Estamos comprometidos y el rendimiento mejorara." },
+          { label: "Hay que exigir mas a algunos", tone: "combative", text: "Ciertos jugadores no estan al nivel que el club exige. Eso tiene consecuencias." },
+          { label: "Hay diferencias claras en el plantel", tone: "honest", text: "Algunos jugadores estan por encima del resto. Es la realidad." }
+        ]
+      },
+      {
+        question: "¿Como ve la competitividad del equipo frente a los lideres del torneo?",
+        choices: [
+          { label: "Estamos en el camino correcto", tone: "diplomatic", text: "Los resultados iran llegando si mantenemos la constancia." },
+          { label: "Estamos muy por debajo del nivel necesario", tone: "combative", text: "No me voy a esconder: hay una brecha que hay que cerrar con urgencia." },
+          { label: "Necesitamos mejorar en areas especificas", tone: "honest", text: "Hay dos o tres aspectos donde la diferencia es notable. Los estamos trabajando." }
+        ]
+      }
+    ],
+    mercado: [
+      {
+        question: "¿El club buscara refuerzos en el proximo mercado?",
+        choices: [
+          { label: "Confiamos en el plantel actual", tone: "diplomatic", text: "Tenemos un buen plantel. Evaluaremos oportunidades con calma." },
+          { label: "Necesitamos incorporaciones urgentes", tone: "combative", text: "La direccion sabe que hay posiciones que necesitan refuerzo inmediato." },
+          { label: "Hay necesidades concretas que trabajar", tone: "honest", text: "Hay dos o tres posiciones donde necesitamos mejorar para ser competitivos." }
+        ]
+      },
+      {
+        question: "¿Como responde a los rumores sobre posibles salidas de jugadores clave?",
+        choices: [
+          { label: "El plantel esta tranquilo y enfocado", tone: "diplomatic", text: "Los jugadores estan concentrados en el campo. Los rumores no generan distraccion." },
+          { label: "Ese jugador no se va a ninguna parte", tone: "combative", text: "Estoy harto de que se use a mis jugadores para especular. Aqui se queda." },
+          { label: "Hay conversaciones normales en el mercado", tone: "honest", text: "Es natural que haya interes en los mejores. Lo manejamos con transparencia." }
+        ]
+      }
+    ],
+    presion: [
+      {
+        question: "¿Como maneja la presion del entorno tras los ultimos resultados?",
+        choices: [
+          { label: "La presion nos motiva y nos hace mejores", tone: "diplomatic", text: "La exigencia es parte del futbol de alto nivel. La procesamos en positivo." },
+          { label: "La critica desmedida no ayuda a nadie", tone: "combative", text: "Necesitamos apoyo, no cuestionamientos constantes cuando los resultados no llegan." },
+          { label: "Reconocemos que los resultados no han sido buenos", tone: "honest", text: "Lo reconocemos y trabajamos para revertirlo. Eso es lo que podemos decir." }
+        ]
+      },
+      {
+        question: "¿Se siente respaldado por la directiva en este momento?",
+        choices: [
+          { label: "Tengo el respaldo total de la institucion", tone: "diplomatic", text: "La comunicacion con la directiva es fluida y constructiva." },
+          { label: "Necesito mas apoyo del que recibo actualmente", tone: "combative", text: "Hay cosas que necesito para trabajar bien y no siempre llegan a tiempo." },
+          { label: "Tenemos una relacion honesta y directa", tone: "honest", text: "Conversamos abiertamente sobre los objetivos y los recursos disponibles." }
+        ]
+      }
+    ],
+    vestuario: [
+      {
+        question: "¿Como esta el ambiente en el vestidor?",
+        choices: [
+          { label: "El grupo esta unido y comprometido", tone: "diplomatic", text: "Hay buena energia interna. El grupo esta comprometido con el proyecto." },
+          { label: "Hay cosas que resolver dentro del plantel", tone: "combative", text: "No voy a mentir, hay tensiones que estamos gestionando con firmeza." },
+          { label: "El grupo dialoga internamente sus diferencias", tone: "honest", text: "Somos honestos entre nosotros. Lo importante es que lo hablamos y lo resolvemos." }
+        ]
+      }
+    ]
+  };
+
+  const TONE_CONSEQUENCES = {
+    diplomatic: { fansMoodDelta: 5, mediaReputationDelta: 5, playerTrustDelta: -3, scandalRisk: 0 },
+    combative: { fansMoodDelta: -5, mediaReputationDelta: -8, playerTrustDelta: 6, scandalRisk: 0.35 },
+    honest: { fansMoodDelta: 2, mediaReputationDelta: 0, playerTrustDelta: 5, scandalRisk: 0 }
+  };
+
+  function ensurePressConferenceHistory(state) {
+    if (state.career) state.career.pressConferenceHistory = state.career.pressConferenceHistory || [];
+  }
+
+  function addQuestionsToConference(conference) {
+    const topic = conference.topic || "tactica";
+    const pool = PRESS_QUESTIONS[topic] || PRESS_QUESTIONS.tactica;
+    const seed = hashText(conference.id + "-questions");
+    const count = Math.min(3, pool.length);
+    conference.questions = [];
+    for (let i = 0; i < count; i += 1) {
+      const q = pool[(seed + i) % pool.length];
+      conference.questions.push({
+        index: i,
+        question: q.question,
+        choices: q.choices,
+        answered: false,
+        selectedChoice: null
+      });
+    }
+    conference.answerable = true;
+    return conference;
+  }
+
+  function applyToneEffect(state, tone, badForm) {
+    const eco = state.managerEcosystem || {};
+    const world = eco.worldMedia || {};
+    const cons = TONE_CONSEQUENCES[tone] || TONE_CONSEQUENCES.diplomatic;
+    if (eco.manager) {
+      eco.manager.mediaReputation = clamp((eco.manager.mediaReputation || 50) + cons.mediaReputationDelta, 0, 100);
+    }
+    if (world.fans) world.fans.pressure = clamp((world.fans.pressure || 45) - cons.fansMoodDelta, 0, 100);
+    (state.players || []).filter(function (p) { return p.teamId === state.userTeamId && !p.retired; }).forEach(function (p) {
+      const record = state.psychology && state.psychology.players && state.psychology.players[p.id];
+      if (record) record.managerTrust = clamp((record.managerTrust || 50) + cons.playerTrustDelta, 0, 100);
+    });
+    if (tone === "combative" && badForm && cons.scandalRisk > 0 && FMG.MediaExtended) {
+      const seed = hashText("scandal-pc-" + (state.seasonNumber || 1) + "-" + (state.currentWeek || 1));
+      if (seed % 3 === 0) {
+        FMG.MediaExtended.addScandal(state, {
+          type: "combative-press-conference",
+          severity: 1,
+          title: "Declaraciones polemicas del cuerpo tecnico",
+          description: "Las declaraciones del manager en rueda de prensa generan controversia en los medios.",
+          affectedPartyId: state.userTeamId,
+          mechanicalEffect: "-5 board trust"
+        });
+      }
+    }
+  }
+
+  FMG.answerPressConference = function (state, conferenceId, answers) {
+    const eco = state.managerEcosystem || {};
+    const all = (eco.media && eco.media.pressConferences) || [];
+    const conference = all.find(function (c) { return c.id === conferenceId; });
+    if (!conference || conference.resolved) return { ok: false, message: "Conferencia no disponible." };
+    ensurePressConferenceHistory(state);
+    const streaks = (state.worldNews && state.worldNews.streaks && state.worldNews.streaks[state.userTeamId]) || {};
+    const badForm = (streaks.losses || 0) >= 2;
+    const record = { conferenceId: conferenceId, week: conference.week, answers: [], tones: [] };
+    const answerKeys = Object.keys(answers || {});
+    answerKeys.forEach(function (qi) {
+      const questionIdx = Number(qi);
+      const choiceIdx = answers[qi];
+      if (!conference.questions) return;
+      const question = conference.questions[questionIdx];
+      if (!question) return;
+      const choice = question.choices && question.choices[choiceIdx];
+      if (!choice) return;
+      question.answered = true;
+      question.selectedChoice = choiceIdx;
+      applyToneEffect(state, choice.tone, badForm);
+      record.answers.push({ questionIdx: questionIdx, choiceIdx: choiceIdx, tone: choice.tone });
+      record.tones.push(choice.tone);
+    });
+    conference.resolved = true;
+    if (state.career) boundedPush(state.career.pressConferenceHistory, record, 20);
+    return { ok: true, message: "Conferencia completada.", record: record };
+  };
+
+  function shouldTriggerConference(state) {
+    const eco = state.managerEcosystem || {};
+    const streaks = (state.worldNews && state.worldNews.streaks && state.worldNews.streaks[state.userTeamId]) || {};
+    const losingStreak = (streaks.losses || 0) >= 3;
+    const hasRumor = (eco.media && eco.media.rumors || []).some(function (r) { return !r.resolved; });
+    const every3Weeks = (state.currentWeek || 1) % 3 === 0;
+    return every3Weeks || losingStreak || hasRumor;
+  }
+
+  const _prevWeekEcoPC = FMG.runManagerEcosystemWeek;
+  FMG.runManagerEcosystemWeek = function (state, options) {
+    const result = _prevWeekEcoPC ? _prevWeekEcoPC(state, options) : {};
+    const eco = state.managerEcosystem || {};
+    if (eco.media && eco.media.pressConferences) {
+      eco.media.pressConferences.forEach(function (c) {
+        if (!c.resolved && !c.questions) addQuestionsToConference(c);
+      });
+      const hasActive = eco.media.pressConferences.some(function (c) { return !c.resolved && c.questions; });
+      if (!hasActive && shouldTriggerConference(state)) {
+        const streaks = (state.worldNews && state.worldNews.streaks && state.worldNews.streaks[state.userTeamId]) || {};
+        const losingStreak = (streaks.losses || 0) >= 3;
+        const hasRumor = (eco.media.rumors || []).some(function (r) { return !r.resolved; });
+        const topic = losingStreak ? "presion" : hasRumor ? "mercado" : "tactica";
+        const journalist = (eco.media.journalists || [])[0] || { id: "j1", name: "Periodista" };
+        const conf = {
+          id: deterministicId("pc-ix", [state.seasonNumber || 1, state.currentWeek || 1, topic]),
+          week: state.currentWeek || 1,
+          seasonNumber: state.seasonNumber || 1,
+          journalistId: journalist.id,
+          journalistName: journalist.name,
+          topic: topic,
+          tone: losingStreak ? "duro" : "incisivo",
+          resolved: false
+        };
+        addQuestionsToConference(conf);
+        const alreadyExists = eco.media.pressConferences.some(function (c) { return c.id === conf.id; });
+        if (!alreadyExists) boundedPush(eco.media.pressConferences, conf, 12);
+      }
+    }
+    return result;
+  };
+  if (FMG.ManagerEcosystem) FMG.ManagerEcosystem.runWeek = FMG.runManagerEcosystemWeek;
+
+  FMG.PressConferenceExtended = {
+    addQuestionsToConference: addQuestionsToConference,
+    applyToneEffect: applyToneEffect,
+    ensurePressConferenceHistory: ensurePressConferenceHistory
+  };
+})();

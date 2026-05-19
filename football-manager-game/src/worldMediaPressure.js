@@ -508,3 +508,365 @@
   };
   FMG.FootballWorldMedia.ensure = FMG.ensureFootballWorldMediaState;
 })();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORLD MEDIA PRESSURE — EXTENDED SYSTEMS (Fase 5)
+// Scandals, Fan Reactions, Hero/Villain Media, Transfer Fan Reactions
+// ═══════════════════════════════════════════════════════════════════════════
+(function () {
+  "use strict";
+
+  const FMG = (window.FMG = window.FMG || {});
+  const clamp = FMG.clamp;
+  const hashText = FMG.hashText;
+  const deterministicId = FMG.deterministicId;
+  const boundedPush = FMG.boundedPush;
+
+  // ═══════════════════════════
+  // FAN REACTIONS
+  // ═══════════════════════════
+
+  function ensureFanReactions(state) {
+    state.fanReactions = state.fanReactions || [];
+    return state.fanReactions;
+  }
+
+  function addFanReaction(state, reaction) {
+    ensureFanReactions(state);
+    const id = deterministicId("fan-rx", [reaction.type, state.seasonNumber || 1, state.currentWeek || 1]);
+    if (state.fanReactions.some(function (r) { return r.id === id; })) return null;
+    const entry = {
+      id: id,
+      week: state.currentWeek || 1,
+      seasonNumber: state.seasonNumber || 1,
+      resolved: false,
+      type: reaction.type || "general",
+      positive: Boolean(reaction.positive),
+      title: reaction.title || "",
+      body: reaction.body || "",
+      icon: reaction.icon || "📣",
+      mechanical: reaction.mechanical || ""
+    };
+    boundedPush(state.fanReactions, entry, 10);
+    return entry;
+  }
+
+  function applyFanReactionEffect(state, reaction) {
+    const eco = state.managerEcosystem || {};
+    const world = eco.worldMedia || {};
+    if (reaction.positive) {
+      world.homeAdvantageBonus = clamp((world.homeAdvantageBonus || 0) + 8, 0, 30);
+      world.homeAdvantageDuration = (world.homeAdvantageDuration || 0) + 2;
+    } else {
+      (state.players || []).filter(function (p) { return p.teamId === state.userTeamId && !p.retired; }).forEach(function (p) {
+        p.morale = clamp((p.morale || 55) - 5, 0, 100);
+      });
+      if (eco.manager) eco.manager.pressure = clamp((eco.manager.pressure || 35) + 10, 0, 100);
+    }
+  }
+
+  function checkFanReactionTriggers(state, streaks) {
+    const userStreaks = (streaks && streaks[state.userTeamId]) || {};
+    const world = (state.managerEcosystem && state.managerEcosystem.worldMedia) || {};
+    if ((userStreaks.wins || 0) >= 4) {
+      addFanReaction(state, {
+        type: "winning-streak",
+        positive: true,
+        title: "La grada explota",
+        body: "La racha ganadora ha encendido el estadio. El equipo siente el respaldo de la hinchada.",
+        icon: "🔥",
+        mechanical: "+8 home advantage x2 matches"
+      });
+    }
+    if ((userStreaks.losses || 0) >= 3) {
+      addFanReaction(state, {
+        type: "losing-streak",
+        positive: false,
+        title: "Silbidos en el estadio",
+        body: "La paciencia de la hinchada se agota. La racha negativa genera tension en las tribunas.",
+        icon: "😤",
+        mechanical: "-5 morale +10 manager pressure"
+      });
+    }
+    if (world.lastDerbyWin && world.lastDerbyWin === (state.currentWeek || 1)) {
+      addFanReaction(state, {
+        type: "derby-win",
+        positive: true,
+        title: "La ciudad es nuestra",
+        body: "La victoria en el clasico desato la euforia. El ambiente en el estadio alcanza su maximo.",
+        icon: "🏆",
+        mechanical: "+8 home advantage x2 matches"
+      });
+    }
+  }
+
+  // ═══════════════════════════
+  // SCANDAL SYSTEM
+  // ═══════════════════════════
+
+  function ensureScandals(state) {
+    state.scandals = state.scandals || [];
+    return state.scandals;
+  }
+
+  function applyScandal(state, scandal) {
+    const eco = state.managerEcosystem || {};
+    const world = eco.worldMedia || {};
+    const severity = scandal.severity || 1;
+    if (eco.manager) {
+      eco.manager.boardTrust = clamp((eco.manager.boardTrust || eco.manager.trust || 50) - 5, 0, 100);
+    }
+    if (severity >= 2) {
+      if (eco.manager) eco.manager.boardTrust = clamp((eco.manager.boardTrust || 50) - 7, 0, 100);
+      if (world.fans) world.fans.pressure = clamp((world.fans.pressure || 45) + 8, 0, 100);
+      if (FMG.addNewsItem) {
+        FMG.addNewsItem(state, {
+          type: "dressing-room",
+          title: scandal.title || "Escandalo interno sacude al club",
+          body: scandal.description || "Un incidente interno genera reacciones externas.",
+          tags: ["escandalo"],
+          importance: 80,
+          dedupeKey: "scandal-news-" + scandal.id
+        });
+      }
+    }
+    if (severity >= 3) {
+      (state.players || []).filter(function (p) { return p.teamId === state.userTeamId && !p.retired; }).forEach(function (p) {
+        p.morale = clamp((p.morale || 55) - 15, 0, 100);
+      });
+    }
+  }
+
+  function addScandal(state, scandal) {
+    ensureScandals(state);
+    const id = deterministicId("scandal", [scandal.type, state.seasonNumber || 1, state.currentWeek || 1, scandal.affectedPartyId || ""]);
+    if (state.scandals.some(function (s) { return s.id === id; })) return null;
+    const entry = {
+      id: id,
+      week: state.currentWeek || 1,
+      seasonNumber: state.seasonNumber || 1,
+      resolved: false,
+      resolvedWeek: null,
+      type: scandal.type || "general",
+      severity: scandal.severity || 1,
+      title: scandal.title || "",
+      description: scandal.description || "",
+      affectedPartyId: scandal.affectedPartyId || null,
+      mechanicalEffect: scandal.mechanicalEffect || ""
+    };
+    boundedPush(state.scandals, entry, 8);
+    applyScandal(state, entry);
+    return entry;
+  }
+
+  function resolveOldScandals(state) {
+    const scandals = ensureScandals(state);
+    const week = state.currentWeek || 1;
+    scandals.forEach(function (s) {
+      const maxWeeks = s.severity === 3 ? 8 : s.severity === 2 ? 6 : 4;
+      if (!s.resolved && week - s.week >= maxWeeks) {
+        s.resolved = true;
+        s.resolvedWeek = week;
+      }
+    });
+  }
+
+  function checkScandalTriggers(state) {
+    const psych = state.psychology;
+    if (psych && psych.chemistry && psych.chemistry.conflict > 80) {
+      const seed = hashText("faction-leak-" + (state.seasonNumber || 1) + "-" + (state.currentWeek || 1));
+      if (seed % 8 === 0) {
+        addScandal(state, {
+          type: "faction-conflict-leak",
+          severity: 1,
+          title: "Fisuras internas trascienden al publico",
+          description: "El conflicto interno del plantel llega a oidos de la prensa.",
+          affectedPartyId: state.userTeamId,
+          mechanicalEffect: "-5 board trust"
+        });
+      }
+    }
+    const toxicPlayer = (state.players || []).find(function (p) { return p.teamId === state.userTeamId && (p.toxicity || 0) > 85; });
+    if (toxicPlayer) {
+      addScandal(state, {
+        type: "player-toxicity-public",
+        severity: 2,
+        title: "El malestar de " + toxicPlayer.name + " trasciende",
+        description: "La situacion de descontento de " + toxicPlayer.name + " ya es de dominio publico.",
+        affectedPartyId: toxicPlayer.id,
+        mechanicalEffect: "-12 board trust -8 fans"
+      });
+    }
+  }
+
+  // ═══════════════════════════
+  // HERO/VILLAIN MEDIA
+  // ═══════════════════════════
+
+  function trackHeroVillainMedia(state, result) {
+    if (!result) return;
+    const hero = result.matchHero;
+    const villain = result.matchVillain;
+    const season = state.seasonNumber || 1;
+    const week = result.week || state.currentWeek || 1;
+    const world = state.managerEcosystem && state.managerEcosystem.worldMedia;
+
+    if (hero && hero.playerId) {
+      const hp = (state.players || []).find(function (x) { return x.id === hero.playerId; });
+      if (hp) {
+        hp.heroCredits = (hp.heroCredits || 0) + 1;
+        hp.mediaReputation = clamp((hp.mediaReputation || 50) + 5, 0, 100);
+        if (FMG.addNewsItem) {
+          FMG.addNewsItem(state, {
+            type: "player-story",
+            title: hero.name + " acapara los titulares tras su actuacion",
+            body: hero.name + " suma notoriedad mediatica. Reputacion: " + Math.round(hp.mediaReputation) + "/100.",
+            tags: ["heroe", "media"],
+            importance: 72,
+            entities: { playerId: hero.playerId },
+            dedupeKey: "hero-media-" + season + "-" + week + "-" + hero.playerId
+          });
+        }
+        if (hp.heroCredits >= 3 && world) {
+          world.narratives = world.narratives || {};
+          world.narratives.active = world.narratives.active || [];
+          const alreadyGolden = world.narratives.active.some(function (n) { return n.playerId === hero.playerId && n.type === "golden-boy"; });
+          if (!alreadyGolden) {
+            world.narratives.active.push({ type: "golden-boy", playerId: hero.playerId, name: hero.name, season: season });
+            if (Number.isFinite(hp.ego)) hp.ego = clamp(hp.ego + 10, 0, 100);
+            if (FMG.addNewsItem) {
+              FMG.addNewsItem(state, {
+                type: "player-story",
+                title: hero.name + ": el nino de oro del campeonato",
+                body: "Tres o mas actuaciones estelares consolidan a " + hero.name + " como la gran figura del torneo.",
+                tags: ["heroe", "golden-boy"],
+                importance: 85,
+                dedupeKey: "golden-boy-" + season + "-" + hero.playerId
+              });
+            }
+          }
+        }
+      }
+    }
+
+    if (villain && villain.playerId) {
+      const vp = (state.players || []).find(function (x) { return x.id === villain.playerId; });
+      if (vp) {
+        vp.villainCredits = (vp.villainCredits || 0) + 1;
+        vp.mediaReputation = clamp((vp.mediaReputation || 50) - 8, 0, 100);
+        if (FMG.addNewsItem) {
+          FMG.addNewsItem(state, {
+            type: "dressing-room",
+            title: villain.name + " queda en el centro de las criticas",
+            body: "La actuacion de " + villain.name + " genera presion mediatica y preguntas sobre su futuro.",
+            tags: ["villano", "critica"],
+            importance: 70,
+            entities: { playerId: villain.playerId },
+            dedupeKey: "villain-media-" + season + "-" + week + "-" + villain.playerId
+          });
+        }
+        if (vp.teamId === state.userTeamId && world && world.fans) {
+          world.fans.pressure = clamp((world.fans.pressure || 45) + 8, 0, 100);
+        }
+        if (vp.villainCredits >= 3) {
+          vp.toxicity = Number.isFinite(vp.toxicity) ? clamp(vp.toxicity + 15, 0, 100) : 15;
+          if (FMG.addNewsItem) {
+            FMG.addNewsItem(state, {
+              type: "dressing-room",
+              title: "El estigma de " + villain.name + " crece en los medios",
+              body: "Tres o mas actuaciones polemicas convierten a " + villain.name + " en el jugador problema de la temporada.",
+              tags: ["villano", "problema"],
+              importance: 78,
+              dedupeKey: "problem-player-" + season + "-" + villain.playerId
+            });
+          }
+        }
+      }
+    }
+  }
+
+  function checkTransferFanReaction(state) {
+    const history = (state.market && state.market.transferHistory) || [];
+    history.filter(function (t) { return t.week === (state.currentWeek || 1) && t.type !== "loan"; }).forEach(function (t) {
+      const p = (state.players || []).find(function (x) { return x.id === t.playerId; });
+      if (!p) return;
+      if ((p.squadRole === "key" || (p.overall || 0) >= 78) && p.teamId !== state.userTeamId) {
+        addFanReaction(state, {
+          type: "key-player-sold",
+          positive: false,
+          title: "Protesta organizada en las tribunas",
+          body: "La venta de " + t.playerName + " genera descontento. Los hinchas ven marcharse a un referente.",
+          icon: "😠",
+          mechanical: "-5 morale +10 manager pressure"
+        });
+      } else if (p.teamId === state.userTeamId && (p.overall || 0) >= 75) {
+        addFanReaction(state, {
+          type: "big-signing",
+          positive: true,
+          title: "Euforia en las tribunas",
+          body: "La llegada de " + t.playerName + " desata el entusiasmo de la aficion.",
+          icon: "🎉",
+          mechanical: "+8 home advantage x2 matches"
+        });
+      }
+    });
+  }
+
+  // ═══════════════════════════
+  // WEEKLY INTEGRATION HOOK
+  // ═══════════════════════════
+
+  const _prevWeekWMP = FMG.runManagerEcosystemWeek;
+  FMG.runManagerEcosystemWeek = function (state, options) {
+    const result = _prevWeekWMP ? _prevWeekWMP(state, options) : {};
+    const streaks = (state.worldNews && state.worldNews.streaks) || {};
+    checkFanReactionTriggers(state, streaks);
+    checkScandalTriggers(state);
+    resolveOldScandals(state);
+    checkTransferFanReaction(state);
+    const world = state.managerEcosystem && state.managerEcosystem.worldMedia;
+    if (world && (world.homeAdvantageDuration || 0) > 0) {
+      world.homeAdvantageDuration -= 1;
+      if (world.homeAdvantageDuration <= 0) { world.homeAdvantageBonus = 0; world.homeAdvantageDuration = 0; }
+    }
+    const freshRx = (state.fanReactions || []).filter(function (r) { return !r.resolved && r.week === (state.currentWeek || 1); });
+    freshRx.forEach(function (r) { applyFanReactionEffect(state, r); r.resolved = true; });
+    return result;
+  };
+  if (FMG.ManagerEcosystem) FMG.ManagerEcosystem.runWeek = FMG.runManagerEcosystemWeek;
+
+  // ═══════════════════════════
+  // EXTEND POST-MATCH
+  // ═══════════════════════════
+
+  const _prevPostMatchWMP = FMG.generatePostMatchNews;
+  FMG.generatePostMatchNews = function (state, result) {
+    const items = _prevPostMatchWMP ? _prevPostMatchWMP(state, result) : [];
+    if (result && (result.homeTeamId === state.userTeamId || result.awayTeamId === state.userTeamId)) {
+      trackHeroVillainMedia(state, result);
+      const rivalry = FMG.getRivalry ? FMG.getRivalry(result.homeTeamId, result.awayTeamId) : null;
+      if (rivalry) {
+        const userGoals = result.homeTeamId === state.userTeamId ? result.homeGoals : result.awayGoals;
+        const oppGoals = result.homeTeamId === state.userTeamId ? result.awayGoals : result.homeGoals;
+        if (userGoals > oppGoals) {
+          const world2 = state.managerEcosystem && state.managerEcosystem.worldMedia;
+          if (world2) world2.lastDerbyWin = state.currentWeek || 1;
+        }
+      }
+    }
+    return items;
+  };
+
+  // ═══════════════════════════
+  // PUBLIC API
+  // ═══════════════════════════
+
+  FMG.MediaExtended = {
+    ensureFanReactions: ensureFanReactions,
+    addFanReaction: addFanReaction,
+    ensureScandals: ensureScandals,
+    addScandal: addScandal,
+    trackHeroVillainMedia: trackHeroVillainMedia,
+    applyFanReactionEffect: applyFanReactionEffect
+  };
+})();

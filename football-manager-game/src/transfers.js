@@ -136,7 +136,7 @@
     const playerAccepts = negotiation.wage >= requiredWage * 0.92 && FMG.SQUAD_ROLES[negotiation.role];
 
     FMG.ensureAdvancedFinances(state);
-    if (state.finances.balance < totalCost || state.finances.budgets.transfers < totalCost) {
+    if (state.finances.balance < totalCost || (negotiation.type !== "free" && state.finances.budgets.transfers < totalCost)) {
       negotiation.status = "rejected";
       negotiation.message = "Presupuesto insuficiente";
       return { ok: false, message: "No hay presupuesto para cerrar la operacion." };

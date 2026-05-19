@@ -95,6 +95,10 @@ let seasonsCompleted = 0;
 let guard = 0;
 while (seasonsCompleted < 3 && guard < 120) {
   if (FMG.gameState.seasonComplete) {
+    if (FMG.gameState.career && FMG.gameState.career.status === "sacked") {
+      const offer = (FMG.gameState.career.offers || []).find((o) => o.status === "pending");
+      if (offer) FMG.acceptCareerOffer(FMG.gameState, offer.id);
+    }
     const started = FMG.startNewSeason();
     assert.equal(started.ok, true, "debe iniciar temporada larga sin romperse");
     seasonsCompleted += 1;

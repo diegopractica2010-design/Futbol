@@ -41,9 +41,9 @@ const players = JSON.parse(fs.readFileSync(path.join(root, "data/players.json"),
 FMG.validateSeedData(teams, players);
 FMG.initializeGame(teams, players);
 
-assert.equal(FMG.gameState.teams.length, 13, "debe cargar trece equipos");
-assert.equal(FMG.gameState.fixtures.length, 26, "la liga ida/vuelta debe tener veintiseis semanas con trece equipos");
-assert.equal(FMG.gameState.players.length, 234, "cada equipo debe quedar con dieciocho jugadores desde datos semilla");
+assert.equal(FMG.gameState.teams.length, 16, "debe cargar dieciseis equipos");
+assert.equal(FMG.gameState.fixtures.length, 30, "la liga ida/vuelta debe tener treinta semanas con dieciseis equipos");
+assert.equal(FMG.gameState.players.length, 288, "cada equipo debe quedar con dieciocho jugadores desde datos semilla");
 
 FMG.selectClub("colo-colo");
 assert.equal(FMG.gameState.selectionMode, false, "seleccionar club debe salir del selector");
