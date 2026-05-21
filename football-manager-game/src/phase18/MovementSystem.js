@@ -68,6 +68,29 @@
     if (decision.action === ACTION.SPACE) mult *= player._riskModifier ? Math.min(1.18, player._riskModifier) : 1;
     var speed = C.AI_SPEED * mult * (player._speedModifier || 1);
 
+    // Boids separation: lightweight repulsion from nearby teammates (same team only)
+    var SEP_RADIUS = 28;
+    var SEP_FORCE  = 0.35;
+    var team = decision._team || null;
+    if (team && team.length) {
+      var sx = 0, sy = 0;
+      for (var ti = 0; ti < team.length; ti++) {
+        var other = team[ti];
+        if (!other || other.id === player.id) continue;
+        var ox = player.x - other.x;
+        var oy = player.y - other.y;
+        var od = Math.hypot(ox, oy);
+        if (od > 0 && od < SEP_RADIUS) {
+          sx += (ox / od) * (SEP_RADIUS - od) / SEP_RADIUS;
+          sy += (oy / od) * (SEP_RADIUS - od) / SEP_RADIUS;
+        }
+      }
+      dx += sx * SEP_FORCE;
+      dy += sy * SEP_FORCE;
+      var newDist = Math.hypot(dx, dy);
+      if (newDist > 0) { dx = dx / newDist; dy = dy / newDist; }
+    }
+
     match.movePlayer(player, dx / dist, dy / dist, speed);
     return true;
   };

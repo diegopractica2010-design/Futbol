@@ -80,9 +80,17 @@
     b.z = Math.max(0, b.z + b.vz);
     if (b.z > 0 || b.vz > 0) b.vz -= 0.42;
     if (b.z === 0 && b.vz < 0) b.vz *= -0.28;
+    // Magnus effect: spin curves ball perpendicular to velocity direction
+    if (b.spin && (Math.abs(b.vx) > 0.5 || Math.abs(b.vy) > 0.5)) {
+      const MAGNUS_FACTOR = 0.006;
+      const speed = Math.hypot(b.vx, b.vy) || 1;
+      b.vx += (-b.vy / speed) * b.spin * MAGNUS_FACTOR;
+      b.vy += (b.vx / speed) * b.spin * MAGNUS_FACTOR;
+    }
+
     b.vx *= C.BALL_FRICTION;
     b.vy *= C.BALL_FRICTION;
-    b.spin *= C.BALL_FRICTION;
+    b.spin *= (C.SPIN_DECAY || 0.975);
 
     // Rebote bordes superior/inferior
     if (b.y - C.BALL_R < 0)          { b.y = C.BALL_R;            b.vy *= -0.7; }

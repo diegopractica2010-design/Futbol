@@ -597,6 +597,13 @@
     "generate-retirement": () => {
       const summary = FMG.generateRetirementSummary ? FMG.generateRetirementSummary(FMG.gameState) : null;
       if (summary) FMG.pushNotification(summary.status + " — Legado: " + summary.legendScore + "/100");
+    },
+    "set-lifestyle": ({ target }) => {
+      const key = target.dataset.key;
+      const delta = Number(target.dataset.delta) || 0;
+      if (!key || !FMG.setLifestyle || !FMG.gameState.playerCareer) return;
+      const current = (FMG.gameState.playerCareer.lifestyle && FMG.gameState.playerCareer.lifestyle[key]) || 50;
+      FMG.setLifestyle(FMG.gameState, key, current + delta);
     }
   };
 

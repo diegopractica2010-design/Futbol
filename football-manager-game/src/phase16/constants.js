@@ -26,6 +26,8 @@
     SHOOT_POWER:  9,
     PASS_POWER:   6,
     BALL_FRICTION: 0.985,
+    SPIN_DECAY: 0.975,
+    MAGNUS_FACTOR: 0.006,
 
     // Tiempo
     FPS:          60,

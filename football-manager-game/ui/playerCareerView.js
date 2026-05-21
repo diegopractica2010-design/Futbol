@@ -143,6 +143,44 @@
           </section>
         </section>
 
+        <details class="ux-disclosure">
+          <summary>Estilo de vida del tecnico</summary>
+          <section class="card">
+            <div class="section-title"><h2>Lifestyle</h2><span class="chip">Ajusta tu rutina semanal</span></div>
+            <div class="stats-grid">
+              ${(FMG.getLifestyleOptions ? FMG.getLifestyleOptions() : []).map(function (opt) {
+                const val = (pc.lifestyle && pc.lifestyle[opt.key]) || 50;
+                return `<article class="stat-card">
+                  <div class="muted">${FMG.escapeHtml(opt.icon + " " + opt.label)}</div>
+                  <div class="progress" style="margin:4px 0"><span style="width:${val}%"></span></div>
+                  <div class="stat-value">${Math.round(val)}/100</div>
+                  <p class="muted" style="font-size:11px;margin-top:4px">${FMG.escapeHtml(opt.desc)}</p>
+                  <div class="button-row" style="margin-top:6px">
+                    <button class="btn-ghost" data-action="set-lifestyle" data-key="${FMG.escapeHtml(opt.key)}" data-delta="-10">-10</button>
+                    <button class="btn-ghost" data-action="set-lifestyle" data-key="${FMG.escapeHtml(opt.key)}" data-delta="-5">-5</button>
+                    <button class="btn-ghost" data-action="set-lifestyle" data-key="${FMG.escapeHtml(opt.key)}" data-delta="5">+5</button>
+                    <button class="btn-ghost" data-action="set-lifestyle" data-key="${FMG.escapeHtml(opt.key)}" data-delta="10">+10</button>
+                  </div>
+                </article>`;
+              }).join("")}
+            </div>
+          </section>
+        </details>
+
+        <details class="ux-disclosure">
+          <summary>Trayectoria de clubes</summary>
+          <section class="card">
+            <div class="section-title"><h2>Historial de clubes</h2><span class="chip">${(pc.career && pc.career.clubs || []).length} club(es)</span></div>
+            <div class="log-list">
+              ${(pc.career && pc.career.clubs || []).length ? (pc.career.clubs || []).map(function (c) { return `
+                <div class="log-item">
+                  <strong>${FMG.escapeHtml(c.name)}</strong>
+                  <p class="muted">Desde T${c.from}${c.to ? " hasta T" + c.to : " (actual)"} | Titulos: ${c.trophies || 0}</p>
+                </div>`;}).join("") : `<div class="empty-state">El historial de clubes se construye con el tiempo.</div>`}
+            </div>
+          </section>
+        </details>
+
         <details class="ux-disclosure" open>
           <summary>Decisiones activas y gestion de plantilla</summary>
           <section class="content-grid">

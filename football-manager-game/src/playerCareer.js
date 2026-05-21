@@ -124,10 +124,12 @@
     const scandals = (state.scandals || []).filter(function (s) {
       return !s.resolved && s.seasonNumber === (state.seasonNumber || 1);
     });
+    // Baseline recovery based on local reputation (prevents exponential decay to 0)
+    const mediaBaseline = Math.round(pc.reputation.local * 0.35 + 10);
+    const mediaDelta = scandals.length * 2.5 - (pc.reputation.local > 65 ? 2.5 : 0.5);
     pc.reputation.mediaImage = clamp(Math.round(
-      pc.reputation.mediaImage * 0.94 - scandals.length * 3 +
-      (pc.reputation.local > 65 ? 2 : -1)
-    ), 0, 100);
+      pc.reputation.mediaImage * 0.97 - mediaDelta + (pc.reputation.mediaImage < mediaBaseline ? 2 : 0)
+    ), mediaBaseline - 5, 100);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -368,8 +370,16 @@
         week: state.currentWeek || 1,
         season: state.seasonNumber || 1
       }, 15);
-      pc.legacy.legendScore = clamp(pc.legacy.legendScore + 8, 0, 100);
-      pc.reputation.league = clamp(pc.reputation.league + 5, 0, 100);
+      // Logarithmic rate: diminishing returns as legendScore grows
+      // Cap per season: max +15 legendScore points per season from moments
+      const seasonKey = "legendScoreSeason-" + (state.seasonNumber || 1);
+      pc.legacy[seasonKey] = (pc.legacy[seasonKey] || 0) + 1;
+      const seasonMoments = pc.legacy[seasonKey];
+      if (seasonMoments <= 5) {
+        const scoreDelta = Math.max(1, Math.round(8 * (1 - pc.legacy.legendScore / 120)));
+        pc.legacy.legendScore = clamp(pc.legacy.legendScore + scoreDelta, 0, 100);
+      }
+      pc.reputation.league = clamp(pc.reputation.league + 3, 0, 100);
     }
     const cc = state.clubCulture || {};
     const homeAdv = (cc.homeAdvantageModifiers || {})[state.userTeamId] || 0;
@@ -529,16 +539,44 @@
         return { type: t.type, clubName: t.teamName, season: t.seasonNumber };
       });
     }
+    // Track current club — register when first seen or when club changes
+    if (state.userTeamId && state.userClub) {
+      const currentClubId = state.userTeamId;
+      const currentEntry = pc.career.clubs.find(function (c) { return c.clubId === currentClubId && !c.to; });
+      if (!currentEntry) {
+        // Close previous entry if exists
+        pc.career.clubs.forEach(function (c) {
+          if (!c.to) { c.to = state.seasonNumber || 1; c.toWeek = state.currentWeek || 1; }
+        });
+        // Open new entry
+        pc.career.clubs.push({
+          clubId: currentClubId,
+          name: state.userClub.name || currentClubId,
+          from: state.seasonNumber || 1,
+          fromWeek: state.currentWeek || 1,
+          to: null,
+          trophies: 0
+        });
+        pc.career.currentClub = currentClubId;
+      }
+      // Update trophy count for current club entry
+      if (currentEntry && career && career.trophies) {
+        currentEntry.trophies = career.trophies.filter(function (t) {
+          return t.teamName === (state.userClub && state.userClub.name);
+        }).length;
+      }
+    }
     // Cleanup jealousy accum at new season start
     const fu = state.footballUniverse;
     if (fu && fu.jealousyAccum && (state.currentWeek || 1) === 1) {
       fu.jealousyAccum = {};
     }
-    // Clean resolved engagement hooks older than 4 weeks
+    // Clean engagement hooks: resolved >4 weeks OR unresolved >6 weeks (prevent accumulation)
     if (fu && fu.engagementHooks) {
       const week = state.currentWeek || 1;
       fu.engagementHooks = fu.engagementHooks.filter(function (h) {
-        return !h.resolved || (week - h.week) < 4;
+        if (h.resolved) return (week - h.week) < 4;
+        return (week - h.week) < 6; // auto-expire unresolved after 6 weeks
       });
     }
     pc.career.yearsActive = state.seasonNumber || 1;
@@ -567,6 +605,39 @@
   // PUBLIC API
   // ═══════════════════════════════════════════════════════════════════════════
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LIFESTYLE SETTER API
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  FMG.setLifestyle = function (state, key, value) {
+    const pc = ensurePlayerCareer(state);
+    const VALID_KEYS = { professionalism: true, trainingFocus: true, nightlifeRisk: true, recoveryQuality: true };
+    if (!VALID_KEYS[key]) return { ok: false, message: "Clave de lifestyle no valida: " + key };
+    const newValue = clamp(Number(value) || 0, 0, 100);
+    const old = pc.lifestyle[key];
+    pc.lifestyle[key] = newValue;
+    // Side effects
+    if (key === "nightlifeRisk" && newValue < 30 && old >= 60) {
+      pc.psychology.discipline = clamp(pc.psychology.discipline + 5, 0, 100);
+    }
+    if (key === "trainingFocus" && newValue >= 80) {
+      pc.psychology.burnout = clamp(pc.psychology.burnout + 2, 0, 100);
+    }
+    if (key === "recoveryQuality" && newValue >= 75) {
+      pc.psychology.burnout = clamp(pc.psychology.burnout - 2, 0, 100);
+    }
+    return { ok: true, key: key, value: newValue };
+  };
+
+  FMG.getLifestyleOptions = function () {
+    return [
+      { key: "professionalism", label: "Profesionalismo", desc: "Impacta disciplina del equipo y reputacion.", icon: "🎯" },
+      { key: "trainingFocus", label: "Foco en entrenamiento", desc: "Sube nivel de jugadores pero aumenta burnout.", icon: "⚽" },
+      { key: "nightlifeRisk", label: "Vida nocturna", desc: "Alto riesgo de escandalos y disciplina baja.", icon: "🌙" },
+      { key: "recoveryQuality", label: "Calidad de recuperacion", desc: "Reduce burnout semanal del cuerpo tecnico.", icon: "💊" }
+    ];
+  };
+
   FMG.PlayerCareer = {
     ensure: ensurePlayerCareer,
     get: function (state) { return state.playerCareer || null; },
@@ -576,7 +647,8 @@
       const pc = state.playerCareer;
       return pc ? pc.decisions.filter(function (d) { return d.status === "pending"; }) : [];
     },
-    getLegacy: function (state) { const pc = state.playerCareer; return pc ? pc.legacy : null; }
+    getLegacy: function (state) { const pc = state.playerCareer; return pc ? pc.legacy : null; },
+    getClubs: function (state) { const pc = state.playerCareer; return pc ? pc.career.clubs : []; }
   };
 
   FMG.ensurePlayerCareer = ensurePlayerCareer;
