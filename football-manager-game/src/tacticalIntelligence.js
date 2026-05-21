@@ -24,11 +24,11 @@
 
   function roleProfile(player) {
     const code = player?.positionCode || player?.position || "";
-    if (code === "POR") return { line: "keeper", depth: 0, width: 0.1, press: 0.2, support: 0.15 };
-    if (code === "DEF") return { line: "defense", depth: 0.22, width: 0.7, press: 0.42, support: 0.34 };
-    if (code === "MED") return { line: "midfield", depth: 0.52, width: 0.82, press: 0.72, support: 0.82 };
-    if (code === "EXT") return { line: "wing", depth: 0.64, width: 1.05, press: 0.7, support: 0.74 };
-    return { line: "attack", depth: 0.8, width: 0.74, press: 0.62, support: 0.58 };
+    if (code === "POR") return { line: "keeper", depth: 0, width: 0.1, press: 0.2, support: 0.15, diag: 0 };
+    if (code === "DEF") return { line: "defense", depth: 0.22, width: 0.75, press: 0.42, support: 0.34, diag: 0.18 };
+    if (code === "MED") return { line: "midfield", depth: 0.52, width: 0.88, press: 0.72, support: 0.82, diag: 0.62 };
+    if (code === "EXT") return { line: "wing", depth: 0.64, width: 1.12, press: 0.7, support: 0.82, diag: 0.88 };
+    return { line: "attack", depth: 0.82, width: 0.74, press: 0.62, support: 0.68, diag: 0.72 };
   }
 
   function getOrders(match, isHome) {
@@ -124,14 +124,28 @@
       const visualSeed = hashId(`${player.id}:${Math.floor(Number(match?.minute) || 0)}:human-ai`);
       const errorSign = visualSeed % 2 === 0 ? 1 : -1;
       const phaseWave = phaseFrom(match, player.id, 0.32 * tempo);
+      const phaseWave2 = phaseFrom(match, player.id, 0.19 * tempo);
       const laneWave = Math.cos(phaseWave) * (2.4 + role.width * 1.8);
-      const offBallRun = teamHasBall ? Math.sin(phaseWave * 0.7) * role.support * 5 : 0;
-      const compactness = teamHasBall ? 0.25 : 0.74 + Math.max(0, press) * 0.18;
-      const ballPullX = (ball.x - base.x) * compactness * (role.line === "keeper" ? 0.02 : 0.16);
-      const ballPullZ = (ball.z - base.z) * compactness * (role.line === "keeper" ? 0.02 : 0.11);
+      // Diagonal support run: combines sin + cos for non-linear off-ball trajectory
+      const diagPhase = phaseFrom(match, player.id, 0.41 * tempo);
+      const diagRun = teamHasBall ? Math.cos(diagPhase) * role.diag * 4.2 : 0;
+      const offBallRun = teamHasBall ? Math.sin(phaseWave * 0.7) * role.support * 5 + diagRun : 0;
+      // Inertia: drift factor based on second sine wave (creates arc/overshoot effect)
+      const inertiaX = Math.sin(phaseWave2) * (teamHasBall ? role.diag * 1.8 : 0.6);
+      const inertiaZ = Math.cos(phaseWave2 * 1.3) * (teamHasBall ? role.support * 1.2 : 0.4);
+      const compactness = teamHasBall ? 0.22 : 0.74 + Math.max(0, press) * 0.18;
+      // Ball weight illusion: smooth attraction scaling by role (attack players pulled harder to ball)
+      const ballWeightX = role.line === "attack" ? 0.22 : role.line === "wing" ? 0.18 : 0.14;
+      const ballWeightZ = role.line === "attack" ? 0.15 : role.line === "wing" ? 0.13 : 0.09;
+      const ballPullX = (ball.x - base.x) * compactness * (role.line === "keeper" ? 0.02 : ballWeightX);
+      const ballPullZ = (ball.z - base.z) * compactness * (role.line === "keeper" ? 0.02 : ballWeightZ);
       const transitionLift = phase.type === "transition" ? phase.intensity * 4 : phase.type === "attack" && teamHasBall ? phase.intensity * 6 : 0;
       const defensiveDrop = teamHasBall ? 0 : role.press * 5 + (press < 0 ? 4 : 0);
       const supportPocket = teamHasBall && role.line === "midfield" ? -sideSign * 2.6 : 0;
+      // Overlap run: fullbacks/wings push forward more aggressively when attacking
+      const overlapBoost = teamHasBall && role.line === "wing" && attackIntent >= 0 ? sideSign * phase.intensity * 3.5 : 0;
+      // Defensive shape: CBs spread wider when defending to cover channels
+      const cbSpread = !teamHasBall && role.line === "defense" && Math.abs(base.x) < FIELD_WIDTH * 0.22 ? base.x * 0.18 : 0;
 
       const desperationLift = desperation * sideSign * (role.line === "defense" ? 7 : role.line === "wing" ? 9 : role.line === "midfield" ? 6 : 4);
       const clusterPull = desperation * clamp(1 - Math.abs(ball.z - base.z) / FIELD_HEIGHT, 0.12, 0.82);
@@ -139,13 +153,18 @@
       const errorZ = (errorSign * -1) * (positionError + panic) * (0.5 + (visualSeed % 5) * 0.16);
       const wingbackPush = desperation > 0 && role.line === "defense" && Math.abs(base.x) > FIELD_WIDTH * 0.24 ? sideSign * desperation * 4 : 0;
 
-      const x = base.x + ballPullX + laneWave * role.width + (teamHasBall ? risk * laneWave * 0.25 : 0) + (ball.x - base.x) * clusterPull * 0.22 + errorX;
+      const x = base.x + ballPullX + laneWave * role.width
+        + (teamHasBall ? risk * laneWave * 0.25 : 0)
+        + (ball.x - base.x) * clusterPull * 0.22
+        + inertiaX + cbSpread
+        + errorX;
       const z = base.z
         + ballPullZ
-        + sideSign * (possessionBias * 0.11 + momentumBias * 0.1 + attackIntent * 5 + transitionLift + offBallRun - defensiveDrop)
+        + sideSign * (possessionBias * 0.11 + momentumBias * 0.1 + attackIntent * 5 + transitionLift + offBallRun - defensiveDrop + overlapBoost)
         + supportPocket
         + desperationLift
         + wingbackPush
+        + inertiaZ
         + errorZ;
 
       return {
@@ -166,17 +185,26 @@
 
     _estimateBall(match, players, currentBall, phase) {
       const event = phase.event;
-      const actor = event?.playerId ? players.find((player) => player.id === event.playerId) : null;
-      if (actor) return { x: actor.mesh.position.x, y: 0.22, z: actor.mesh.position.z };
-      if (currentBall) return { x: currentBall.x || 0, y: currentBall.y || 0.22, z: currentBall.z || 0 };
       const minute = Number(match?.minute) || 0;
+      const actor = event?.playerId ? players.find((player) => player.id === event.playerId) : null;
+      if (actor) {
+        const pos = actor.mesh.position;
+        // Ball weight illusion: ball slightly leads player direction (1-frame anticipation offset)
+        const velX = Math.sin(minute * 0.37 + hashId(actor.id || "")) * 1.4;
+        const velZ = Math.cos(minute * 0.29 + hashId(actor.id || "")) * 1.1;
+        return { x: pos.x + velX, y: 0.22, z: pos.z + velZ };
+      }
+      if (currentBall) {
+        // Smooth ball position with minor arc (deceleration illusion)
+        const arcY = 0.22 + Math.abs(Math.sin(minute * 0.44)) * 0.12;
+        return { x: currentBall.x || 0, y: arcY, z: currentBall.z || 0 };
+      }
       const homePossession = Number(match?.result?.stats?.home?.possession) || 50;
       const direction = homePossession >= 50 ? 1 : -1;
-      return {
-        x: Math.sin(minute * 0.31) * 22,
-        y: 0.22,
-        z: direction * (Math.cos(minute * 0.21) * 12),
-      };
+      // More naturalistic ball movement: compound sine for non-repetitive path
+      const bx = Math.sin(minute * 0.31) * 20 + Math.cos(minute * 0.17) * 7;
+      const bz = direction * (Math.cos(minute * 0.21) * 11 + Math.sin(minute * 0.13) * 5);
+      return { x: bx, y: 0.22 + Math.abs(Math.sin(minute * 0.44)) * 0.08, z: bz };
     }
 
     _isSupport(player, ball, phase) {

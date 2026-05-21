@@ -147,11 +147,13 @@
         hinchada: [`La hinchada eleva el tono en ${club.name}`, `${club.name} y una tribuna que ya pide senales`, `El tablon se hace escuchar en ${club.name}`, `¿Paciencia o exigencia alrededor de ${club.name}?`],
         mercado: [`Mercado, rumores y urgencias alrededor de ${club.name}`, `${club.name} mide su pulso en la ventana`, `La carpeta de fichajes no descansa en ${club.name}`, `¿Se mueve la dirigencia antes del cierre?`],
         identidad: [`El debate sobre la identidad de ${club.name} no se apaga`, `${club.name} busca que su idea convenza al entorno`, `Una semana para reconocer la mano del entrenador`, `¿Tiene sello este ${club.name}?`],
-        sponsors: [`Los auspiciadores miran de cerca a ${club.name}`, `La marca ${club.name} necesita calma`, `¿Puede el club ordenar el ruido comercial?`, `La estabilidad tambien se juega fuera de la cancha`],
+        sponsors: [`La aficion de ${club.name} exige mas que palabras`, `${club.name}: el entorno lo pide y la cancha lo decide`, `Mas que puntos: lo que ${club.name} le debe a su gente`, `La ciudad espera y ${club.name} no puede fallar`],
         prestigio: [`La liga empieza a mirar distinto a ${club.name}`, `El proyecto gana respeto fuera de casa`, `¿Hay salto de prestigio en camino?`, `${club.name} juega por algo mas que puntos`]
       };
       const title = chooseMediaHeadline(world, templates[topic] || templates.identidad, hashText(`${state.currentWeek}-${topic}-title`));
-      const body = `${pundit?.name || "La mesa de analisis"} instala el eje ${topic}: presion de prensa ${pressure}/100, expectativa de hinchas ${world.fans.pressure}/100 y reputacion tactica ${world.reputation.tacticalReputation}.`;
+      const punditorName = pundit?.name || "El analisis del momento";
+      const pressureWord = pressure > 72 ? "tension maxima" : pressure > 55 ? "ruido creciente" : "momento de reflexion";
+      const body = `${punditorName}: ${pressureWord} alrededor de ${club.name}. ${topic === "presion" ? "Los resultados pasan factura y el entorno lo siente." : topic === "mercado" ? "El mercado no espera y el club tiene decisiones que tomar." : topic === "hinchada" ? "La tribuna ya habla con otra voz. Alguien tiene que responder." : "El futbol chileno sigue el pulso de " + club.city + " esta semana."}`;
       const item = {
         id: deterministicId("headline", [state.seasonNumber, state.currentWeek, topic]),
         type: "world-reaction",

@@ -547,25 +547,25 @@
       {
         question: "¿Que cambios tacticos planea para las proximas semanas?",
         choices: [
-          { label: "Seguiremos con lo establecido", tone: "diplomatic", text: "El sistema funciona y los jugadores lo entienden bien." },
-          { label: "Hay que cambiar ya", tone: "combative", text: "Si no cambiamos seguiremos cediendo terreno. El equipo necesita un sacudon." },
-          { label: "Necesitamos adaptarnos", tone: "honest", text: "El rival nos ha obligado a repensar algunas cosas. Estamos trabajando en ello." }
+          { label: "Mantener la linea", tone: "diplomatic", text: "Seguimos confiando en lo que venimos haciendo. Los jugadores necesitan continuidad para asentarse." },
+          { label: "Necesitamos un sacudon", tone: "combative", text: "No podemos seguir igual. El rival nos lee y necesitamos romper el patron con urgencia." },
+          { label: "Estamos ajustando detalles", tone: "honest", text: "El modelo esta bien pero hay cosas puntuales que mejorar. Esta semana trabajamos en eso." }
         ]
       },
       {
         question: "¿Como valora el rendimiento individual de sus jugadores?",
         choices: [
-          { label: "El grupo trabaja con dedicacion", tone: "diplomatic", text: "Estamos comprometidos y el rendimiento mejorara." },
-          { label: "Hay que exigir mas a algunos", tone: "combative", text: "Ciertos jugadores no estan al nivel que el club exige. Eso tiene consecuencias." },
-          { label: "Hay diferencias claras en el plantel", tone: "honest", text: "Algunos jugadores estan por encima del resto. Es la realidad." }
+          { label: "Confianza en el grupo", tone: "diplomatic", text: "Hay jugadores que estan bien y otros que estan encontrando su mejor nivel. Es un proceso." },
+          { label: "Hay que subir el nivel o hay consecuencias", tone: "combative", text: "Algunos no estan rindiendo al nivel que este club exige. Eso tiene que cambiar ya." },
+          { label: "Hay diferencias visibles entre los jugadores", tone: "honest", text: "Hay jugadores que estan muy bien y otros que necesitan mas. No hay secreto en eso." }
         ]
       },
       {
         question: "¿Como ve la competitividad del equipo frente a los lideres del torneo?",
         choices: [
-          { label: "Estamos en el camino correcto", tone: "diplomatic", text: "Los resultados iran llegando si mantenemos la constancia." },
-          { label: "Estamos muy por debajo del nivel necesario", tone: "combative", text: "No me voy a esconder: hay una brecha que hay que cerrar con urgencia." },
-          { label: "Necesitamos mejorar en areas especificas", tone: "honest", text: "Hay dos o tres aspectos donde la diferencia es notable. Los estamos trabajando." }
+          { label: "Vamos en la direccion correcta", tone: "diplomatic", text: "Cada semana aprendemos. La distancia se acorta cuando el trabajo es sostenido." },
+          { label: "La brecha es real y hay que ser honesto", tone: "combative", text: "No me voy a esconder: hoy nos superan. Eso tiene que cambiar con trabajo, no con discursos." },
+          { label: "Hay areas donde la diferencia es clara", tone: "honest", text: "En algunos aspectos competimos de igual a igual. En otros aun nos falta. Lo sabemos y lo trabajamos." }
         ]
       }
     ],
@@ -573,17 +573,17 @@
       {
         question: "¿El club buscara refuerzos en el proximo mercado?",
         choices: [
-          { label: "Confiamos en el plantel actual", tone: "diplomatic", text: "Tenemos un buen plantel. Evaluaremos oportunidades con calma." },
-          { label: "Necesitamos incorporaciones urgentes", tone: "combative", text: "La direccion sabe que hay posiciones que necesitan refuerzo inmediato." },
-          { label: "Hay necesidades concretas que trabajar", tone: "honest", text: "Hay dos o tres posiciones donde necesitamos mejorar para ser competitivos." }
+          { label: "Confiamos en lo que tenemos", tone: "diplomatic", text: "Este plantel tiene recursos. Antes de buscar afuera, vamos a explotar lo que ya esta aqui." },
+          { label: "Necesitamos refuerzos, no hay vuelta", tone: "combative", text: "No es un secreto: hay posiciones que necesitan refuerzo. La direccion lo sabe y espero que actue." },
+          { label: "Hay posiciones puntuales donde mejorar", tone: "honest", text: "Tenemos un plantel competitivo pero en dos o tres zonas podriamos ser mas fuertes. Lo analizamos." }
         ]
       },
       {
         question: "¿Como responde a los rumores sobre posibles salidas de jugadores clave?",
         choices: [
-          { label: "El plantel esta tranquilo y enfocado", tone: "diplomatic", text: "Los jugadores estan concentrados en el campo. Los rumores no generan distraccion." },
-          { label: "Ese jugador no se va a ninguna parte", tone: "combative", text: "Estoy harto de que se use a mis jugadores para especular. Aqui se queda." },
-          { label: "Hay conversaciones normales en el mercado", tone: "honest", text: "Es natural que haya interes en los mejores. Lo manejamos con transparencia." }
+          { label: "El foco esta en la cancha", tone: "diplomatic", text: "Cada semana hay rumores. Los jugadores lo saben y se mantienen enfocados. Yo tambien." },
+          { label: "Nadie sale mientras yo decida", tone: "combative", text: "Mientras dependa de mi, ese jugador no va a ninguna parte. Que quede claro." },
+          { label: "El mercado siempre genera movimiento", tone: "honest", text: "Es logico que haya interes en los buenos jugadores. Pero eso no interfiere con el dia a dia." }
         ]
       }
     ],
@@ -591,17 +591,17 @@
       {
         question: "¿Como maneja la presion del entorno tras los ultimos resultados?",
         choices: [
-          { label: "La presion nos motiva y nos hace mejores", tone: "diplomatic", text: "La exigencia es parte del futbol de alto nivel. La procesamos en positivo." },
-          { label: "La critica desmedida no ayuda a nadie", tone: "combative", text: "Necesitamos apoyo, no cuestionamientos constantes cuando los resultados no llegan." },
-          { label: "Reconocemos que los resultados no han sido buenos", tone: "honest", text: "Lo reconocemos y trabajamos para revertirlo. Eso es lo que podemos decir." }
+          { label: "La presion es combustible", tone: "diplomatic", text: "Quien no quiere sentir esto no deberia estar en el futbol. Nosotros la convertimos en energia." },
+          { label: "La critica facil no ayuda a nadie", tone: "combative", text: "Juzgar desde afuera es sencillo. Adentro estamos trabajando, aunque eso no se vea en los titulares." },
+          { label: "Los resultados nos han golpeado, no voy a mentir", tone: "honest", text: "Ha sido una semana dificil. Lo reconocemos y vamos a dar una respuesta en la cancha." }
         ]
       },
       {
         question: "¿Se siente respaldado por la directiva en este momento?",
         choices: [
-          { label: "Tengo el respaldo total de la institucion", tone: "diplomatic", text: "La comunicacion con la directiva es fluida y constructiva." },
-          { label: "Necesito mas apoyo del que recibo actualmente", tone: "combative", text: "Hay cosas que necesito para trabajar bien y no siempre llegan a tiempo." },
-          { label: "Tenemos una relacion honesta y directa", tone: "honest", text: "Conversamos abiertamente sobre los objetivos y los recursos disponibles." }
+          { label: "La relacion con el directorio es solida", tone: "diplomatic", text: "Tenemos conversaciones permanentes y la vision esta alineada. El club va en la misma direccion que yo." },
+          { label: "Necesito mas respaldo concreto", tone: "combative", text: "El respaldo se demuestra con hechos, no con palabras. Necesito que las decisiones lleguen mas rapido." },
+          { label: "Hay dialogo, aunque no siempre coincidamos", tone: "honest", text: "Tenemos diferencias en algunos puntos, como es normal. Pero la comunicacion esta abierta y eso es lo que importa." }
         ]
       }
     ],
@@ -609,9 +609,9 @@
       {
         question: "¿Como esta el ambiente en el vestidor?",
         choices: [
-          { label: "El grupo esta unido y comprometido", tone: "diplomatic", text: "Hay buena energia interna. El grupo esta comprometido con el proyecto." },
-          { label: "Hay cosas que resolver dentro del plantel", tone: "combative", text: "No voy a mentir, hay tensiones que estamos gestionando con firmeza." },
-          { label: "El grupo dialoga internamente sus diferencias", tone: "honest", text: "Somos honestos entre nosotros. Lo importante es que lo hablamos y lo resolvemos." }
+          { label: "El grupo esta bien", tone: "diplomatic", text: "Vi grupos en peor situacion con mejores resultados y grupos en mejor situacion con peores. Este grupo tiene hambre." },
+          { label: "Hay cosas que gestionar y no lo voy a ocultar", tone: "combative", text: "Hay tensiones. Eso pasa en todos los camarines que quieren ganar. Las estamos trabajando con firmeza." },
+          { label: "Somos un grupo que se habla las verdades", tone: "honest", text: "Hay conversaciones dificiles, si. Pero preferimos eso a que la tension se acumule y explote en la cancha." }
         ]
       }
     ]

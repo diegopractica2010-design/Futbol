@@ -31,7 +31,8 @@ const tests = [
   "tests/deterministicRuntime.test.js",
   "tests/persistenceArchitecture.test.js",
   "tests/runtimeStressHarness.test.js",
-  "tests/longTermWorldSimulation.test.js"
+  "tests/longTermWorldSimulation.test.js",
+  "tests/pre_phase10_validation.test.js"
 ];
 
 const failures = [];

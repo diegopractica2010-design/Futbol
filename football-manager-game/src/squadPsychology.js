@@ -538,7 +538,7 @@
           addDressingRoomEvent(state, {
             type: "ego-clash",
             title: player.name + " exige protagonismo",
-            description: "Ego " + player.ego + "/100. Lleva " + weeksBenched + " semanas sin ser titular y hace sentir su malestar.",
+            description: player.name + " lleva " + weeksBenched + " semanas viendo los partidos desde el banco. Su paciencia se agota y el vestuario lo nota.",
             playerId: player.id,
             icon: "⚡",
             choices: [
@@ -555,7 +555,7 @@
             addDressingRoomEvent(state, {
               type: "ego-clash",
               title: player.name + " y " + rival.name + ": dos egos que chocan",
-              description: "Tension creciente entre dos figuras del plantel. Cohesion puede verse afectada.",
+              description: "Dos caracteres fuertes que chocan. El grupo siente la chispa y el cuerpo tecnico debe actuar antes de que se propague.",
               playerId: player.id,
               icon: "💥",
               choices: [
@@ -655,7 +655,7 @@
           addDressingRoomEvent(state, {
             type: "faction-conflict",
             title: "Tension interna en \"" + faction.name + "\"",
-            description: "El grupo \"" + faction.name + "\" (" + faction.memberIds.length + " jugadores) muestra descontento. Fortaleza: " + faction.strength + "/100.",
+            description: "El grupo \"" + faction.name + "\" esta incubando descontento. " + faction.memberIds.length + " jugadores comparten una tension que empieza a filtrarse al resto del camarín.",
             icon: "🔥",
             choices: [
               { label: "Reunion grupal", effect: { cohesion: 4, factionMood: 8 } },
@@ -777,7 +777,7 @@
       addDressingRoomEvent(state, {
         type: "toxic-spread",
         title: player.name + ": ambiente enrarecido",
-        description: "Toxicidad " + player.toxicity + "/100. El descontento de " + player.name + " afecta el clima del vestuario.",
+        description: "El malestar de " + player.name + " esta envenenando el ambiente. El grupo lo percibe y la quimica del equipo sufre las consecuencias.",
         playerId: player.id,
         icon: "☠️",
         choices: [
@@ -799,7 +799,7 @@
       addDressingRoomEvent(state, {
         type: "ego-clash",
         title: player.name + " pide salir del club",
-        description: "Toxicidad maxima (" + player.toxicity + "/100). " + player.name + " ha solicitado formalmente su transferencia.",
+        description: player.name + " ya no puede mas. Ha solicitado salir del club y su presencia en los entrenamientos se ha vuelto insostenible.",
         playerId: player.id,
         icon: "🚪",
         choices: [

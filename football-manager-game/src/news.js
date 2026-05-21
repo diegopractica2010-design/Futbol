@@ -101,12 +101,12 @@
 
   function headlineContext(state, item) {
     const teamId = item.entities?.teamId || item.entities?.homeTeamId || item.entities?.awayTeamId || state.userTeamId;
-    const club = team(state, teamId) || state.userClub || { name: "El club", city: "la ciudad" };
+    const clubObj = team(state, teamId) || state.userClub || null;
     const player = item.entities?.playerId ? state.players.find((entry) => entry.id === item.entities.playerId) : null;
     return {
-      club: club.name || "El club",
-      city: club.city || "la ciudad",
-      player: player?.name || "el protagonista",
+      club: clubObj ? clubObj.name : (state.userClub ? state.userClub.name : "el equipo"),
+      city: clubObj ? (clubObj.city || "la ciudad") : "la ciudad",
+      player: player ? player.name : "la figura del partido",
       title: item.title
     };
   }
@@ -117,55 +117,98 @@
       (ctx) => `¿Que partido se viene para ${ctx.club}?`,
       (ctx) => `${ctx.city} ya palpita la previa`,
       (ctx) => `La semana pone a prueba a ${ctx.club}`,
-      (ctx) => `${ctx.club} mira el proximo duelo con tension`
+      (ctx) => `${ctx.club} mira el proximo duelo con tension`,
+      (ctx) => `El siguiente paso de ${ctx.club} se juega pronto`,
+      (ctx) => `Previa: ${ctx.club} no puede fallar esta vez`,
+      (ctx) => `¿Tiene ${ctx.club} lo necesario para el desafio?`
     ],
     chronicle: [
       (ctx) => `${ctx.club} firma una noche para comentar`,
       (ctx) => `La fecha deja lectura fuerte para ${ctx.club}`,
       (ctx) => `¿Cambio de animo tras el pitazo final?`,
-      (ctx) => `El resultado mueve el clima en ${ctx.city}`
+      (ctx) => `El resultado mueve el clima en ${ctx.city}`,
+      (ctx) => `${ctx.club} cierra la jornada con un mensaje`,
+      (ctx) => `El partido tuvo de todo y ${ctx.club} lo vivio en primera persona`,
+      (ctx) => `Lo que dejo el resultado para ${ctx.club} esta semana`
     ],
     rumor: [
       (ctx) => `${ctx.player} vuelve a sonar en el mercado`,
       (ctx) => `La carpeta de ${ctx.player} empieza a circular`,
       (ctx) => `¿Movimiento en puerta por ${ctx.player}?`,
-      (ctx) => `El mercado mira de reojo a ${ctx.player}`
+      (ctx) => `El mercado mira de reojo a ${ctx.player}`,
+      (ctx) => `${ctx.player} entre rumores y realidad`,
+      (ctx) => `¿Cuanto tiempo mas dura ${ctx.player} sin definir su futuro?`,
+      (ctx) => `El nombre de ${ctx.player} aparece en conversaciones de trasfondo`
     ],
     fans: [
       (ctx) => `La hinchada de ${ctx.club} marca el pulso`,
       (ctx) => `${ctx.city} habla del momento del equipo`,
       (ctx) => `El animo popular se mueve en ${ctx.club}`,
-      (ctx) => `¿Se enciende la tribuna de ${ctx.club}?`
+      (ctx) => `¿Se enciende la tribuna de ${ctx.club}?`,
+      (ctx) => `Los hinchas de ${ctx.club} no se quedan callados`,
+      (ctx) => `La calle ya opina y ${ctx.club} lo sabe`,
+      (ctx) => `El estadio de ${ctx.club} quiere mas de lo mismo`
     ],
     "player-story": [
       (ctx) => `${ctx.player} pide lugar en la conversacion`,
       (ctx) => `La semana de ${ctx.player} no pasa inadvertida`,
       (ctx) => `¿Hasta donde puede llegar ${ctx.player}?`,
-      (ctx) => `${ctx.player} empieza a cambiar el relato`
+      (ctx) => `${ctx.player} empieza a cambiar el relato`,
+      (ctx) => `${ctx.player} en el momento mas importante de su carrera`,
+      (ctx) => `Nadie puede ignorar a ${ctx.player} esta semana`,
+      (ctx) => `El futbol le esta diciendo algo a ${ctx.player}`
     ],
     classic: [
       (ctx) => `El clasico deja ruido hasta el lunes`,
       (ctx) => `Una rivalidad que vuelve a pesar`,
       (ctx) => `El barrio futbolero no suelta el resultado`,
-      (ctx) => `¿Otro capitulo caliente para la memoria?`
+      (ctx) => `¿Otro capitulo caliente para la memoria?`,
+      (ctx) => `El clasico no necesita presentacion: lo vivimos`,
+      (ctx) => `Rivalidad vieja, herida fresca`,
+      (ctx) => `Lo que une y divide: el clasico de siempre`
     ],
     "dressing-room": [
-      (ctx) => `El camarin de ${ctx.club} queda bajo observacion`,
-      (ctx) => `Puertas adentro se mueve el ambiente`,
-      (ctx) => `¿Hay ruido interno en ${ctx.club}?`,
-      (ctx) => `El vestuario exige manejo fino esta semana`
+      (ctx) => `Algo se mueve dentro de ${ctx.club}`,
+      (ctx) => `El vestuario de ${ctx.club} tiene sus propias conversaciones`,
+      (ctx) => `¿Hay tensiones que gestionar en ${ctx.club}?`,
+      (ctx) => `La intimidad del grupo de ${ctx.club} habla por si sola`,
+      (ctx) => `Entre companeros no todo es armonia en ${ctx.club}`,
+      (ctx) => `El cuerpo tecnico de ${ctx.club} tiene trabajo por delante`,
+      (ctx) => `Lo que pasa cuando se cierra la puerta del vestuario`
     ],
     "world-reaction": [
       (ctx) => `${ctx.club} vuelve al centro de la discusion`,
       (ctx) => `La prensa cambia el tono con ${ctx.club}`,
       (ctx) => `¿Proyecto firme o semana de dudas?`,
-      (ctx) => `El entorno futbolero mira hacia ${ctx.city}`
+      (ctx) => `El entorno futbolero mira hacia ${ctx.city}`,
+      (ctx) => `Todo el futbol chileno habla de ${ctx.club} hoy`,
+      (ctx) => `Lo que piensa el mundo del balon sobre ${ctx.club}`,
+      (ctx) => `${ctx.club} en la agenda futbolera nacional`
     ],
     general: [
       (ctx) => `${ctx.club} suma un nuevo capitulo`,
       (ctx) => `La semana deja una senal en ${ctx.city}`,
       (ctx) => `¿Que lectura queda para el cuerpo tecnico?`,
-      (ctx) => `El torneo vuelve a mover el tablero emocional`
+      (ctx) => `El torneo vuelve a mover el tablero emocional`,
+      (ctx) => `Futbol chileno: otra semana que no defrauda`,
+      (ctx) => `El torneo escribe, los equipos responden`,
+      (ctx) => `Cada semana es una historia nueva`
+    ],
+    transfer: [
+      (ctx) => `El mercado se mueve y ${ctx.player} aparece en primer plano`,
+      (ctx) => `¿Que hay de verdad en los rumores sobre ${ctx.player}?`,
+      (ctx) => `La temporada de ${ctx.player} genera interes fuera de ${ctx.club}`,
+      (ctx) => `${ctx.player} esta en la cabeza de mas de un director deportivo`,
+      (ctx) => `El agente de ${ctx.player} no para de recibir llamados`,
+      (ctx) => `Antes de que cierre el mercado: ${ctx.player} en el centro`
+    ],
+    streak: [
+      (ctx) => `${ctx.club} encadena victorias y el equipo crece`,
+      (ctx) => `La racha de ${ctx.club} tiene nombre propio`,
+      (ctx) => `Sin frenos: ${ctx.club} sigue sumando de a tres`,
+      (ctx) => `La continuidad de ${ctx.club} ya genera respeto`,
+      (ctx) => `¿Quien puede parar esta version de ${ctx.club}?`,
+      (ctx) => `${ctx.club} y una serie que empieza a hablar sola`
     ]
   };
 

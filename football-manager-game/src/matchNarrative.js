@@ -386,14 +386,22 @@
     "El empate no le sirve a ninguno...",
     "Queda tiempo para un heroe o un villano...",
     "El reloj corre y el marcador no se mueve...",
-    "Minutos finales: alguien tiene que decidir"
+    "Minutos finales: alguien tiene que decidir",
+    "Un gol vale una fortuna a estas alturas...",
+    "El estadio contiene la respiracion...",
+    "Iguales en el marcador, desiguales en el nervio...",
+    "El siguiente gol cambia todo — la pregunta es quien lo va a marcar"
   ];
 
   const ONE_GOAL_LINES = [
     "El marcador tiembla en los ultimos instantes...",
     "Tres puntos en juego con el tiempo casi agotado...",
     "Un gol puede cambiar todo — la defensa lo sabe...",
-    "Agonia pura: un gol de diferencia y poco tiempo"
+    "Agonia pura: un gol de diferencia y poco tiempo",
+    "El que pierde no puede parpadear...",
+    "La cuerda esta al limite — cualquier error es fatal...",
+    "Un gol separa el cielo del abismo...",
+    "Los nervios mandan y la pelota se vuelve de plomo"
   ];
 
   function getPressureNarrative(state, liveMatch, minute) {
