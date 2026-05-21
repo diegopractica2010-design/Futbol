@@ -555,7 +555,13 @@
     const eco = state.managerEcosystem || {};
     const world = eco.worldMedia || {};
     if (reaction.positive) {
-      world.homeAdvantageBonus = clamp((world.homeAdvantageBonus || 0) + 8, 0, 30);
+      if (state.userTeamId) {
+        if (!state.clubCulture) state.clubCulture = {};
+        if (!state.clubCulture.homeAdvantageModifiers) state.clubCulture.homeAdvantageModifiers = {};
+        state.clubCulture.homeAdvantageModifiers[state.userTeamId] = clamp(
+          (state.clubCulture.homeAdvantageModifiers[state.userTeamId] || 0) + 2, 0, 15
+        );
+      }
       world.homeAdvantageDuration = (world.homeAdvantageDuration || 0) + 2;
     } else {
       (state.players || []).filter(function (p) { return p.teamId === state.userTeamId && !p.retired; }).forEach(function (p) {
@@ -613,11 +619,17 @@
     const eco = state.managerEcosystem || {};
     const world = eco.worldMedia || {};
     const severity = scandal.severity || 1;
-    if (eco.manager) {
-      eco.manager.boardTrust = clamp((eco.manager.boardTrust || eco.manager.trust || 50) - 5, 0, 100);
+    if (FMG.updateBoardTrust) {
+      FMG.updateBoardTrust(state, "Escandalo: " + (scandal.title || "incidente"), -5);
+    } else if (state.finances) {
+      state.finances.boardTrust = clamp((state.finances.boardTrust || 50) - 5, 0, 100);
     }
     if (severity >= 2) {
-      if (eco.manager) eco.manager.boardTrust = clamp((eco.manager.boardTrust || 50) - 7, 0, 100);
+      if (FMG.updateBoardTrust) {
+        FMG.updateBoardTrust(state, "Escandalo grave: " + (scandal.title || "incidente"), -7);
+      } else if (state.finances) {
+        state.finances.boardTrust = clamp((state.finances.boardTrust || 50) - 7, 0, 100);
+      }
       if (world.fans) world.fans.pressure = clamp((world.fans.pressure || 45) + 8, 0, 100);
       if (FMG.addNewsItem) {
         FMG.addNewsItem(state, {
