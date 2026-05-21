@@ -498,7 +498,7 @@
     const outcome = _origAdvanceLiveMatch ? _origAdvanceLiveMatch(state, minutes) : { ok: false, message: "No disponible." };
     if (!outcome.ok) return outcome;
     const liveMatch = state.liveMatch;
-    if (!liveMatch || !liveMatch.result || liveMatch.completed) return outcome;
+    if (!liveMatch || !liveMatch.result) return outcome;
 
     const minute = liveMatch.minute;
     if (minute >= 85) {

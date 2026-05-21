@@ -698,9 +698,15 @@
       record.answers.push({ questionIdx: questionIdx, choiceIdx: choiceIdx, tone: choice.tone });
       record.tones.push(choice.tone);
     });
-    conference.resolved = true;
-    if (state.career) boundedPush(state.career.pressConferenceHistory, record, 20);
-    return { ok: true, message: "Conferencia completada.", record: record };
+    const totalQuestions = (conference.questions || []).length;
+    const answeredCount = (conference.questions || []).filter(function (q) { return q.answered; }).length;
+    const allAnswered = totalQuestions === 0 || answeredCount >= totalQuestions;
+    if (allAnswered) {
+      conference.resolved = true;
+      if (state.career) boundedPush(state.career.pressConferenceHistory, record, 20);
+    }
+    const msg = allAnswered ? "Conferencia completada." : "Respuesta registrada. " + answeredCount + "/" + totalQuestions + " preguntas respondidas.";
+    return { ok: true, message: msg, record: record };
   };
 
   function shouldTriggerConference(state) {

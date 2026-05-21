@@ -413,17 +413,18 @@
     const wh = state.worldHistory;
     if (!wh || !wh.economicCycle) return;
     const delta = CYCLE_BUDGET_DELTA[wh.economicCycle.phase] || 0;
-    if (delta === 0) return;
 
     (state.teams || []).forEach(function (t) {
       if (state.rivalAI && state.rivalAI.budgets && state.rivalAI.budgets[t.id]) {
         const dynastyBonus = getDynastyBonus(state, t.id);
         const combinedMult = (1 + delta) * dynastyBonus.budgetMultiplier;
-        state.rivalAI.budgets[t.id] = clamp(
-          Math.round(state.rivalAI.budgets[t.id] * combinedMult),
-          1000000,
-          999999999
-        );
+        if (combinedMult !== 1) {
+          state.rivalAI.budgets[t.id] = clamp(
+            Math.round(state.rivalAI.budgets[t.id] * combinedMult),
+            1000000,
+            999999999
+          );
+        }
       }
     });
 
