@@ -268,6 +268,94 @@
           </section>
         </section>
       </details>
+      ${(function () {
+        const scandals = (state.scandals || []).filter(function (s) { return !s.resolved; });
+        const traditions = (state.clubCulture && state.clubCulture.activeTraditions || []).filter(function (t) { return t.seasonNumber === (state.seasonNumber || 1); });
+        if (!scandals.length && !traditions.length) return "";
+        return `<details class="ux-disclosure">
+          <summary>Escándalos activos y tradiciones del club</summary>
+          <section class="content-grid">
+            <section class="card">
+              <div class="section-title"><h2>Escándalos activos</h2><span class="chip">${scandals.length}</span></div>
+              <div class="log-list">
+                ${scandals.length ? scandals.map(function (s) { return `
+                  <div class="log-item">
+                    <strong>Nivel ${s.severity} | ${FMG.escapeHtml(s.title)}</strong>
+                    <p class="muted">${FMG.escapeHtml(s.description)}</p>
+                    <p class="muted">Semana ${s.week} | ${s.mechanicalEffect || ""}</p>
+                  </div>`;}).join("") : `<div class="empty-state">Sin escándalos activos.</div>`}
+              </div>
+            </section>
+            <section class="card">
+              <div class="section-title"><h2>Tradiciones activas</h2><span class="chip">${traditions.length}</span></div>
+              <div class="log-list">
+                ${traditions.length ? traditions.map(function (t) { return `
+                  <div class="log-item">
+                    <strong>${FMG.escapeHtml(t.title)}</strong>
+                    <p class="muted">${FMG.escapeHtml(t.body)}</p>
+                  </div>`;}).join("") : `<div class="empty-state">Sin tradiciones activadas esta temporada.</div>`}
+              </div>
+            </section>
+          </section>
+        </details>`;
+      })()}
+      ${(function () {
+        const eco = state.managerEcosystem || {};
+        const conferences = (eco.media && eco.media.pressConferences || []).filter(function (c) { return !c.resolved && c.answerable && c.questions; });
+        if (!conferences.length) return "";
+        const conf = conferences[0];
+        return `<details class="ux-disclosure" open>
+          <summary>Rueda de prensa pendiente — ${FMG.escapeHtml(conf.topic)}</summary>
+          <section class="card">
+            <div class="section-title"><h2>Conferencia de prensa</h2><span class="chip">${FMG.escapeHtml(conf.journalistName || "Periodista")} | ${FMG.escapeHtml(conf.tone)}</span></div>
+            <p class="muted" style="padding:0 1rem 0.5rem">Tema: ${FMG.escapeHtml(conf.topic)}</p>
+            ${(conf.questions || []).map(function (q, qi) { return `
+              <div class="log-item">
+                <strong>P${qi + 1}: ${FMG.escapeHtml(q.question)}</strong>
+                <div class="button-row" style="margin-top:0.5rem">
+                  ${(q.choices || []).map(function (ch, ci) { return `
+                    <button class="${q.answered && q.selectedChoice === ci ? "active" : "btn-ghost"}"
+                      data-action="answer-press-conference"
+                      data-conference-id="${FMG.escapeHtml(conf.id)}"
+                      data-question-idx="${qi}"
+                      data-choice-idx="${ci}"
+                      title="${FMG.escapeHtml(ch.text)}">
+                      ${FMG.escapeHtml(ch.label)} (${FMG.escapeHtml(ch.tone)})
+                    </button>`;}).join("")}
+                </div>
+              </div>`;}).join("")}
+          </section>
+        </details>`;
+      })()}
+      ${(function () {
+        const docs = FMG.LegacyEngine ? FMG.LegacyEngine.getDocumentaries(state).slice(0, 3) : [];
+        const legacy = FMG.LegacyEngine ? FMG.LegacyEngine.getManagerLegacy(state) : null;
+        if (!docs.length && !legacy) return "";
+        return `<details class="ux-disclosure">
+          <summary>Legado y documentales de temporada</summary>
+          <section class="content-grid">
+            ${legacy ? `<section class="card">
+              <div class="section-title"><h2>Legado del técnico</h2><span class="chip">${FMG.escapeHtml(legacy.legacyLabel)}</span></div>
+              <div class="stats-grid">
+                <article class="stat-card"><div class="muted">Puntuación</div><div class="stat-value">${legacy.legacyScore}/100</div></article>
+                <article class="stat-card"><div class="muted">Títulos</div><div class="stat-value">${legacy.totalTitles}</div></article>
+                <article class="stat-card"><div class="muted">Temporadas</div><div class="stat-value">${legacy.seasonsManaged}</div></article>
+                <article class="stat-card"><div class="muted">Hall of Fame</div><div class="stat-value">${legacy.hallOfFamePlayersNurtured}</div></article>
+              </div>
+            </section>` : ""}
+            <section class="card">
+              <div class="section-title"><h2>Archivo de temporada</h2><span class="chip">${docs.length} entrega(s)</span></div>
+              <div class="log-list">
+                ${docs.map(function (doc) { return `
+                  <div class="log-item">
+                    <strong>T${doc.season} — ${FMG.escapeHtml(doc.clubName)}</strong>
+                    ${(doc.paragraphs || []).map(function (p) { return `<p class="muted">${FMG.escapeHtml(p)}</p>`;}).join("")}
+                  </div>`;}).join("") || `<div class="empty-state">Los documentales se generan al completar cada temporada.</div>`}
+              </div>
+            </section>
+          </section>
+        </details>`;
+      })()}
     `;
   };
 })();

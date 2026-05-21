@@ -48,6 +48,23 @@
             ${topPlayers.map((player) => `<div class="list-row compact"><div><strong>${FMG.escapeHtml(player.name)}</strong><p class="muted">${player.position} | OVR ${player.overall} | POT ${player.potential}</p></div><button class="btn-ghost" data-action="select-squad-player" data-player-id="${player.id}">Ficha</button></div>`).join("")}
           </div>
         </section>
+        ${(function () {
+          const timeline = FMG.LegacyEngine ? FMG.LegacyEngine.getClubTimeline(state, rival.id) : [];
+          if (!timeline.length) return "";
+          const typeIcon = { "dynasty": "👑", "fallen-giant": "📉", "recovery": "📈", "title": "🏆", "legendary-moment": "⭐", "hof-induction": "🎖️" };
+          return `<details class="ux-disclosure">
+            <summary>Historia del club</summary>
+            <section class="card">
+              <div class="section-title"><h2>Línea de tiempo histórica</h2><span class="chip">${timeline.length} evento(s)</span></div>
+              <div class="log-list">
+                ${timeline.slice(0, 15).map(function (entry) { return `
+                  <div class="log-item">
+                    <strong>${typeIcon[entry.type] || "📋"} T${entry.season} — ${FMG.escapeHtml(entry.description)}</strong>
+                  </div>`;}).join("")}
+              </div>
+            </section>
+          </details>`;
+        })()}
         <details class="ux-disclosure">
           <summary>Lectura deportiva del rival</summary>
           <section class="card">

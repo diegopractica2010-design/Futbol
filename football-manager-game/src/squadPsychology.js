@@ -731,7 +731,8 @@
       if (!veteran || !youngster) { rel.mentorType = null; return; }
 
       if (veteran.teamId !== state.userTeamId) {
-        youngster.confidence = clamp((youngster.confidence || 55) - 8, 0, 100);
+        const bondPenalty = Math.round(4 + (rel.mentorBondStrength || 40) / 10);
+        youngster.confidence = clamp((youngster.confidence || 55) - bondPenalty, 0, 100);
         rel.mentorType = null;
         return;
       }

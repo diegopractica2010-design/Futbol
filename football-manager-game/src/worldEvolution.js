@@ -417,8 +417,10 @@
 
     (state.teams || []).forEach(function (t) {
       if (state.rivalAI && state.rivalAI.budgets && state.rivalAI.budgets[t.id]) {
+        const dynastyBonus = getDynastyBonus(state, t.id);
+        const combinedMult = (1 + delta) * dynastyBonus.budgetMultiplier;
         state.rivalAI.budgets[t.id] = clamp(
-          Math.round(state.rivalAI.budgets[t.id] * (1 + delta)),
+          Math.round(state.rivalAI.budgets[t.id] * combinedMult),
           1000000,
           999999999
         );

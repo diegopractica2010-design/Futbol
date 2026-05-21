@@ -299,8 +299,14 @@
     if (momentumGap > 60) {
       const winningSide = liveMatch.momentum >= 50 ? "home" : "away";
       modifiers[winningSide].pressingIntensity *= 0.95;
-      modifiers[winningSide].pressureBonus -= 0.02;
+      modifiers[winningSide].pressureBonus -= (1 - modifiers[winningSide].pressingIntensity) * 0.4;
     }
+
+    ["home", "away"].forEach(function (side) {
+      if (modifiers[side].pressingIntensity < 1) {
+        modifiers[side].pressureBonus += (modifiers[side].pressingIntensity - 1) * 0.08;
+      }
+    });
 
     matchState.modifiers = modifiers;
     liveMatch.humanAI = liveMatch.humanAI || {};

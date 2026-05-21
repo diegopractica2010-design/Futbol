@@ -121,6 +121,44 @@
           </div>
         </section>
       </details>
+      ${(function () {
+        const reactions = (state.fanReactions || []).slice(0, 4);
+        const loyaltyConflicts = FMG.getLoyaltyConflicts ? FMG.getLoyaltyConflicts(state) : [];
+        const dressingEvents = (state.dressingRoomEvents || []).filter(function (e) { return !e.resolved; }).slice(0, 3);
+        if (!reactions.length && !loyaltyConflicts.length && !dressingEvents.length) return "";
+        return `<details class="ux-disclosure" open>
+          <summary>Pulso de la hinchada y vestuario</summary>
+          <section class="content-grid">
+            <section class="card">
+              <div class="section-title"><h2>Pulso de la hinchada</h2><span class="chip">${reactions.length} reacciones</span></div>
+              <div class="log-list">
+                ${reactions.length ? reactions.map(function (r) { return `
+                  <div class="log-item">
+                    <strong>${FMG.escapeHtml(r.icon || "")} ${FMG.escapeHtml(r.title)}</strong>
+                    <p class="muted">${FMG.escapeHtml(r.body)}</p>
+                    <p class="muted">${r.positive ? "Efecto positivo" : "Efecto negativo"} | ${FMG.escapeHtml(r.mechanical || "")}</p>
+                  </div>`;}).join("") : `<div class="empty-state">La hinchada esta en calma.</div>`}
+              </div>
+            </section>
+            <section class="card">
+              <div class="section-title"><h2>Vestuario</h2><span class="chip">${dressingEvents.length + loyaltyConflicts.length} pendientes</span></div>
+              <div class="log-list">
+                ${dressingEvents.map(function (e) { return `
+                  <div class="log-item">
+                    <strong>${FMG.escapeHtml(e.icon || "")} ${FMG.escapeHtml(e.title)}</strong>
+                    <p class="muted">${FMG.escapeHtml(e.description)}</p>
+                  </div>`;}).join("")}
+                ${loyaltyConflicts.map(function (c) { return `
+                  <div class="log-item">
+                    <strong>⚖️ Dilema de lealtad: ${FMG.escapeHtml(c.playerName)}</strong>
+                    <p class="muted">${FMG.escapeHtml(c.buyerTeamName)} ofrece ${FMG.currency ? FMG.currency(c.offerFee) : c.offerFee}. Decide en carrera.</p>
+                  </div>`;}).join("")}
+                ${!dressingEvents.length && !loyaltyConflicts.length ? `<div class="empty-state">El vestuario esta tranquilo.</div>` : ""}
+              </div>
+            </section>
+          </section>
+        </details>`;
+      })()}
       <details class="ux-disclosure">
         <summary>Movimiento rival y notificaciones</summary>
         <section class="content-grid">

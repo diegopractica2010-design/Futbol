@@ -175,7 +175,8 @@
       const windowHeat = state.market.windowOpen ? 6 : -3;
       const mediaHeat = state.managerEcosystem?.worldMedia?.media?.pressure || 45;
       advanced.economy.momentum = clamp(Math.round(advanced.economy.momentum * 0.78 + history.length * 0.4 + windowHeat + (mediaHeat - 50) * 0.08), -30, 60);
-      advanced.economy.inflation = clamp(Number((1 + advanced.economy.momentum / 180 + Math.min(avgFee, 80000000) / 900000000).toFixed(3)), 0.86, 1.42);
+      const cycleMult = advanced.economy.inflationMultiplier || 1;
+      advanced.economy.inflation = clamp(Number((cycleMult * (1 + advanced.economy.momentum / 180 + Math.min(avgFee, 80000000) / 900000000)).toFixed(3)), 0.75, 1.65);
       advanced.economy.deadlinePressure = state.market.windowOpen
         ? clamp(Math.round(((state.currentWeek || 1) / Math.max(1, state.totalWeeks || 14)) * 100), 0, 100)
         : 0;
@@ -299,7 +300,8 @@
       const economy = FootballEconomyController.update(state);
       const mediaPressure = state.managerEcosystem?.worldMedia?.media?.pressure || 42;
       const deadline = economy.deadlinePressure || 0;
-      return clamp(Math.round(agent.greed * 0.28 + ambition.ambition * 0.24 + mediaPressure * 0.18 + deadline * 0.18 + ambition.frustration * 0.12), 0, 100);
+      const mediaRepFactor = ((player.mediaReputation || 50) - 50) * 0.12;
+      return clamp(Math.round(agent.greed * 0.28 + ambition.ambition * 0.24 + mediaPressure * 0.18 + deadline * 0.18 + ambition.frustration * 0.12 + mediaRepFactor), 0, 100);
     },
 
     evaluateContext(state, negotiation, player, base = {}) {
@@ -852,6 +854,30 @@
             detail: agent.name + " propone renovacion de " + player.name + " en terminos razonables. Acepta contrato de 3 anyos sin drama.",
             heat: 40
           }, 24);
+        }
+      }
+
+      // protector: blocks incoming offers when player loyalty is high
+      if (agent.personality === "protector") {
+        const profile = adv.players && adv.players[player.id];
+        const loyalty = profile ? profile.loyalty : 50;
+        if (loyalty > 70) {
+          const pendingOffer = (state.market && state.market.incomingOffers || []).find(function (o) {
+            return o.playerId === player.id && o.status === "pending";
+          });
+          if (pendingOffer) {
+            pendingOffer.status = "rejected";
+            boundedPush(adv.drama, {
+              id: deterministicId("protector-block", [season, week, agent.id, player.id]),
+              week: week,
+              seasonNumber: season,
+              type: "agent-protector-block",
+              playerId: player.id,
+              playerName: player.name,
+              detail: agent.name + " bloquea la oferta por " + player.name + " alegando su lealtad al club (" + loyalty + "/100).",
+              heat: 50
+            }, 24);
+          }
         }
       }
     });

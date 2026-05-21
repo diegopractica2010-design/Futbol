@@ -161,6 +161,42 @@
         <summary>Pulso económico y vestuario contractual</summary>
         ${renderAdvancedMarketPulse(state)}
       </details>
+      ${(function () {
+        const conflicts = FMG.getLoyaltyConflicts ? FMG.getLoyaltyConflicts(state) : [];
+        const promises = FMG.getActivePromises ? FMG.getActivePromises(state) : [];
+        if (!conflicts.length && !promises.length) return "";
+        return `<details class="ux-disclosure" open>
+          <summary>Lealtad y promesas activas</summary>
+          <section class="content-grid">
+            <section class="card">
+              <div class="section-title"><h2>Conflictos de lealtad</h2><span class="chip">${conflicts.length} pendientes</span></div>
+              <div class="log-list">
+                ${conflicts.length ? conflicts.map(function (c) { return `
+                  <div class="log-item">
+                    <strong>⚖️ ${FMG.escapeHtml(c.playerName)} — dilema de lealtad</strong>
+                    <p class="muted">${FMG.escapeHtml(c.buyerTeamName)} ofrece ${FMG.currency ? FMG.currency(c.offerFee) : c.offerFee}. Caduca en ${c.conflictDuration || 0} semana(s).</p>
+                    <div class="button-row" style="margin-top:0.5rem">
+                      <button class="btn-primary" data-action="resolve-loyalty-conflict" data-conflict-id="${FMG.escapeHtml(c.id)}" data-decision="match">Igualar oferta</button>
+                      <button class="btn-secondary" data-action="resolve-loyalty-conflict" data-conflict-id="${FMG.escapeHtml(c.id)}" data-decision="release">Vender con honor</button>
+                      <button class="btn-ghost" data-action="resolve-loyalty-conflict" data-conflict-id="${FMG.escapeHtml(c.id)}" data-decision="block">Retener</button>
+                    </div>
+                  </div>`;}).join("") : `<div class="empty-state">Sin conflictos de lealtad pendientes.</div>`}
+              </div>
+            </section>
+            <section class="card">
+              <div class="section-title"><h2>Promesas activas</h2><span class="chip">${promises.length}</span></div>
+              <div class="log-list">
+                ${promises.length ? promises.map(function (p) { return `
+                  <div class="log-item">
+                    <strong>${FMG.escapeHtml(p.playerName)}</strong>
+                    <p class="muted">Promesa: ${FMG.escapeHtml(p.text)}</p>
+                    <p class="muted">Semana ${p.week} | Activa ${p.weeksActive} semana(s)</p>
+                  </div>`;}).join("") : `<div class="empty-state">Sin promesas contractuales activas.</div>`}
+              </div>
+            </section>
+          </section>
+        </details>`;
+      })()}
       <section class="content-grid">
         <section class="card"><div class="section-title"><h2>Negociaciones</h2></div><div class="log-list">${renderNegotiations(state)}</div></section>
         <section class="card"><div class="section-title"><h2>Ofertas recibidas</h2></div><div class="log-list">${renderIncomingOffers(state)}</div></section>

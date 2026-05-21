@@ -839,7 +839,14 @@
     const world = state.managerEcosystem && state.managerEcosystem.worldMedia;
     if (world && (world.homeAdvantageDuration || 0) > 0) {
       world.homeAdvantageDuration -= 1;
-      if (world.homeAdvantageDuration <= 0) { world.homeAdvantageBonus = 0; world.homeAdvantageDuration = 0; }
+      if (world.homeAdvantageDuration <= 0) {
+        world.homeAdvantageDuration = 0;
+        if (state.userTeamId && state.clubCulture && state.clubCulture.homeAdvantageModifiers) {
+          state.clubCulture.homeAdvantageModifiers[state.userTeamId] = Math.max(
+            0, (state.clubCulture.homeAdvantageModifiers[state.userTeamId] || 0) - 2
+          );
+        }
+      }
     }
     const freshRx = (state.fanReactions || []).filter(function (r) { return !r.resolved && r.week === (state.currentWeek || 1); });
     freshRx.forEach(function (r) { applyFanReactionEffect(state, r); r.resolved = true; });

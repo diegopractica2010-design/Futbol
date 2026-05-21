@@ -122,6 +122,9 @@
       [FMG.ROUTES.finances, "Finanzas", "Presupuesto del club"],
       [FMG.ROUTES.career, "Carrera", "Manager"],
       [FMG.ROUTES.news, "Noticias", "Mundo vivo"],
+      [FMG.ROUTES.history, "Historia", "Momentos legendarios e historia"],
+      [FMG.ROUTES.hallOfFame, "HoF", "Salon de la Fama"],
+      [FMG.ROUTES.legacy, "Legado", "Legado del manager"],
       [FMG.ROUTES.settings, "Config", "Guardado y configuracion"],
       [FMG.ROUTES.phase15, "Jugar v1", "Partido jugable Fase 15"],
       [FMG.ROUTES.phase16, "Jugar v2", "Framework modular Fase 16"],
@@ -241,6 +244,9 @@
       case FMG.ROUTES.rival: return FMG.renderRivalClubView(FMG.gameState);
       case FMG.ROUTES.settings: return FMG.renderSettingsView(FMG.gameState);
       case FMG.ROUTES.table: return FMG.renderTableView(FMG.gameState);
+      case FMG.ROUTES.history: return FMG.renderHistoryView ? FMG.renderHistoryView(FMG.gameState) : "<div class='empty-state'>Vista Historia no disponible.</div>";
+      case FMG.ROUTES.hallOfFame: return FMG.renderHallOfFameView ? FMG.renderHallOfFameView(FMG.gameState) : "<div class='empty-state'>Vista Salon de la Fama no disponible.</div>";
+      case FMG.ROUTES.legacy: return FMG.renderLegacyView ? FMG.renderLegacyView(FMG.gameState) : "<div class='empty-state'>Vista Legado no disponible.</div>";
       case FMG.ROUTES.onboarding: return FMG.renderOnboardingView();
       case FMG.ROUTES.credits: return FMG.renderCreditsView();
       case FMG.ROUTES.phase15: return renderSandboxFrame(FMG.renderPhase15View());
@@ -547,7 +553,24 @@
       if (!target.dataset.confirm && !window.confirm("Poner en venta a este jugador?")) return false;
       FMG.pushNotification(FMG.sellPlayer(FMG.gameState, target.dataset.playerId).message);
     },
-    "dismiss-toast": ({ target }) => FMG.dismissNotification(target.dataset.id)
+    "dismiss-toast": ({ target }) => FMG.dismissNotification(target.dataset.id),
+    "answer-press-conference": ({ target }) => {
+      const conferenceId = target.dataset.conferenceId;
+      const questionIdx = Number(target.dataset.questionIdx);
+      const choiceIdx = Number(target.dataset.choiceIdx);
+      if (!conferenceId) return;
+      const answers = {};
+      answers[questionIdx] = choiceIdx;
+      const result = FMG.answerPressConference ? FMG.answerPressConference(FMG.gameState, conferenceId, answers) : { ok: false, message: "No disponible." };
+      FMG.pushNotification(result.message);
+    },
+    "resolve-loyalty-conflict": ({ target }) => {
+      const conflictId = target.dataset.conflictId;
+      const decision = target.dataset.decision;
+      if (!conflictId || !decision) return;
+      const result = FMG.resolveLoyaltyConflict ? FMG.resolveLoyaltyConflict(FMG.gameState, conflictId, decision) : { ok: false, message: "No disponible." };
+      FMG.pushNotification(result.message);
+    }
   };
 
   async function handleAction(action, target) {
