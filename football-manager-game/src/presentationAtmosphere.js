@@ -100,19 +100,26 @@
 
     _headline(stage, home, away, rivalry, event) {
       if (event?.type === "goal") return "GOL EN DIRECTO";
+      if (event?.type === "red-card") return "TARJETA ROJA";
+      if (event?.type === "narrative") return "TRAMO DECISIVO";
+      if (stage === "intro" && rivalry) return rivalry.name.toUpperCase();
       if (stage === "intro") return `${home?.name || "Local"} vs ${away?.name || "Visita"}`;
-      if (stage === "halftime") return "ENTRETIEMPO";
-      if (stage === "fulltime") return "FINAL DEL PARTIDO";
-      if (stage === "late") return "TRAMO DECISIVO";
-      return rivalry?.name || "PARTIDO EN VIVO";
+      if (stage === "halftime") return "DESCANSO";
+      if (stage === "fulltime") return "PITAZO FINAL";
+      if (stage === "late") return "MINUTOS FINALES";
+      return rivalry?.name?.toUpperCase() || "PARTIDO EN VIVO";
     }
 
     _strapline(stage, tension, weather, tournament) {
+      if (stage === "intro" && tension >= 80) return "La rivalidad que detiene el pais";
+      if (stage === "intro" && tension >= 60) return `${tournament} | Estadio encendido | ${weather.label}`;
       if (stage === "intro") return `${tournament} | ${weather.label}`;
-      if (stage === "halftime") return "Ajustes, energia y lectura tactica";
-      if (stage === "fulltime") return "Resumen, impacto y cierre de fecha";
-      if (tension >= 80) return "Ambiente de clasico, maxima tension";
-      if (tension >= 62) return "Ritmo alto y estadio encendido";
+      if (stage === "halftime") return "El partido se decide en los segundos 45 minutos";
+      if (stage === "fulltime") return "El marcador habla y el analisis comienza";
+      if (stage === "late" && tension >= 70) return "El clasico entra en su momento de verdad";
+      if (stage === "late") return "El reloj y el marcador mandan";
+      if (tension >= 80) return "Ambiente historico — el partido lo tiene todo";
+      if (tension >= 62) return "Ritmo alto y cada posesion cuenta";
       return `${tournament} | ${weather.label}`;
     }
   }
@@ -121,13 +128,31 @@
     constructor() {
       this.level = 30;
       this.phase = 0;
+      this._goalSurge = 0;
     }
 
     update(presentation, deltaMs) {
+      const delta = deltaMs || 16;
       const target = presentation?.crowd || 30;
-      this.level += (target - this.level) * 0.08;
-      this.phase += (deltaMs || 16) * (0.0007 + this.level / 180000);
+      // Goal surge: spike crowd level on goal events
+      const ev = presentation?.event;
+      if (ev && ev.type === "goal") this._goalSurge = 45;
+      this._goalSurge = Math.max(0, this._goalSurge - delta * 0.03);
+      const effectiveTarget = clamp(target + this._goalSurge, 20, 100);
+      // Faster response on high-tension moments
+      const responseRate = (presentation?.stage === "late" || presentation?.pressure > 70) ? 0.12 : 0.08;
+      this.level += (effectiveTarget - this.level) * responseRate;
+      this.phase += delta * (0.0007 + this.level / 180000);
       return this.level;
+    }
+
+    getCrowdText(level, stage, derby) {
+      if (derby && level > 75) return "El estadio ruge — ambiente de clasico historico";
+      if (stage === "late" && level > 60) return "El estadio respira tension — cada segundo importa";
+      if (level > 80) return "El estadio explota con la aficion";
+      if (level > 60) return "La hinchada empuja y el ambiente escala";
+      if (level > 40) return "Partido vivo con el estadio atento";
+      return "El estadio espera y observa";
     }
   }
 
