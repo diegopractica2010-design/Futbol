@@ -20,7 +20,8 @@
       "Bash(git commit -m ' *)",
       "Bash(node tests/phase6.test.js)",
       "Bash(node tests/phase13.test.js)",
-      "Bash(node -e \"const t=require\\('./data/teams.json'\\); console.log\\('teams count:', t.length, t.map\\(x=>x.id\\).join\\(', '\\)\\)\")"
+      "Bash(node -e \"const t=require\\('./data/teams.json'\\); console.log\\('teams count:', t.length, t.map\\(x=>x.id\\).join\\(', '\\)\\)\")",
+      "Bash(node -e ' *)"
     ]
   }
 }
