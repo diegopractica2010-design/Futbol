@@ -46,6 +46,9 @@
                     <span>Seguimiento ${listing.scoutingLevel}%</span>
                     <span>${listing.loanAvailable ? "Cesion viable" : "Solo compra"}</span>
                     ${listing.marketHeat ? `<span>Calor ${listing.marketHeat}/100</span>` : ""}
+                    ${player.mediaReputation && player.mediaReputation > 60 ? `<span>⭐ Figura mediatica ${Math.round(player.mediaReputation)}</span>` : ""}
+                    ${player.heroCredits && player.heroCredits >= 3 ? `<span>🌟 Nino de oro</span>` : ""}
+                    ${player.villainCredits && player.villainCredits >= 3 ? `<span>⚠️ Jugador problema</span>` : ""}
                   </div>
                 </div>
               </div>

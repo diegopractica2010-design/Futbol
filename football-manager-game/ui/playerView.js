@@ -51,6 +51,11 @@
             <span class="chip" title="Potencial maximo estimado">POT ${player.potential}</span>
             <span class="chip">Contrato ${player.contractYears || 0}a</span>
             <span class="chip">${FMG.currency(player.salary)} sueldo</span>
+            ${player.mediaReputation && player.mediaReputation > 55 ? `<span class="chip" title="Reputacion mediatica">⭐ Media ${Math.round(player.mediaReputation)}</span>` : ""}
+            ${player.confidence && player.confidence > 70 ? `<span class="chip" title="Confianza alta">🔥 Confiado</span>` : player.confidence && player.confidence < 35 ? `<span class="chip" title="Confianza baja">😰 Dubitativo</span>` : ""}
+            ${player.ego && player.ego > 75 ? `<span class="chip" title="Ego elevado">⚡ Ego alto</span>` : ""}
+            ${player.toxicity && player.toxicity > 60 ? `<span class="chip" title="Toxicidad en el vestuario">☠️ Tension</span>` : ""}
+            ${player.heroCredits && player.heroCredits >= 3 ? `<span class="chip" title="Nino de oro de la temporada">🌟 Figura</span>` : ""}
           </div>
           <div class="hero-actions">
             <button class="btn-ghost" data-action="change-route" data-route="${FMG.ROUTES.squad}">Volver a plantilla</button>

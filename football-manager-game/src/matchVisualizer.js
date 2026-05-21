@@ -292,31 +292,54 @@
       this.vX = 0; this.vY = 0; this.vZ = 0;
       this.shakeAmt = 0;
       this._shakeRng = mulberry32(hashSeed("camshake"));
+      this._prevBx = 0; this._prevBz = 0;
     }
 
-    onGoal()    { this.tZoom = 1.14; this.shakeAmt = 5.5; setTimeout(() => { this.tZoom = 1; }, 1400); }
-    onShot()    { this.tZoom = 1.07; setTimeout(() => { this.tZoom = 1; }, 700); }
-    onCounter() { this.tZoom = 0.91; setTimeout(() => { this.tZoom = 1; }, 900); }
+    onGoal()    { this.tZoom = 1.16; this.shakeAmt = 6.5; setTimeout(() => { this.tZoom = 1; }, 1600); }
+    onShot()    { this.tZoom = 1.09; setTimeout(() => { this.tZoom = 1; }, 750); }
+    onCounter() { this.tZoom = 0.90; setTimeout(() => { this.tZoom = 1; }, 1000); }
+    onDesperation() { this.tZoom = 0.93; setTimeout(() => { this.tZoom = 1; }, 1200); }
+    onPanic()   { this.shakeAmt = 3.5; }
 
-    trackBall(ballPos) {
+    trackBall(ballPos, momentum, humanAI) {
       if (!ballPos) return;
       const bx = (ballPos.x / FIELD_WIDTH);
       const bz = (ballPos.z / FIELD_HEIGHT);
-      const dx = bx - this.tX, dz = bz - this.tY;
+      // Velocity anticipation: lean ahead of ball movement direction
+      const vx = bx - this._prevBx || 0;
+      const vz = bz - this._prevBz || 0;
+      this._prevBx = bx; this._prevBz = bz;
+      const anticipateX = vx * 1.8;
+      const anticipateZ = vz * 1.4;
+      const tx = bx + anticipateX;
+      const tz = bz + anticipateZ;
+      const dx = tx - this.tX, dz = tz - this.tY;
       const dist = Math.hypot(dx, dz);
-      if (dist > 0.07) { this.tX += dx * 0.28; this.tY += dz * 0.28; }
-      this.tX = clamp(this.tX, -0.14, 0.14);
-      this.tY = clamp(this.tY, -0.14, 0.14);
+      if (dist > 0.05) { this.tX += dx * 0.32; this.tY += dz * 0.32; }
+      this.tX = clamp(this.tX, -0.18, 0.18);
+      this.tY = clamp(this.tY, -0.18, 0.18);
+      // Momentum-driven zoom: attacking pressure shows wide view, close attack shows tight
+      if (momentum !== undefined) {
+        const gap = Math.abs((momentum || 50) - 50);
+        if (gap > 25 && Math.abs(bz) > 0.25) this.tZoom = clamp(1 + gap * 0.003, 1, 1.08);
+      }
+      // Desperation camera: widen when desperate team pushes forward
+      if (humanAI) {
+        const homeDesp = humanAI.desperation && humanAI.desperation.home || 0;
+        const awayDesp = humanAI.desperation && humanAI.desperation.away || 0;
+        const maxDesp = Math.max(homeDesp, awayDesp);
+        if (maxDesp > 0.5 && this.tZoom >= 1) this.tZoom = clamp(1 - maxDesp * 0.06, 0.91, 1);
+      }
     }
 
     update(dt) {
-      const a = clamp(dt / 260, 0, 1);
-      this.vX = this.vX * 0.74 + (this.tX - this.panX) * a;
-      this.vY = this.vY * 0.74 + (this.tY - this.panY) * a;
-      this.vZ = this.vZ * 0.74 + (this.tZoom - this.zoom) * a;
+      const a = clamp(dt / 240, 0, 1);
+      this.vX = this.vX * 0.72 + (this.tX - this.panX) * a;
+      this.vY = this.vY * 0.72 + (this.tY - this.panY) * a;
+      this.vZ = this.vZ * 0.72 + (this.tZoom - this.zoom) * a;
       this.panX += this.vX; this.panY += this.vY; this.zoom += this.vZ;
-      this.zoom = clamp(this.zoom, 0.86, 1.2);
-      this.shakeAmt = Math.max(0, this.shakeAmt - dt * 0.038);
+      this.zoom = clamp(this.zoom, 0.86, 1.22);
+      this.shakeAmt = Math.max(0, this.shakeAmt - dt * 0.036);
     }
 
     getShakeOffset() {
@@ -937,6 +960,18 @@
         } else if (ev.type === "offside") {
           const fs = this._eventScreenPosition(ev);
           this.cinematic.triggerOffside(fs.y, "FUERA DE JUEGO");
+        } else if (ev.type === "narrative") {
+          // Pressure narrative events from matchNarrative.js — cinematic camera response
+          const lm = this._liveMatch;
+          const humanAI = lm && lm.humanAI;
+          if (humanAI) {
+            const homeDesp = (humanAI.desperation && humanAI.desperation.home) || 0;
+            const awayDesp = (humanAI.desperation && humanAI.desperation.away) || 0;
+            if (Math.max(homeDesp, awayDesp) > 0.4) this.camera.onDesperation();
+            const homePanic = (humanAI.panic && humanAI.panic.home) || 0;
+            const awayPanic = (humanAI.panic && humanAI.panic.away) || 0;
+            if (Math.max(homePanic, awayPanic) > 0.5) this.camera.onPanic();
+          }
         }
       }
 
@@ -1167,7 +1202,12 @@
           if (spd > 0.4) this.ballTrail.push(bs.x, bs.y, spd * 55);
         }
         this._prevBallScr = bs;
-        this.camera.trackBall({ x: this.ball.renderX, z: this.ball.renderZ });
+        const lm = this._liveMatch;
+        this.camera.trackBall(
+          { x: this.ball.renderX, z: this.ball.renderZ },
+          lm ? (Number(lm.momentum) || 50) : undefined,
+          lm ? lm.humanAI : undefined
+        );
       }
 
       // FIX 1: Player render positions — updated every frame with drift + restlessness
@@ -1786,7 +1826,7 @@
     }
 
     // ================================================================
-    // PHASE 5 — CHAOS ENGINE
+    // PHASE 5 — CHAOS ENGINE (now reads liveMatch.humanAI for realism)
     // ================================================================
     _getChaosNudge(playerId, minute, momentum) {
       const slot = Math.floor(minute / 2);
@@ -1801,16 +1841,30 @@
       const pl = this.players[playerId];
       if (!pl) { this._chaosMod[playerId] = { x: 0, z: 0 }; return this._chaosMod[playerId]; }
 
+      // Read real humanAI values from liveMatch if available
+      const liveMatch = this._liveMatch;
+      const humanAI = liveMatch && liveMatch.humanAI;
+      const sideKey = pl.isHome ? "home" : "away";
+      const humanPosError = humanAI && humanAI.positionError ? clamp(Number(humanAI.positionError[sideKey]) || 0, 0, 4) : 0;
+      const humanPanic = humanAI && humanAI.panic ? clamp(Number(humanAI.panic[sideKey]) || 0, 0, 80) / 80 : 0;
+      const humanDesp = humanAI && humanAI.desperation ? clamp(Number(humanAI.desperation[sideKey]) || 0, 0, 1) : 0;
+
       const pressuref = clamp(Math.abs(momentum - 50) / 50, 0, 1); // 0 = balanced, 1 = one-sided
+      // Amplify chaos by real positionError and panic (scales existing effects)
+      const errorScale = 1 + humanPosError * 0.45 + humanPanic * 0.6;
       let cx = 0, cz = 0;
 
-      // Defensive panic — defenders scramble when under pressure
-      if (pl.positionCode === "DEF" && momentum < 35 && pl.isHome) {
-        cx = (rng() - 0.5) * 4.5 * pressuref;
-        cz = (rng() - 0.5) * 3.5 * pressuref;
-      } else if (pl.positionCode === "DEF" && momentum > 65 && !pl.isHome) {
-        cx = (rng() - 0.5) * 4.5 * pressuref;
-        cz = (rng() - 0.5) * 3.5 * pressuref;
+      // Defensive panic — defenders scramble. Now uses real panic value from humanAI
+      if (pl.positionCode === "DEF" && (momentum < 35 && pl.isHome || momentum > 65 && !pl.isHome)) {
+        const panicAmp = Math.max(pressuref, humanPanic);
+        cx = (rng() - 0.5) * 4.5 * panicAmp * errorScale;
+        cz = (rng() - 0.5) * 3.5 * panicAmp * errorScale;
+      }
+      // Desperation forward push — DEF and MED surge forward when team is desperate
+      else if (humanDesp > 0.4 && (pl.positionCode === "DEF" || pl.positionCode === "MED")) {
+        const dir = pl.isHome ? 1 : -1;
+        cx = (rng() - 0.5) * 2.8 * humanDesp;
+        cz = rng() * 5 * humanDesp * dir;
       }
       // Attacking overload — forwards cluster in box
       else if ((pl.positionCode === "DEL" || pl.positionCode === "EXT") && pressuref > 0.4) {
