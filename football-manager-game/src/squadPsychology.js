@@ -602,14 +602,15 @@
     const youngGroup = players.filter(function (p) { return p.age < 22; }).map(function (p) { return p.id; });
     const veteranGroup = players.filter(function (p) { return p.age > 30; }).map(function (p) { return p.id; });
 
+    const MIN_FACTION = Math.max(2, Math.floor(players.length / 7));
     const candidates = [];
     Object.keys(byNationality).forEach(function (nat) {
-      if (byNationality[nat].length >= 3) {
+      if (byNationality[nat].length >= MIN_FACTION) {
         candidates.push({ type: "nationality", name: "Grupo " + nat, memberIds: byNationality[nat].slice(0, 8) });
       }
     });
-    if (youngGroup.length >= 3) candidates.push({ type: "young", name: "La cantera", memberIds: youngGroup.slice(0, 8) });
-    if (veteranGroup.length >= 3) candidates.push({ type: "veteran", name: "Los mayores", memberIds: veteranGroup.slice(0, 8) });
+    if (youngGroup.length >= MIN_FACTION) candidates.push({ type: "young", name: "La cantera", memberIds: youngGroup.slice(0, 8) });
+    if (veteranGroup.length >= MIN_FACTION) candidates.push({ type: "veteran", name: "Los mayores", memberIds: veteranGroup.slice(0, 8) });
 
     candidates.slice(0, MAX_FACTIONS).forEach(function (candidate) {
       const exists = factions.find(function (f) { return f.type === candidate.type && f.name === candidate.name; });
@@ -628,7 +629,7 @@
     const activeIds = new Set(players.map(function (p) { return p.id; }));
     for (let i = factions.length - 1; i >= 0; i -= 1) {
       factions[i].memberIds = factions[i].memberIds.filter(function (id) { return activeIds.has(id); });
-      if (factions[i].memberIds.length < 3) factions.splice(i, 1);
+      if (factions[i].memberIds.length < MIN_FACTION) factions.splice(i, 1);
     }
 
     return factions;
@@ -745,6 +746,31 @@
       }
       if (!Number.isFinite(veteran.legacyPoints)) veteran.legacyPoints = 0;
       veteran.legacyPoints += 3 / 36;
+      // Overall boost when bond >= 60 (max +3 per career, tracked in fu.mentorBoostGiven)
+      if (rel.mentorBondStrength >= 60 && (youngster.overall || 0) < (veteran.overall || 0)) {
+        const fu = state.footballUniverse;
+        if (fu) {
+          const boostKey = veteran.id + "->" + youngster.id;
+          fu.mentorBoostGiven = fu.mentorBoostGiven || {};
+          const totalBoost = fu.mentorBoostGiven[boostKey] || 0;
+          const boostThreshold = 60 + Math.floor((rel.mentorBondStrength - 60) / 10) * 10;
+          if (totalBoost < 3 && rel.mentorBondStrength === boostThreshold) {
+            youngster.overall = clamp((youngster.overall || 60) + 1, 0, 99);
+            fu.mentorBoostGiven[boostKey] = totalBoost + 1;
+            if (FMG.addNewsItem) {
+              FMG.addNewsItem(state, {
+                type: "development",
+                title: youngster.name + " florece bajo la tutela de " + veteran.name,
+                body: "La relacion mentor-protege ha dado frutos reales. " + youngster.name + " mejora su nivel gracias a la guia del veterano.",
+                tags: ["desarrollo", "mentor"],
+                importance: 62,
+                entities: { playerId: youngster.id, teamId: state.userTeamId },
+                dedupeKey: "mentor-boost-" + boostKey + "-" + totalBoost
+              });
+            }
+          }
+        }
+      }
     });
   }
 
@@ -924,6 +950,43 @@
   // ═══════════════════════════════
   // PUBLIC API
   // ═══════════════════════════════
+
+  FMG.resolveDressingRoomEvent = function (state, eventId, choiceLabel) {
+    const events = state.dressingRoomEvents || [];
+    const event = events.find(function (e) { return e.id === eventId; });
+    if (!event || event.resolved) return { ok: false, message: "Evento no disponible." };
+    const choice = (event.choices || []).find(function (c) { return c.label === choiceLabel; });
+    if (!choice) return { ok: false, message: "Eleccion no encontrada." };
+    const eff = choice.effect || {};
+    const psych = state.psychology;
+    if (eff.egoPlayer !== undefined && event.playerId) {
+      const p = getPlayer(state, event.playerId);
+      if (p) p.ego = clamp((p.ego || 50) + eff.egoPlayer, 0, 100);
+    }
+    if (eff.managerTrust !== undefined && psych && psych.manager) {
+      psych.manager.trust = clamp((psych.manager.trust || 50) + eff.managerTrust, 0, 100);
+    }
+    if (eff.cohesion !== undefined && psych && psych.chemistry) {
+      psych.chemistry.cohesion = clamp(psych.chemistry.cohesion + eff.cohesion, 0, 100);
+    }
+    if (eff.conflict !== undefined && psych && psych.chemistry) {
+      psych.chemistry.conflict = clamp(psych.chemistry.conflict + eff.conflict, 0, 100);
+    }
+    if (eff.frustration !== undefined && event.playerId && psych && psych.players && psych.players[event.playerId]) {
+      psych.players[event.playerId].emotions.frustration =
+        clamp((psych.players[event.playerId].emotions.frustration || 30) + eff.frustration, 0, 100);
+    }
+    if (eff.toxicity !== undefined && event.playerId) {
+      const p = getPlayer(state, event.playerId);
+      if (p) p.toxicity = clamp((p.toxicity || 20) + eff.toxicity, 0, 100);
+    }
+    if (eff.factionMood !== undefined && psych && psych.factions) {
+      psych.factions.forEach(function (f) { f.mood = clamp((f.mood || 55) + eff.factionMood, 0, 100); });
+    }
+    event.resolved = true;
+    event.resolvedLabel = choiceLabel;
+    return { ok: true, choice: choice, event: event };
+  };
 
   FMG.SquadPsychologyExtended = {
     ensureEgo: ensureEgo,

@@ -338,6 +338,7 @@
       if (FMG.generatePostMatchNews) results.forEach((result) => FMG.generatePostMatchNews(state, result));
       if (FMG.generateContextualWeeklyNews) FMG.generateContextualWeeklyNews(state, event);
       FMG.runManagerEcosystemWeek?.(state, { phase: "post-week" });
+      if (FMG.runPlayerCareerWeek) FMG.runPlayerCareerWeek(state);
     };
     if (typeof document !== "undefined" && typeof queueMicrotask === "function") queueMicrotask(run);
     else run();

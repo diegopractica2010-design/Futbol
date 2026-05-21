@@ -2,7 +2,12 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="FM Chile" />
+    <link rel="manifest" href="./manifest.json" />
     <meta property="og:title" content="Football Manager Chile" />
     <meta property="og:description" content="Gestiona tu club chileno. Tácticas, fichajes y partidos en vivo. Gratis en el navegador." />
     <meta property="og:type" content="game" />
@@ -56,12 +61,13 @@
     <script src="./src/advancedTransferMarket.js" defer></script>
     <script src="./src/advancedYouthAcademy.js" defer></script>
     <script src="./src/squadPsychology.js" defer></script>
-    <!-- Fases 2, 7, 8, 9, Universe: Narrative, Club Culture, World Evolution, Legacy, Football Universe -->
+    <!-- Fases 2, 7, 8, 9, Universe, 10: All extended systems -->
     <script src="./src/matchNarrative.js" defer></script>
     <script src="./src/clubCulture.js" defer></script>
     <script src="./src/worldEvolution.js" defer></script>
     <script src="./src/legacyEngine.js" defer></script>
     <script src="./src/footballUniverse.js" defer></script>
+    <script src="./src/playerCareer.js" defer></script>
     <script src="./src/gameEngine.js" defer></script>
     <script src="./src/tacticalIntelligence.js" defer></script>
     <script src="./src/presentationAtmosphere.js" defer></script>
@@ -176,6 +182,14 @@
     <script src="./ui/historyView.js" defer></script>
     <script src="./ui/hallOfFameView.js" defer></script>
     <script src="./ui/legacyView.js" defer></script>
+    <script src="./ui/playerCareerView.js" defer></script>
     <script src="./src/main.js" defer></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("./sw.js").catch(function () {});
+        });
+      }
+    </script>
   </body>
   </html>

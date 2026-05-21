@@ -1,0 +1,29 @@
+{
+  "appId": "cl.footballmanager.chile",
+  "appName": "Football Manager Chile",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#0a1a0e",
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": true,
+      "style": "Dark",
+      "backgroundColor": "#0a1a0e"
+    },
+    "Keyboard": {
+      "resize": "none"
+    },
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#0a1a0e",
+      "showSpinner": false
+    }
+  }
+}

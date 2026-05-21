@@ -123,8 +123,15 @@
           (p.seasonStats && p.seasonStats.starts || 0) / completedWeeks > myStartRate + 0.25;
       });
       if (!rivals.length) return;
+      const fu = ensureFootballUniverse(state);
+      fu.jealousyAccum = fu.jealousyAccum || {};
+      const accumKey = player.id + "-" + (state.seasonNumber || 1);
+      fu.jealousyAccum[accumKey] = (fu.jealousyAccum[accumKey] || 0) + 1;
+      const weeksAccum = fu.jealousyAccum[accumKey];
+      const threshold = 2 + (hashText(player.id) % 3);
+      if (weeksAccum < threshold) return;
+      fu.jealousyAccum[accumKey] = 0;
       const seed = hashText("jealousy-" + (state.seasonNumber || 1) + "-" + (state.currentWeek || 1) + "-" + player.id);
-      if (seed % 4 !== 0) return;
       const rival = rivals[seed % rivals.length];
       player.morale = clamp((player.morale || 55) - 3, 0, 100);
       if (state.psychology && state.psychology.players && state.psychology.players[player.id]) {

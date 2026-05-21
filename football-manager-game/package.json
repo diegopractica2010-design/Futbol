@@ -2,6 +2,7 @@
   "name": "football-manager-game-chile",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "engines": {
     "node": ">=18"
   },
@@ -9,7 +10,33 @@
     "dev": "node dev-server.js",
     "test": "eslint src/ ui/ --max-warnings=0 && node tests/run-all.js",
     "lint": "eslint src/ ui/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "desktop": "electron .",
+    "desktop:install": "npm install --save-dev electron electron-builder",
+    "desktop:build": "electron-builder --dir",
+    "desktop:dist": "electron-builder",
+    "android:init": "npx cap init && npx cap add android",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:build": "npx cap sync android && npx cap open android"
+  },
+  "build": {
+    "appId": "cl.footballmanager.chile",
+    "productName": "Football Manager Chile",
+    "directories": {
+      "output": "dist-desktop"
+    },
+    "files": [
+      "**/*",
+      "!node_modules",
+      "!tests",
+      "!dist-desktop",
+      "!*.md",
+      "!electron"
+    ],
+    "win": { "target": "nsis" },
+    "mac": { "target": "dmg" },
+    "linux": { "target": "AppImage" }
   },
   "devDependencies": {
     "eslint": "^9.39.1",

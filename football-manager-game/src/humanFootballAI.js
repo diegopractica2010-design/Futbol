@@ -304,7 +304,9 @@
 
     ["home", "away"].forEach(function (side) {
       if (modifiers[side].pressingIntensity < 1) {
-        modifiers[side].pressureBonus += (modifiers[side].pressingIntensity - 1) * 0.08;
+        const intensityDrop = modifiers[side].pressingIntensity - 1;
+        modifiers[side].pressureBonus += intensityDrop * 0.12;
+        modifiers[side].shotQualityMultiplier *= (1 + intensityDrop * 0.06);
       }
     });
 

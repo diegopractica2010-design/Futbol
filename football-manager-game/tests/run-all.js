@@ -33,7 +33,8 @@ const tests = [
   "tests/runtimeStressHarness.test.js",
   "tests/longTermWorldSimulation.test.js",
   "tests/pre_phase10_validation.test.js",
-  "tests/pre_phase10_finalization.test.js"
+  "tests/pre_phase10_finalization.test.js",
+  "tests/playerCareer.test.js"
 ];
 
 const failures = [];

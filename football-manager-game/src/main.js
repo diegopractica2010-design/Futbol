@@ -125,6 +125,7 @@
       [FMG.ROUTES.history, "Historia", "Momentos legendarios e historia"],
       [FMG.ROUTES.hallOfFame, "HoF", "Salon de la Fama"],
       [FMG.ROUTES.legacy, "Legado", "Legado del manager"],
+      [FMG.ROUTES.playerCareer, "Mi Carrera", "Vida del tecnico — Fase 10"],
       [FMG.ROUTES.settings, "Config", "Guardado y configuracion"],
       [FMG.ROUTES.phase15, "Jugar v1", "Partido jugable Fase 15"],
       [FMG.ROUTES.phase16, "Jugar v2", "Framework modular Fase 16"],
@@ -247,6 +248,7 @@
       case FMG.ROUTES.history: return FMG.renderHistoryView ? FMG.renderHistoryView(FMG.gameState) : "<div class='empty-state'>Vista Historia no disponible.</div>";
       case FMG.ROUTES.hallOfFame: return FMG.renderHallOfFameView ? FMG.renderHallOfFameView(FMG.gameState) : "<div class='empty-state'>Vista Salon de la Fama no disponible.</div>";
       case FMG.ROUTES.legacy: return FMG.renderLegacyView ? FMG.renderLegacyView(FMG.gameState) : "<div class='empty-state'>Vista Legado no disponible.</div>";
+      case FMG.ROUTES.playerCareer: return FMG.renderPlayerCareerView ? FMG.renderPlayerCareerView(FMG.gameState) : "<div class='empty-state'>Vista Carrera no disponible.</div>";
       case FMG.ROUTES.onboarding: return FMG.renderOnboardingView();
       case FMG.ROUTES.credits: return FMG.renderCreditsView();
       case FMG.ROUTES.phase15: return renderSandboxFrame(FMG.renderPhase15View());
@@ -570,6 +572,31 @@
       if (!conflictId || !decision) return;
       const result = FMG.resolveLoyaltyConflict ? FMG.resolveLoyaltyConflict(FMG.gameState, conflictId, decision) : { ok: false, message: "No disponible." };
       FMG.pushNotification(result.message);
+    },
+    "resolve-career-decision": ({ target }) => {
+      const decisionId = target.dataset.decisionId;
+      const choiceId = target.dataset.choiceId;
+      if (!decisionId || !choiceId) return;
+      const result = FMG.resolvePlayerCareerDecision ? FMG.resolvePlayerCareerDecision(FMG.gameState, decisionId, choiceId) : { ok: false, message: "No disponible." };
+      FMG.pushNotification(result.ok ? (result.choice ? result.choice.label : "Decision tomada.") : (result.message || "No disponible."));
+    },
+    "react-to-hook": ({ target }) => {
+      const hookId = target.dataset.hookId;
+      const choice = target.dataset.choice;
+      if (!hookId || !choice) return;
+      const result = FMG.reactToEngagementHook ? FMG.reactToEngagementHook(FMG.gameState, hookId, choice) : { ok: false };
+      FMG.pushNotification(result.ok ? (result.effect ? result.effect.label : "Reaccion registrada.") : "No disponible.");
+    },
+    "resolve-dressing-event": ({ target }) => {
+      const eventId = target.dataset.eventId;
+      const choiceLabel = target.dataset.choiceLabel;
+      if (!eventId || !choiceLabel) return;
+      const result = FMG.resolveDressingRoomEvent ? FMG.resolveDressingRoomEvent(FMG.gameState, eventId, choiceLabel) : { ok: false };
+      FMG.pushNotification(result.ok ? choiceLabel : "No disponible.");
+    },
+    "generate-retirement": () => {
+      const summary = FMG.generateRetirementSummary ? FMG.generateRetirementSummary(FMG.gameState) : null;
+      if (summary) FMG.pushNotification(summary.status + " — Legado: " + summary.legendScore + "/100");
     }
   };
 
