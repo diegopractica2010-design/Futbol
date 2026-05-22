@@ -23,7 +23,19 @@
       "Bash(node -e \"const t=require\\('./data/teams.json'\\); console.log\\('teams count:', t.length, t.map\\(x=>x.id\\).join\\(', '\\)\\)\")",
       "Bash(node -e ' *)",
       "Bash(node tests/pre_phase10_validation.test.js)",
-      "Bash(node tests/pre_phase10_finalization.test.js)"
+      "Bash(node tests/pre_phase10_finalization.test.js)",
+      "Bash(node tests/playerCareer.test.js)",
+      "Bash(grep -v \"node_modules\\\\|//.*TODO\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Diego y Pauli\\\\Desktop\\\\proyecto\\\\futbol\\\\Futbol\\\\football-manager-game\" -Recurse -File)",
+      "Bash(Measure-Object)",
+      "Bash(Select-Object -ExpandProperty Count)",
+      "Bash(npm test *)",
+      "Bash(sort -t: -k3)",
+      "Bash(xargs ls -la)",
+      "Bash(sort -k5 -rn)",
+      "Bash(grep -v \"//.*http\\\\|docs\\\\.\\\\|github\\\\.\\\\|unity3d\")",
+      "Bash(awk '{sum+=$5} END{print \"Total: \" sum/1024 \" KB\"}')",
+      "Bash(node -e \"const p=require\\('./data/players.json'\\); console.log\\('Players:', p.length, 'avg salary:', Math.round\\(p.reduce\\(\\(s,x\\)=>s+\\(x.salary||0\\),0\\)/p.length\\)\\)\")"
     ]
   }
 }
