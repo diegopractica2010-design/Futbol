@@ -574,6 +574,10 @@
       });
     }
     FMG.validateSeedData(teams, players);
+    // DETERMINISM FIX: reset global RNG to seed=1 on every new game so identical
+    // initializeGame(teams, players) calls always produce identical results.
+    const INITIAL_SEED = 1;
+    if (FMG.initRNG) FMG.initRNG(INITIAL_SEED);
     const expandedTeams = typeof document !== "undefined" ? ensureTeamDepth(teams) : teams.map(FMG.cloneTeam);
     const fixtures = buildSeasonFixtures(expandedTeams);
     const seasonPlayers = ensureSquadDepth(expandedTeams, players);
@@ -587,7 +591,7 @@
         selectionMode: true,
         teams: expandedTeams,
         players: seasonPlayers,
-        seed: FMG.getCurrentSeed?.() || 1,
+        seed: INITIAL_SEED,
         fixtures,
         currentWeek: 1,
         totalWeeks: fixtures.length,

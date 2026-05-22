@@ -358,6 +358,12 @@
       pc.psychology.confidence + (userWon ? 4 : -3) + (Math.abs(scoreDiff) >= 3 ? 2 : 0), 0, 100
     );
     pc.career.matches += 1;
+    // Track team goals scored this match as manager career stat
+    if (matchData.result) {
+      const uid = state.userTeamId;
+      const scored = matchData.result.homeTeamId === uid ? (matchData.result.homeGoals || 0) : (matchData.result.awayGoals || 0);
+      pc.career.goals += scored;
+    }
     if (matchData.isDerby) {
       pc.psychology.pressure = clamp(pc.psychology.pressure + (userWon ? -5 : 10), 0, 100);
       generateCareerEvent(state, userWon ? "derby-win" : "derby-loss",

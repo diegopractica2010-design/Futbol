@@ -1,8 +1,19 @@
 // Football Manager Chile — Electron Desktop App
 // Run: npx electron . (requires: npm install --save-dev electron)
+// Build: npm run desktop:dist
 
-const { app, BrowserWindow, Menu } = require("electron");
+const { app, BrowserWindow, Menu, protocol } = require("electron");
 const path = require("path");
+
+// Enable custom protocol for local files (avoids webSecurity: false)
+app.whenReady().then(() => {
+  // Register file:// protocol handler so local HTML/JS/CSS loads correctly
+  protocol.registerFileProtocol("app", (request, callback) => {
+    const filePath = request.url.replace("app://", "");
+    callback(path.join(__dirname, "..", filePath));
+  });
+  createWindow();
+});
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -11,12 +22,13 @@ function createWindow() {
     minWidth: 960,
     minHeight: 640,
     title: "Football Manager Chile",
-    icon: path.join(__dirname, "../assets/favicon.svg"),
     backgroundColor: "#0a1a0e",
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false
+      sandbox: true,
+      // webSecurity enabled (do NOT set to false — security risk)
+      // Local file loading works via file:// protocol
     }
   });
 
@@ -31,13 +43,18 @@ function createWindow() {
         { label: "Salir", role: "quit" }
       ]
     },
-    { label: "Ver", submenu: [{ role: "reload" }, { role: "toggleDevTools" }, { role: "togglefullscreen" }] }
+    {
+      label: "Ver",
+      submenu: [
+        { role: "reload" },
+        { role: "togglefullscreen" }
+        // DevTools removed from release build
+      ]
+    }
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate));
   return win;
 }
-
-app.whenReady().then(createWindow);
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
