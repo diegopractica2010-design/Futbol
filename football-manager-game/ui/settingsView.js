@@ -13,9 +13,9 @@
     return `
       <section class="hero">
         <div class="panel hero-main">
-          <span class="eyebrow">Guardado y robustez</span>
-          <h1 class="hero-title">Configuracion</h1>
-          <p class="hero-copy">Administra slots, autosave, exportacion, dificultad y reglas de temporada para sesiones largas.</p>
+          <span class="eyebrow">Sistema</span>
+          <h1 class="hero-title">Centro de juego</h1>
+          <p class="hero-copy">Administra guardados, dificultad, autosave y reglas de temporada.</p>
           <div class="chips">
             <span class="chip">Version ${state.version}</span>
             <span class="chip">Slot activo ${FMG.escapeHtml(state.saveMeta.activeSlotId)}</span>
@@ -28,7 +28,7 @@
         </div>
         <div class="side-stack">
           <section class="panel">
-            <div class="section-title"><h2>Errores visibles</h2></div>
+            <div class="section-title"><h2>Estado del sistema</h2></div>
             <div class="log-list">
               ${state.systemErrors.length ? state.systemErrors.map((error) => `<div class="log-item"><strong>${FMG.escapeHtml(error.message)}</strong><p class="muted">${FMG.escapeHtml(error.detail)}</p></div>`).join("") : `<div class="empty-state">No hay errores registrados.</div>`}
             </div>

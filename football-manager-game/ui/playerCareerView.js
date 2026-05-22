@@ -1,218 +1,212 @@
 (function () {
   const FMG = (window.FMG = window.FMG || {});
 
-  function reputationBar(label, value) {
-    return `<article class="stat-card">
+  function bar(label, value, className) {
+    return `<article class="stat-card ${className || ""}">
       <div class="muted">${FMG.escapeHtml(label)}</div>
-      <div class="progress" style="margin:4px 0"><span style="width:${FMG.clamp ? FMG.clamp(value, 0, 100) : value}%"></span></div>
-      <div class="stat-value">${Math.round(value)}</div>
+      <div class="progress"><span style="width:${FMG.clamp(Number(value) || 0, 0, 100)}%"></span></div>
+      <div class="stat-value">${Math.round(Number(value) || 0)}</div>
     </article>`;
   }
 
-  function psychBar(label, value, warnHigh, warnLow) {
-    const warn = (warnHigh && value >= warnHigh) ? "⚠️ " : (warnLow && value <= warnLow) ? "⬇️ " : "";
-    return `<article class="stat-card">
-      <div class="muted">${warn}${FMG.escapeHtml(label)}</div>
-      <div class="progress" style="margin:4px 0"><span style="width:${Math.round(value)}%"></span></div>
-      <div class="stat-value">${Math.round(value)}</div>
-    </article>`;
-  }
-
-  function renderDecisions(pc) {
-    const pending = (pc.decisions || []).filter(function (d) { return d.status === "pending"; });
-    if (!pending.length) return `<div class="empty-state">No hay decisiones activas. Surgiran con la evolucion de tu carrera.</div>`;
-    return pending.map(function (d) { return `
-      <div class="log-item">
-        <strong>${FMG.escapeHtml(d.title)}</strong>
-        <p class="muted">${FMG.escapeHtml(d.detail)}</p>
-        <div class="button-row" style="margin-top:0.5rem">
-          ${(d.choices || []).map(function (c) { return `
-            <button class="btn-ghost"
-              data-action="resolve-career-decision"
-              data-decision-id="${FMG.escapeHtml(d.id)}"
-              data-choice-id="${FMG.escapeHtml(c.id)}">
-              ${FMG.escapeHtml(c.label)}
-            </button>`;}).join("")}
-        </div>
-      </div>`;}).join("");
-  }
-
-  function renderEngagementHooks(fu) {
-    const hooks = ((fu && fu.engagementHooks) || []).filter(function (h) { return !h.resolved; }).slice(0, 3);
-    if (!hooks.length) return `<div class="empty-state">Sin eventos activos esta semana.</div>`;
-    return hooks.map(function (h) { return `
-      <div class="log-item">
-        <strong>${FMG.escapeHtml(h.text)}</strong>
-        <div class="button-row" style="margin-top:0.5rem">
-          <button class="btn-primary" data-action="react-to-hook" data-hook-id="${FMG.escapeHtml(h.id)}" data-choice="focus">Concentrarse</button>
-          <button class="btn-ghost" data-action="react-to-hook" data-hook-id="${FMG.escapeHtml(h.id)}" data-choice="rest">Recuperarse</button>
-          <button class="btn-ghost" data-action="react-to-hook" data-hook-id="${FMG.escapeHtml(h.id)}" data-choice="press">Declaraciones</button>
-          <button class="btn-ghost" data-action="react-to-hook" data-hook-id="${FMG.escapeHtml(h.id)}" data-choice="ignore">Ignorar</button>
-        </div>
-      </div>`;}).join("");
-  }
-
-  function renderDressingEvents(state) {
-    const events = (state.dressingRoomEvents || []).filter(function (e) { return !e.resolved && (e.choices || []).length > 0; }).slice(0, 3);
-    if (!events.length) return `<div class="empty-state">El vestuario esta tranquilo.</div>`;
-    return events.map(function (e) { return `
-      <div class="log-item">
-        <strong>${FMG.escapeHtml(e.icon || "")} ${FMG.escapeHtml(e.title)}</strong>
-        <p class="muted">${FMG.escapeHtml(e.description)}</p>
-        <div class="button-row" style="margin-top:0.5rem">
-          ${(e.choices || []).map(function (c) { return `
-            <button class="btn-ghost"
-              data-action="resolve-dressing-event"
-              data-event-id="${FMG.escapeHtml(e.id)}"
-              data-choice-label="${FMG.escapeHtml(c.label)}">
-              ${FMG.escapeHtml(c.label)}
-            </button>`;}).join("")}
-        </div>
-      </div>`;}).join("");
-  }
-
-  function renderLegacyMoments(pc) {
-    const moments = (pc.legacy && pc.legacy.legendaryMoments) || [];
-    if (!moments.length) return `<div class="empty-state">Los momentos legendarios se construyen con el tiempo.</div>`;
-    const typeLabel = { comeback: "Remontada", thriller: "Thrilller", "derby_classic": "Clasico", last_minute_winner: "Gol agónico", hat_trick: "Hat-trick", massive_comeback: "Remontada epica" };
-    return moments.slice(0, 8).map(function (m) { return `
-      <div class="log-item">
-        <strong>⭐ ${FMG.escapeHtml(typeLabel[m.type] || m.type)}</strong>
-        <p class="muted">T${m.season} | Semana ${m.week}</p>
-      </div>`;}).join("");
-  }
-
-  function renderRetirement(pc) {
-    const rs = pc.legacy && pc.legacy.retirementSummary;
-    if (!rs) return `<div class="empty-state">El resumen de retiro se genera al final de la carrera.</div>`;
+  function renderCreator(state) {
+    const archetypes = FMG.PlayerMode?.archetypes || {};
+    const teams = state.teams || [];
     return `
-      <div class="log-item">
-        <strong>${FMG.escapeHtml(rs.status)}</strong>
-        <p class="muted">${FMG.escapeHtml(rs.narrative)}</p>
-        <p class="muted">Titulos: ${rs.trophiesTotal} | Legado: ${rs.legendScore}/100 | Hall of Fame: ${rs.hallOfFame ? "Si" : "No"}</p>
-        ${rs.records.length ? `<div class="chips">${rs.records.map(function (r) { return `<span class="chip">${FMG.escapeHtml(r)}</span>`; }).join("")}</div>` : ""}
+      <section class="hero player-mode-creator" data-player-mode-create>
+        <div class="panel hero-main football-priority">
+          <span class="eyebrow">Modo aparte</span>
+          <h1 class="hero-title">Carrera Jugador</h1>
+          <p class="hero-copy">Crea un futbolista propio y vive una carrera separada del manager: entrenamientos, minutos, mensajes del DT, representante, objetivos y partidos semana a semana.</p>
+          <div class="player-create-grid">
+            <label>
+              <span>Nombre del jugador</span>
+              <input data-player-name type="text" value="Diego Promesa" maxlength="32" />
+            </label>
+            <label>
+              <span>Arquetipo</span>
+              <select data-player-archetype>
+                ${Object.entries(archetypes).map(([key, value]) => `<option value="${key}">${FMG.escapeHtml(value.label)}</option>`).join("")}
+              </select>
+            </label>
+            <label>
+              <span>Primer club</span>
+              <select data-player-club>
+                ${teams.map((team) => `<option value="${FMG.escapeHtml(team.id)}" ${team.id === state.userTeamId ? "selected" : ""}>${FMG.escapeHtml(team.name)}</option>`).join("")}
+              </select>
+            </label>
+          </div>
+          <div class="hero-actions">
+            <button class="btn-primary" data-action="create-player-mode">Crear jugador</button>
+          </div>
+        </div>
+        <div class="side-stack">
+          <section class="panel">
+            <div class="section-title"><h2>Como se juega</h2><span class="chip">Estilo carrera FIFA</span></div>
+            <div class="log-list">
+              <div class="log-item"><strong>Entrena</strong><p class="muted">Sube atributos y forma, pero controla la fatiga.</p></div>
+              <div class="log-item"><strong>Juega semanas</strong><p class="muted">El DT decide minutos segun confianza, forma y rendimiento.</p></div>
+              <div class="log-item"><strong>Responde decisiones</strong><p class="muted">Representante, prensa y entrenador reaccionan de inmediato.</p></div>
+            </div>
+          </section>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderObjectives(pm) {
+    return (pm.objectives || []).map((objective) => {
+      const raw = objective.id === "rating"
+        ? (Number(objective.value) / Math.max(1, Number(objective.target))) * 100
+        : (Number(objective.value) / Math.max(1, Number(objective.target))) * 100;
+      const pct = FMG.clamp(Math.round(raw), 0, 100);
+      return `<div class="log-item">
+        <strong>${FMG.escapeHtml(objective.title)}</strong>
+        <p class="muted">${FMG.escapeHtml(String(objective.value || 0))}/${FMG.escapeHtml(String(objective.target))} ${FMG.escapeHtml(objective.unit)}</p>
+        <div class="progress"><span style="width:${pct}%"></span></div>
       </div>`;
+    }).join("") || `<div class="empty-state">Sin objetivos activos.</div>`;
+  }
+
+  function renderDecisions(pm) {
+    const pending = (pm.decisions || []).filter((decision) => decision.status === "pending");
+    if (!pending.length) return `<div class="empty-state">Sin decisiones urgentes. Avanza semanas para que aparezcan llamadas del DT y del agente.</div>`;
+    return pending.map((decision) => `
+      <div class="log-item consequence-card">
+        <strong>${FMG.escapeHtml(decision.title)}</strong>
+        <p class="muted">${FMG.escapeHtml(decision.detail)}</p>
+        <div class="button-row" style="margin-top:10px;">
+          ${(decision.choices || []).map((choice) => `<button class="btn-secondary" data-action="resolve-player-mode-decision" data-decision-id="${FMG.escapeHtml(decision.id)}" data-choice-id="${FMG.escapeHtml(choice.id)}">${FMG.escapeHtml(choice.label)}</button>`).join("")}
+        </div>
+      </div>`).join("");
+  }
+
+  function renderMatches(pm) {
+    return (pm.matches || []).slice(0, 8).map((match) => `
+      <div class="log-item player-match-row ${match.goals ? "is-wow" : ""}">
+        <strong>Semana ${match.week}: ${FMG.escapeHtml(match.headline)}</strong>
+        <p class="muted">${FMG.escapeHtml(match.clubName)} vs ${FMG.escapeHtml(match.opponentName)} | ${match.starts ? "Titular" : match.minutes ? "Suplente" : "No jugo"} | ${match.minutes} min | Rating ${match.rating}</p>
+        <div class="chips">
+          <span class="chip">Goles ${match.goals}</span>
+          <span class="chip">Asistencias ${match.assists}</span>
+          ${match.cleanSheet ? `<span class="chip chip-success">Porteria a cero</span>` : ""}
+        </div>
+      </div>`).join("") || `<div class="empty-state">Todavia no disputaste partidos. Avanza la primera semana.</div>`;
+  }
+
+  function renderMessages(pm) {
+    return (pm.messages || []).slice(0, 8).map((message) => `
+      <div class="log-item message-${FMG.escapeHtml(message.tone || "neutral")}">
+        <strong>${FMG.escapeHtml(message.from)} | ${FMG.escapeHtml(message.title)}</strong>
+        <p class="muted">${FMG.escapeHtml(message.body)}</p>
+      </div>`).join("") || `<div class="empty-state">Tu bandeja esta vacia.</div>`;
   }
 
   FMG.renderPlayerCareerView = function (state) {
-    const pc = FMG.ensurePlayerCareer ? FMG.ensurePlayerCareer(state) : (state.playerCareer || {});
-    const fu = state.footballUniverse || {};
-    const rep = pc.reputation || {};
-    const psych = pc.psychology || {};
-    const legacy = pc.legacy || {};
-    const career = pc.career || {};
-    const managerName = (state.managerProfile && state.managerProfile.name) || "Manager";
+    const pm = FMG.ensurePlayerMode ? FMG.ensurePlayerMode(state) : state.playerMode;
+    if (!pm || !pm.created) return renderCreator(state);
+    const player = pm.player;
+    const attrs = player.attributes || {};
+    const team = (state.teams || []).find((item) => item.id === pm.clubId);
+    const playerChallenges = FMG.generatePlayerLiveChallenges ? FMG.generatePlayerLiveChallenges(state) : ((state.liveChallenges && state.liveChallenges.player) || []);
 
     return `
-      <section class="screen-rhythm">
-        <section class="card football-priority">
-          <div class="section-title">
-            <div>
-              <span class="eyebrow">Carrera del técnico</span>
-              <h2>${FMG.escapeHtml(managerName)}</h2>
+      <section class="screen-rhythm player-mode-screen">
+        <section class="hero">
+          <div class="panel hero-main football-priority player-mode-hero">
+            <span class="eyebrow">Carrera Jugador</span>
+            <div class="club-heading">
+              <div class="player-avatar">${FMG.escapeHtml((player.name || "JP").split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase())}</div>
+              <h1 class="hero-title">${FMG.escapeHtml(player.name)}</h1>
             </div>
+            <p class="hero-copy">${FMG.escapeHtml(player.archetypeLabel)} | ${FMG.escapeHtml(player.position)} | ${FMG.escapeHtml(team?.name || "Sin club")} | T${pm.seasonNumber} Semana ${pm.week}</p>
             <div class="chips">
-              <span class="chip" title="Legado actual">${FMG.escapeHtml(state.legacy && state.legacy.managerLegacy ? state.legacy.managerLegacy.legacyLabel : "Construyendo")}</span>
-              <span class="chip">T${state.seasonNumber || 1}</span>
-              ${career.trophies && career.trophies.length ? `<span class="chip">🏆 ${career.trophies.length} titulos</span>` : ""}
+              <span class="chip">OVR ${player.overall}</span>
+              <span class="chip">Potencial ${player.potential}</span>
+              <span class="chip">XP ${pm.xp}</span>
+              <span class="chip">Puntos ${pm.skillPoints}</span>
             </div>
+            <div class="hero-actions">
+              <button class="btn-primary" data-action="advance-player-mode-week">Jugar proxima semana</button>
+              <button class="btn-secondary" data-action="train-player-mode" data-plan="balanced">Entreno balanceado</button>
+              <button class="btn-secondary" data-action="train-player-mode" data-plan="finishing">Definicion</button>
+              <button class="btn-secondary" data-action="train-player-mode" data-plan="playmaking">Creacion</button>
+              <button class="btn-secondary" data-action="train-player-mode" data-plan="athletic">Fisico</button>
+            </div>
+          </div>
+          <div class="side-stack">
+            <section class="panel player-inbox">
+              <div class="section-title"><h2>Bandeja del jugador</h2><span class="chip">${(pm.messages || []).length}</span></div>
+              <div class="log-list">${renderMessages(pm)}</div>
+            </section>
           </div>
         </section>
 
         <section class="content-grid">
           <section class="card">
-            <div class="section-title"><h2>Reputacion</h2></div>
+            <div class="section-title"><h2>Atributos</h2><span class="chip">${FMG.escapeHtml(pm.trainingPlan)}</span></div>
             <div class="stats-grid">
-              ${reputationBar("Local", rep.local || 0)}
-              ${reputationBar("Liga nacional", rep.league || 0)}
-              ${reputationBar("Imagen publica", rep.mediaImage || 0)}
-              ${reputationBar("Popularidad fans", rep.fanPop || 0)}
-              ${reputationBar("Mundial", rep.world || 0)}
+              ${bar("Ritmo", attrs.pace)}
+              ${bar("Tiro", attrs.shooting)}
+              ${bar("Pase", attrs.passing)}
+              ${bar("Regate", attrs.dribbling)}
+              ${bar("Defensa", attrs.defending)}
+              ${bar("Fisico", attrs.physical)}
             </div>
           </section>
           <section class="card">
-            <div class="section-title"><h2>Estado psicologico</h2></div>
+            <div class="section-title"><h2>Confianza y entorno</h2></div>
             <div class="stats-grid">
-              ${psychBar("Confianza", psych.confidence || 55, null, 35)}
-              ${psychBar("Moral", psych.morale || 60, null, 40)}
-              ${psychBar("Ambicion", psych.ambition || 70)}
-              ${psychBar("Presion", psych.pressure || 30, 70)}
-              ${psychBar("Burnout", psych.burnout || 20, 80)}
-              ${psychBar("Disciplina", psych.discipline || 65, null, 40)}
+              ${bar("Confianza DT", pm.personality.managerTrust)}
+              ${bar("Carino hinchas", pm.personality.fanLove)}
+              ${bar("Interes mercado", pm.personality.agentHeat)}
+              ${bar("Disciplina", pm.personality.discipline)}
+              ${bar("Forma", pm.personality.form)}
+              ${bar("Fatiga", pm.personality.fatigue)}
             </div>
           </section>
         </section>
 
-        <details class="ux-disclosure">
-          <summary>Estilo de vida del tecnico</summary>
+        <section class="content-grid">
           <section class="card">
-            <div class="section-title"><h2>Lifestyle</h2><span class="chip">Ajusta tu rutina semanal</span></div>
-            <div class="stats-grid">
-              ${(FMG.getLifestyleOptions ? FMG.getLifestyleOptions() : []).map(function (opt) {
-                const val = (pc.lifestyle && pc.lifestyle[opt.key]) || 50;
-                return `<article class="stat-card">
-                  <div class="muted">${FMG.escapeHtml(opt.icon + " " + opt.label)}</div>
-                  <div class="progress" style="margin:4px 0"><span style="width:${val}%"></span></div>
-                  <div class="stat-value">${Math.round(val)}/100</div>
-                  <p class="muted" style="font-size:11px;margin-top:4px">${FMG.escapeHtml(opt.desc)}</p>
-                  <div class="button-row" style="margin-top:6px">
-                    <button class="btn-ghost" data-action="set-lifestyle" data-key="${FMG.escapeHtml(opt.key)}" data-delta="-10">-10</button>
-                    <button class="btn-ghost" data-action="set-lifestyle" data-key="${FMG.escapeHtml(opt.key)}" data-delta="-5">-5</button>
-                    <button class="btn-ghost" data-action="set-lifestyle" data-key="${FMG.escapeHtml(opt.key)}" data-delta="5">+5</button>
-                    <button class="btn-ghost" data-action="set-lifestyle" data-key="${FMG.escapeHtml(opt.key)}" data-delta="10">+10</button>
-                  </div>
-                </article>`;
-              }).join("")}
-            </div>
+            <div class="section-title"><h2>Objetivos de temporada</h2><span class="chip">Progreso visible</span></div>
+            <div class="log-list">${renderObjectives(pm)}</div>
           </section>
-        </details>
-
-        <details class="ux-disclosure">
-          <summary>Trayectoria de clubes</summary>
           <section class="card">
-            <div class="section-title"><h2>Historial de clubes</h2><span class="chip">${(pc.career && pc.career.clubs || []).length} club(es)</span></div>
+            <div class="section-title"><h2>Desafios del jugador</h2><span class="chip">Live</span></div>
             <div class="log-list">
-              ${(pc.career && pc.career.clubs || []).length ? (pc.career.clubs || []).map(function (c) { return `
-                <div class="log-item">
-                  <strong>${FMG.escapeHtml(c.name)}</strong>
-                  <p class="muted">Desde T${c.from}${c.to ? " hasta T" + c.to : " (actual)"} | Titulos: ${c.trophies || 0}</p>
-                </div>`;}).join("") : `<div class="empty-state">El historial de clubes se construye con el tiempo.</div>`}
+              ${playerChallenges.filter((challenge) => challenge.status === "active").slice(0, 3).map((challenge) => {
+                const pct = FMG.clamp(Math.round(((challenge.progress || 0) / Math.max(1, challenge.target || 1)) * 100), 0, 100);
+                return `<div class="log-item challenge-card">
+                  <strong>${FMG.escapeHtml(challenge.title)}</strong>
+                  <p class="muted">${FMG.escapeHtml(challenge.detail)}</p>
+                  <p class="muted">Recompensa: ${FMG.escapeHtml(challenge.reward)}</p>
+                  <div class="progress"><span style="width:${pct}%"></span></div>
+                </div>`;
+              }).join("") || `<div class="empty-state">No hay desafios activos.</div>`}
             </div>
           </section>
-        </details>
-
-        <details class="ux-disclosure" open>
-          <summary>Decisiones activas y gestion de plantilla</summary>
-          <section class="content-grid">
-            <section class="card">
-              <div class="section-title"><h2>Decisiones de carrera</h2><span class="chip">${(pc.decisions || []).filter(function (d) { return d.status === "pending"; }).length} pendientes</span></div>
-              <div class="log-list">${renderDecisions(pc)}</div>
-            </section>
-            <section class="card">
-              <div class="section-title"><h2>Eventos del vestuario</h2></div>
-              <div class="log-list">${renderDressingEvents(state)}</div>
-            </section>
-          </section>
-        </details>
-
-        <details class="ux-disclosure" open>
-          <summary>Pulso de la semana — reacciona ahora</summary>
-          <section class="card">
-            <div class="section-title"><h2>Tension y anticipacion</h2><span class="chip">${((fu.engagementHooks || []).filter(function (h) { return !h.resolved; })).length} activos</span></div>
-            <div class="log-list">${renderEngagementHooks(fu)}</div>
-          </section>
-        </details>
+        </section>
 
         <section class="content-grid">
           <section class="card">
-            <div class="section-title"><h2>Momentos legendarios</h2><span class="chip">${((pc.legacy && pc.legacy.legendaryMoments) || []).length}/15</span></div>
-            <div class="log-list">${renderLegacyMoments(pc)}</div>
+            <div class="section-title"><h2>Decisiones inmediatas</h2><span class="chip">${(pm.decisions || []).filter((decision) => decision.status === "pending").length} pendientes</span></div>
+            <div class="log-list">${renderDecisions(pm)}</div>
+          </section>
+        </section>
+
+        <section class="content-grid">
+          <section class="card">
+            <div class="section-title"><h2>Partidos del jugador</h2><span class="chip">${pm.careerStats.appearances} PJ</span></div>
+            <div class="log-list">${renderMatches(pm)}</div>
           </section>
           <section class="card">
-            <div class="section-title"><h2>Legado final</h2><span class="chip">Score ${legacy.legendScore || 0}/100</span></div>
-            <div class="log-list">${renderRetirement(pc)}</div>
-            <div style="padding:0.75rem 1rem">
-              <button class="btn-secondary" data-action="generate-retirement">Ver resumen de carrera</button>
+            <div class="section-title"><h2>Resumen carrera</h2><span class="chip">Media ${pm.careerStats.avgRating || 0}</span></div>
+            <div class="stats-grid">
+              <article class="stat-card"><div class="muted">Titularidades</div><div class="stat-value">${pm.careerStats.starts || 0}</div></article>
+              <article class="stat-card"><div class="muted">Goles</div><div class="stat-value">${pm.careerStats.goals || 0}</div></article>
+              <article class="stat-card"><div class="muted">Asistencias</div><div class="stat-value">${pm.careerStats.assists || 0}</div></article>
+              <article class="stat-card"><div class="muted">Porterias a cero</div><div class="stat-value">${pm.careerStats.cleanSheets || 0}</div></article>
             </div>
           </section>
         </section>

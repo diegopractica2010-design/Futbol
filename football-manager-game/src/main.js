@@ -84,12 +84,13 @@
 
   function renderSelection() {
     return `
-      <section class="panel">
-        <span class="eyebrow">Seleccion inicial</span>
+      <section class="panel club-selection-screen">
+        <span class="eyebrow">Modo Manager</span>
         <h1 class="hero-title">Elige tu club</h1>
-        <p class="hero-copy">Cada institucion llega con presupuesto, hinchada y estilo propio. El arte del juego esta resuelto con CSS y SVG locales para mantener el proyecto portable y sin dependencias externas.</p>
+        <p class="hero-copy">Cada institucion tiene presupuesto, hinchada, presion y objetivos propios. Elige un proyecto y empieza una temporada completa con partidos en vivo, mercado y drama semanal.</p>
         <div class="hero-actions">
           <button class="btn-secondary" data-action="change-route" data-route="${FMG.ROUTES.settings}">Gestionar guardados</button>
+          <button class="btn-secondary" data-action="change-route" data-route="${FMG.ROUTES.playerCareer}">Ir a Carrera Jugador</button>
         </div>
         <div class="selector-grid">
           ${FMG.gameState.teams.map((team) => {
@@ -112,21 +113,21 @@
 
   function renderNavigation() {
     const items = [
-      [FMG.ROUTES.dashboard, "Inicio", "Panel principal"],
-      [FMG.ROUTES.squad, "Plantilla", "Gestionar jugadores"],
-      [FMG.ROUTES.matches, "Partidos", "Jugar y revisar partidos"],
+      [FMG.ROUTES.dashboard, "Central", "Panel principal"],
+      [FMG.ROUTES.squad, "Plantel", "Gestionar jugadores"],
+      [FMG.ROUTES.matches, "Partido", "Jugar y revisar partidos"],
       [FMG.ROUTES.calendar, "Calendario", "Ver fixture"],
       [FMG.ROUTES.market, "Mercado", "Fichajes y ventas"],
-      [FMG.ROUTES.rival, "Rivales", "Analizar clubes rivales"],
+      [FMG.ROUTES.rival, "Scout", "Analizar clubes rivales"],
       [FMG.ROUTES.table, "Tabla", "Competencias"],
-      [FMG.ROUTES.finances, "Finanzas", "Presupuesto del club"],
-      [FMG.ROUTES.career, "Carrera", "Manager"],
+      [FMG.ROUTES.finances, "Club", "Presupuesto del club"],
+      [FMG.ROUTES.career, "Manager", "Carrera del tecnico"],
       [FMG.ROUTES.news, "Noticias", "Mundo vivo"],
       [FMG.ROUTES.history, "Historia", "Momentos legendarios e historia"],
-      [FMG.ROUTES.hallOfFame, "HoF", "Salon de la Fama"],
+      [FMG.ROUTES.hallOfFame, "Salon", "Salon de la Fama"],
       [FMG.ROUTES.legacy, "Legado", "Legado del manager"],
-      [FMG.ROUTES.playerCareer, "Mi Carrera", "Vida del tecnico — Fase 10"],
-      [FMG.ROUTES.settings, "Config", "Guardado y configuracion"],
+      [FMG.ROUTES.playerCareer, "Jugador", "Modo jugador separado"],
+      [FMG.ROUTES.settings, "Sistema", "Guardado y configuracion"],
       [FMG.ROUTES.phase15, "Jugar v1", "Partido jugable Fase 15"],
       [FMG.ROUTES.phase16, "Jugar v2", "Framework modular Fase 16"],
       [FMG.ROUTES.phase17, "Jugar v3", "Animaciones base Fase 17"],
@@ -139,10 +140,12 @@
       [FMG.ROUTES.phase24, "Jugar v10", "Tácticas en Cancha Fase 24"]
     ];
 
-    const visibleItems = isDevMode ? items : items.filter(([route]) => !String(route).startsWith("phase"));
+    const visibleItems = (isDevMode ? items : items.filter(([route]) => !String(route).startsWith("phase")))
+      .filter(([route]) => FMG.gameState.userTeamId || [FMG.ROUTES.playerCareer, FMG.ROUTES.settings].includes(route));
 
     return `
       <nav class="nav" role="navigation" aria-label="Menu principal">
+        <strong class="nav-brand">FM Chile 26</strong>
         <button class="btn-ghost nav-save" data-action="change-route" data-route="${FMG.ROUTES.settings}" aria-label="Gestionar guardados">Guardar</button>
         ${visibleItems.map(([route, label, tooltip]) => `
           <button class="${FMG.gameState.route === route ? "active" : "btn-ghost"} ${SANDBOX_PHASE_ROUTES.has(route) ? "sandbox-nav-item" : ""}" data-action="change-route" data-route="${route}" aria-current="${FMG.gameState.route === route ? "page" : "false"}" title="${FMG.escapeHtml(SANDBOX_PHASE_ROUTES.has(route) ? `Sandbox / No afecta carrera - ${tooltip}` : tooltip)}" aria-label="${FMG.escapeHtml(SANDBOX_PHASE_ROUTES.has(route) ? `Sandbox, no afecta carrera, ${tooltip}` : tooltip)}">${label}${SANDBOX_PHASE_ROUTES.has(route) ? `<span class="sandbox-mini-badge">Sandbox</span>` : ""}</button>`).join("")}
@@ -342,6 +345,14 @@
         FMG.gameState.selectionMode = true;
       });
     },
+    "start-player-career": () => {
+      localStorage.setItem("fmg-onboarding-done", "1");
+      authorizedGameStateWrite(() => {
+        FMG.gameState.route = FMG.ROUTES.playerCareer;
+        FMG.gameState.selectionMode = false;
+      });
+      syncBrowserRoute(FMG.ROUTES.playerCareer);
+    },
     "import-save-start": () => {
       localStorage.setItem("fmg-onboarding-done", "1");
       authorizedGameStateWrite(() => {
@@ -354,7 +365,7 @@
       unmountCurrentPhaseRoute();
       authorizedGameStateWrite(() => {
         FMG.gameState.route = target.dataset.route;
-        if (target.dataset.route === FMG.ROUTES.settings || target.dataset.route === FMG.ROUTES.credits) FMG.gameState.selectionMode = false;
+        if (target.dataset.route === FMG.ROUTES.settings || target.dataset.route === FMG.ROUTES.credits || target.dataset.route === FMG.ROUTES.playerCareer) FMG.gameState.selectionMode = false;
       });
       syncBrowserRoute(target.dataset.route);
     },
@@ -450,7 +461,7 @@
       const decision = FMG.createNarrativeDecision(FMG.gameState);
       FMG.pushNotification(`Nueva decision: ${decision.title}.`);
     },
-    "resolve-career-decision": ({ target }) => FMG.pushNotification(FMG.resolveNarrativeDecision(FMG.gameState, target.dataset.decisionId, target.dataset.choiceId).message),
+    "resolve-manager-decision": ({ target }) => FMG.pushNotification(FMG.resolveNarrativeDecision(FMG.gameState, target.dataset.decisionId, target.dataset.choiceId).message),
     "set-news-filter": ({ target }) => FMG.setNewsFilter(FMG.gameState, target.dataset.filter),
     "set-table-sort": ({ target }) => FMG.setTableViewOption(FMG.gameState, "sort", target.dataset.sort),
     "set-table-filter": ({ target }) => FMG.setTableViewOption(FMG.gameState, "filter", target.dataset.filter),
@@ -573,6 +584,10 @@
       const result = FMG.resolveLoyaltyConflict ? FMG.resolveLoyaltyConflict(FMG.gameState, conflictId, decision) : { ok: false, message: "No disponible." };
       FMG.pushNotification(result.message);
     },
+    "resolve-player-mode-decision": ({ target }) => {
+      const result = FMG.resolvePlayerModeDecision ? FMG.resolvePlayerModeDecision(FMG.gameState, target.dataset.decisionId, target.dataset.choiceId) : { ok: false, message: "No disponible." };
+      FMG.pushNotification(result.message || (result.ok ? "Decision tomada." : "No disponible."));
+    },
     "resolve-career-decision": ({ target }) => {
       const decisionId = target.dataset.decisionId;
       const choiceId = target.dataset.choiceId;
@@ -604,6 +619,22 @@
       if (!key || !FMG.setLifestyle || !FMG.gameState.playerCareer) return;
       const current = (FMG.gameState.playerCareer.lifestyle && FMG.gameState.playerCareer.lifestyle[key]) || 50;
       FMG.setLifestyle(FMG.gameState, key, current + delta);
+    },
+    "create-player-mode": ({ target }) => {
+      const scope = target.closest("[data-player-mode-create]") || document;
+      const name = scope.querySelector("[data-player-name]")?.value || "Diego Promesa";
+      const archetype = scope.querySelector("[data-player-archetype]")?.value || "striker";
+      const clubId = scope.querySelector("[data-player-club]")?.value || FMG.gameState.userTeamId || FMG.gameState.teams[0]?.id;
+      const result = FMG.createPlayerModeCareer ? FMG.createPlayerModeCareer(FMG.gameState, { name, archetype, clubId }) : { ok: false, message: "No disponible." };
+      FMG.pushNotification(result.message);
+    },
+    "train-player-mode": ({ target }) => {
+      const result = FMG.trainPlayerMode ? FMG.trainPlayerMode(FMG.gameState, target.dataset.plan) : { ok: false, message: "No disponible." };
+      FMG.pushNotification(result.message);
+    },
+    "advance-player-mode-week": () => {
+      const result = FMG.advancePlayerModeWeek ? FMG.advancePlayerModeWeek(FMG.gameState) : { ok: false, message: "No disponible." };
+      FMG.pushNotification(result.message);
     }
   };
 
@@ -678,7 +709,7 @@
       if (browserRoute && localStorage.getItem("fmg-onboarding-done")) {
         authorizedGameStateWrite(() => {
           FMG.gameState.route = browserRoute;
-          FMG.gameState.selectionMode = !FMG.gameState.userTeamId && browserRoute !== FMG.ROUTES.settings;
+          FMG.gameState.selectionMode = !FMG.gameState.userTeamId && ![FMG.ROUTES.settings, FMG.ROUTES.playerCareer].includes(browserRoute);
         });
       }
       syncBrowserRoute(FMG.gameState.route, { replace: true });
@@ -688,11 +719,11 @@
       hideLoadingScreen();
     } catch (error) {
       hideLoadingScreen();
-      app.innerHTML = `
+    app.innerHTML = `
         <section class="panel error-screen">
           <h1>No se pudieron cargar los datos del juego</h1>
-          <p class="hero-copy">Para jugar Football Manager Chile, el juego debe ejecutarse desde un servidor web, no directamente desde tu computador.</p>
-          <h2>Opciones rapidas:</h2>
+          <p class="hero-copy">FM Chile 26 debe ejecutarse desde un servidor local para cargar planteles, clubes y guardados.</p>
+          <h2>Opciones rapidas</h2>
           <ol>
             <li><strong>VS Code:</strong> instala Live Server y abre index.html con "Open with Live Server".</li>
             <li><strong>Python:</strong> ejecuta <code>python -m http.server 8080</code> y abre <code>localhost:8080</code>.</li>

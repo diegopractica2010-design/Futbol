@@ -501,6 +501,29 @@
     if (effects.trust) FMG.updateBoardTrust(state, `Decision: ${choice.label}`, effects.trust);
     if (effects.reputation) adjustReputation(state, effects.reputation, `Decision: ${choice.label}`);
     if (effects.development) FMG.recordCareerDevelopment(state, effects.development, "Impulso narrativo a juveniles");
+    if (FMG.recordVisibleConsequence) {
+      const actor = effects.trust < 0
+        ? "Presidente"
+        : effects.players < 0
+        ? "Referente del plantel"
+        : effects.press > 0
+        ? "Prensa"
+        : "Vestuario";
+      const detail = effects.trust < 0
+        ? "La directiva te llama esa misma noche: quiere ambicion, pero no a cualquier costo."
+        : effects.players < 0
+        ? "Un jugador importante se molesta y avisa que no entrenara igual si el rol no queda claro."
+        : effects.press > 0
+        ? "La conferencia prende titulares y el ambiente alrededor del club se calienta."
+        : "El grupo responde al gesto y la charla se nota en el entrenamiento siguiente.";
+      FMG.recordVisibleConsequence(state, {
+        actor,
+        title: choice.label,
+        detail,
+        tone: effects.trust < 0 || effects.players < 0 ? "danger" : "neutral",
+        stat: effects.trust ? "boardTrust" : effects.players ? "players" : "press"
+      });
+    }
     decision.status = "resolved";
     decision.selectedChoiceId = choice.id;
     decision.result = {

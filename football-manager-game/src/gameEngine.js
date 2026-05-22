@@ -379,8 +379,32 @@
       FMG.closeWriteToken?.();
     }
     if (userMatch) FMG.recordCareerMatchImpact(state, userMatch);
+    if (userMatch) FMG.updateManagerChallengeProgress?.(state, userMatch);
 
     const event = FMG.applyWeeklyEvent(state);
+    if (userMatch) {
+      FMG.evaluateSeasonWowMoments?.(state, userMatch);
+      const userOutcome = userMatch.homeTeamId === state.userTeamId
+        ? userMatch.homeGoals - userMatch.awayGoals
+        : userMatch.awayGoals - userMatch.homeGoals;
+      if (userOutcome <= -2 && state.finances?.boardTrust <= 45) {
+        FMG.recordVisibleConsequence?.(state, {
+          actor: "Presidente",
+          title: "Llamada despues del partido",
+          detail: "El presidente pide explicaciones inmediatas y exige una reaccion en la proxima fecha.",
+          tone: "danger",
+          stat: "boardTrust"
+        });
+      } else if (userOutcome >= 2) {
+        FMG.recordVisibleConsequence?.(state, {
+          actor: "Capitan",
+          title: "El vestuario compra el plan",
+          detail: "Los referentes respaldan publicamente tu planteamiento y sube la energia del grupo.",
+          tone: "success",
+          stat: "players"
+        });
+      }
+    }
     const financeReport = FMG.processWeeklyFinances(state);
     FMG.applyInfrastructureEffects(state);
     FMG.generateIncomingOffers(state);
@@ -407,6 +431,8 @@
       FMG.openWriteToken?.();
       state.currentWeek = nextFixture.week;
       FMG.closeWriteToken?.();
+      const nextUserMatch = nextFixture.matches.find((match) => match.homeTeamId === state.userTeamId || match.awayTeamId === state.userTeamId);
+      FMG.updatePreMatchTension?.(state, nextUserMatch);
     } else {
       FMG.openWriteToken?.();
       state.seasonComplete = true;
@@ -419,6 +445,7 @@
       state.seasonHistory = state.seasonHistory.slice(0, 8);
       FMG.closeWriteToken?.();
       FMG.evaluateCareerSeasonEnd(state, seasonRecord);
+      FMG.updatePreMatchTension?.(state, null);
     }
     updateMarketWindow(state);
     schedulePostWeekSideEffects(state, results, event);
@@ -546,6 +573,9 @@
     FMG.ensureAdvancedTransferMarket?.(revived);
     FMG.ensureFootballGenerationState?.(revived);
     FMG.ensureSquadPsychologyState?.(revived);
+    FMG.ensureSeasonDramaState?.(revived);
+    FMG.ensurePlayerMode?.(revived);
+    FMG.ensureLiveChallenges?.(revived);
     FMG.humanFootballAI?.ensureHumanAIState?.(revived);
     if (revived.userTeamId && !revived.career.objectives.length) FMG.createBoardObjectives(revived);
     FMG.preparePlayersForSeason(revived.players);
@@ -641,6 +671,28 @@
           lastEvaluation: null,
           sackingHistory: []
         },
+        playerMode: {
+          active: false,
+          created: false,
+          player: null,
+          clubId: null,
+          seasonNumber: 1,
+          week: 1,
+          maxWeeks: 30,
+          status: "academy",
+          objectives: [],
+          matches: [],
+          decisions: [],
+          messages: [],
+          offers: [],
+          xp: 0,
+          skillPoints: 0,
+          trainingPlan: "balanced",
+          careerStats: { appearances: 0, starts: 0, goals: 0, assists: 0, cleanSheets: 0, avgRating: 0, trophies: 0 },
+          personality: { managerTrust: 48, fanLove: 35, agentHeat: 28, discipline: 62, form: 50 }
+        },
+        seasonDrama: { moments: [], consequences: [], lastTablePodium: [], preMatchTension: null, seasonMomentCount: {} },
+        liveChallenges: { manager: [], player: [], completed: [] },
         worldNews: { items: [], rivalries: [], streaks: {}, pressQuestions: [], weeklyEvents: [], filter: "all" },
         ui: { selectedRivalId: null, tableSort: "points", tableFilter: "all", calendarFilter: "all", reducedMotion: false },
         settings: FMG.deepClone(FMG.defaultGameSettings),
@@ -666,6 +718,9 @@
     FMG.ensureAdvancedTransferMarket?.(FMG.gameState);
     FMG.ensureFootballGenerationState?.(FMG.gameState);
     FMG.ensureSquadPsychologyState?.(FMG.gameState);
+    FMG.ensureSeasonDramaState?.(FMG.gameState);
+    FMG.ensurePlayerMode?.(FMG.gameState);
+    FMG.ensureLiveChallenges?.(FMG.gameState);
     updateMarketWindow(FMG.gameState);
     if (FMG.PlayerProgressionIntegration?.initializeProgressionForGameState) {
       FMG.PlayerProgressionIntegration.initializeProgressionForGameState(FMG.gameState);
@@ -715,6 +770,10 @@
     FMG.ensureAdvancedTransferMarket?.(FMG.gameState);
     FMG.ensureFootballGenerationState?.(FMG.gameState);
     FMG.ensureSquadPsychologyState?.(FMG.gameState);
+    FMG.ensureSeasonDramaState?.(FMG.gameState);
+    FMG.ensurePlayerMode?.(FMG.gameState);
+    FMG.ensureLiveChallenges?.(FMG.gameState);
+    FMG.generateManagerLiveChallenges?.(FMG.gameState, { force: true });
     FMG.autoSelectLineup(FMG.gameState, team.id);
     FMG.buildTransferMarket(FMG.gameState);
     FMG.ensureUIState(FMG.gameState);
@@ -729,6 +788,11 @@
       dedupeKey: `manager-start-${FMG.gameState.seasonNumber}-${team.id}`
     });
     FMG.pushNotification(`Tomaste el control de ${team.name}.`);
+    const firstUserFixture = FMG.gameState.fixtures
+      .find((fixture) => fixture.matches.some((match) => match.homeTeamId === team.id || match.awayTeamId === team.id));
+    if (firstUserFixture) {
+      FMG.updatePreMatchTension?.(FMG.gameState, firstUserFixture.matches.find((match) => match.homeTeamId === team.id || match.awayTeamId === team.id));
+    }
     if (FMG.emitGameEvent) {
       FMG.emitGameEvent(FMG.EventTypes.BOARD_OBJECTIVE_UPDATED, {
         teamId: team.id,
@@ -801,6 +865,7 @@
     if (!currentFixture) return { ok: false, message: "No quedan fechas por disputar." };
     const userMatch = currentFixture.matches.find((match) => match.homeTeamId === state.userTeamId || match.awayTeamId === state.userTeamId);
     if (!userMatch) return { ok: false, message: "Tu club descansa esta semana." };
+    FMG.updatePreMatchTension?.(state, userMatch);
 
     prepareWeek(state, currentFixture);
     const homeTeam = state.teams.find((team) => team.id === userMatch.homeTeamId);
@@ -982,6 +1047,13 @@
     FMG.ensureAdvancedTransferMarket?.(state);
     FMG.ensureFootballGenerationState?.(state);
     FMG.ensureSquadPsychologyState?.(state);
+    FMG.ensureSeasonDramaState?.(state);
+    FMG.ensureLiveChallenges?.(state);
+    FMG.openWriteToken?.();
+    state.liveChallenges.manager = [];
+    FMG.closeWriteToken?.();
+    FMG.updatePreMatchTension?.(state, fixtures[0]?.matches.find((match) => match.homeTeamId === state.userTeamId || match.awayTeamId === state.userTeamId));
+    FMG.generateManagerLiveChallenges?.(state, { force: true });
     state.teams.forEach((team) => {
       team.form = FMG.clamp(9 + FMG.randomInt(0, 5), 0, 20);
     });

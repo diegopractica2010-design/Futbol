@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="FM Chile" />
     <link rel="manifest" href="./manifest.json" />
-    <meta property="og:title" content="Football Manager Chile" />
+    <meta property="og:title" content="FM Chile 26" />
     <meta property="og:description" content="Gestiona tu club chileno. Tácticas, fichajes y partidos en vivo. Gratis en el navegador." />
     <meta property="og:type" content="game" />
     <meta property="og:image" content="./assets/og-preview.svg" />
@@ -17,7 +17,7 @@
     <meta name="theme-color" content="#0f7a5a" />
     <meta name="description" content="Football Manager Chile - el simulador de fútbol chileno gratuito. Elige tu club, ficha jugadores y dirige tu equipo a la gloria." />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self';" />
-    <title>Football Manager Game Chile</title>
+    <title>FM Chile 26</title>
     <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="./manifest.json" />
     <link rel="stylesheet" href="./css/styles.css" />
@@ -25,7 +25,7 @@
   <body>
     <a class="skip-link" href="#app">Saltar al contenido</a>
     <div id="loading-screen" style="position:fixed;inset:0;display:grid;place-items:center;background:#eef2ea;z-index:999;">
-      <p style="color:#0f7a5a;font-weight:800;font-size:1.5rem;">Cargando Football Manager Chile...</p>
+      <p style="color:#0f7a5a;font-weight:800;font-size:1.5rem;">Cargando FM Chile 26...</p>
     </div>
     <div id="app" role="main" tabindex="-1"></div>
     <canvas id="match-canvas" style="display:none;" role="img" aria-label="Visualizador de partido">
@@ -50,6 +50,8 @@
     <script src="./src/humanFootballAI.js" defer></script>
     <script src="./src/finances.js" defer></script>
     <script src="./src/events.js" defer></script>
+    <script src="./src/seasonDrama.js" defer></script>
+    <script src="./src/liveChallenges.js" defer></script>
     <script src="./src/transfers.js" defer></script>
     <script src="./src/career.js" defer></script>
     <script src="./src/news.js" defer></script>
@@ -68,6 +70,7 @@
     <script src="./src/legacyEngine.js" defer></script>
     <script src="./src/footballUniverse.js" defer></script>
     <script src="./src/playerCareer.js" defer></script>
+    <script src="./src/playerMode.js" defer></script>
     <script src="./src/gameEngine.js" defer></script>
     <script src="./src/tacticalIntelligence.js" defer></script>
     <script src="./src/presentationAtmosphere.js" defer></script>

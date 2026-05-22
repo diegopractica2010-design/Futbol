@@ -211,7 +211,7 @@
             ${FMG.clubBadge(homeTeam, "md")}
             <div><strong>${FMG.escapeHtml(homeTeam.name)}</strong><span>${liveMatch.homeLineupIds.length} en cancha</span></div>
           </div>
-          <div class="live-hud-score">
+          <div class="live-hud-score live-score-pulse">
             <span class="live-hud-clock">${liveMatch.completed ? "FT" : `${liveMatch.minute}'`}</span>
             <strong class="${userGoalFlash ? "score--gol" : ""}" role="status" aria-live="polite" aria-label="Marcador: ${result.homeGoals} a ${result.awayGoals}">${result.homeGoals} - ${result.awayGoals}</strong>
           </div>
@@ -341,8 +341,25 @@
     const homeTeam = currentMatch ? state.teams.find((team) => team.id === currentMatch.homeTeamId) : null;
     const awayTeam = currentMatch ? state.teams.find((team) => team.id === currentMatch.awayTeamId) : null;
     const stats = currentMatch ? currentMatch.stats : null;
+    const drama = FMG.ensureSeasonDramaState ? FMG.ensureSeasonDramaState(state) : (state.seasonDrama || {});
+    const tension = drama.preMatchTension;
     return `
       <section class="screen-rhythm">
+      ${tension ? `<section class="card matchday-tension">
+        <div class="section-title">
+          <div>
+            <span class="eyebrow">Pre-partido</span>
+            <h2>${FMG.escapeHtml(tension.homeTeamName)} vs ${FMG.escapeHtml(tension.awayTeamName)}</h2>
+          </div>
+          <span class="chip tension-chip">${FMG.escapeHtml(tension.label)} ${Math.round(tension.tension)}/100</span>
+        </div>
+        <p class="muted">${FMG.escapeHtml(tension.detail)}</p>
+        <div class="progress tension-progress"><span style="width:${FMG.clamp(tension.tension, 0, 100)}%"></span></div>
+        <div class="button-row" style="margin-top:14px;">
+          <button class="btn-primary live-cta" data-action="start-live-match">Entrar al partido</button>
+          <button class="btn-secondary" data-action="change-route" data-route="${FMG.ROUTES.squad}">Ajustar plantilla</button>
+        </div>
+      </section>` : ""}
       <section class="content-grid">
         <section class="card football-priority">
           <div class="section-title">

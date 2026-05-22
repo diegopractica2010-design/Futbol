@@ -41,7 +41,7 @@
         ${
           pending
             ? `<div class="button-row" style="margin-top:10px;">
-                ${decision.choices.map((choice) => `<button class="btn-secondary" data-action="resolve-career-decision" data-decision-id="${decision.id}" data-choice-id="${choice.id}">${FMG.escapeHtml(choice.label)}</button>`).join("")}
+                ${decision.choices.map((choice) => `<button class="btn-secondary" data-action="resolve-manager-decision" data-decision-id="${decision.id}" data-choice-id="${choice.id}">${FMG.escapeHtml(choice.label)}</button>`).join("")}
               </div>`
             : `<p class="muted">Resuelto: ${FMG.escapeHtml(decision.result?.label || "Sin detalle")}</p>`
         }

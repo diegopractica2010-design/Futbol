@@ -24,6 +24,10 @@
     const position = state.standings.findIndex((entry) => entry.teamId === state.userTeamId) + 1;
     const progress = state.totalWeeks ? (state.completedWeeks / state.totalWeeks) * 100 : 0;
     const plan = FMG.getTeamPlan(state, state.userTeamId);
+    const drama = FMG.ensureSeasonDramaState ? FMG.ensureSeasonDramaState(state) : (state.seasonDrama || {});
+    const challenges = FMG.generateManagerLiveChallenges ? FMG.generateManagerLiveChallenges(state) : ((state.liveChallenges && state.liveChallenges.manager) || []);
+    const tension = drama.preMatchTension;
+    const canPlayLive = !state.seasonComplete && !state.liveMatch;
 
     return `
       <section class="hero">
@@ -38,7 +42,8 @@
           </div>
           <div class="hero-actions">
             ${avgEnergy < 60 || avgMorale < 45 ? `<div class="empty-state alert-state">Plantel en zona de riesgo: energía ${avgEnergy}/100, moral ${avgMorale}/100.</div>` : ""}
-            <button class="btn-primary" data-action="advance-week" aria-label="Simular semana completa">Simular semana</button>
+            ${canPlayLive ? `<button class="btn-primary live-cta" data-action="start-live-match" aria-label="Jugar partido con visualizador integrado">Jugar partido en vivo</button>` : ""}
+            <button class="btn-secondary" data-action="advance-week" aria-label="Simular semana completa">Simular semana</button>
             ${state.seasonComplete ? `<button class="btn-primary" data-action="new-season" data-confirm="Iniciar temporada ${state.seasonNumber + 1}?">Nueva temporada</button>` : ""}
             <button class="btn-secondary" data-action="change-route" data-route="${FMG.ROUTES.settings}">Gestionar guardados</button>
           </div>
@@ -66,6 +71,12 @@
                   : `<div class="empty-state">Tu club descansa en la próxima fecha.</div>`
             }
           </section>
+          ${tension ? `<section class="panel pre-match-tension">
+            <div class="section-title"><h2>${FMG.escapeHtml(tension.label)}</h2><span class="chip tension-chip">${Math.round(tension.tension)}/100</span></div>
+            <p><strong>${FMG.escapeHtml(tension.homeTeamName)} vs ${FMG.escapeHtml(tension.awayTeamName)}</strong></p>
+            <p class="muted">${FMG.escapeHtml(tension.detail)}</p>
+            <div class="progress tension-progress"><span style="width:${FMG.clamp(tension.tension, 0, 100)}%"></span></div>
+          </section>` : ""}
           <section class="panel">
             <div class="section-title"><h2>Radar rápido</h2></div>
             <div class="log-list">
@@ -94,7 +105,7 @@
           </div>
         </section>
         <section class="card">
-          <div class="section-title"><h2>Top liga</h2></div>
+          <div class="section-title"><h2>Podio en tiempo real</h2><span class="chip">Tabla viva</span></div>
           <div class="table">
             <div class="table-row header"><span>#</span><span>Equipo</span><span>Pts</span><span>DG</span><span>GF</span><span>PJ</span></div>
             ${state.standings.slice(0, 5).map((entry, index) => `
@@ -103,7 +114,46 @@
               </div>`).join("")}
           </div>
         </section>
+        <section class="card">
+          <div class="section-title"><h2>Desafios de temporada</h2><span class="chip">Live</span></div>
+          <div class="log-list">
+            ${challenges.filter((challenge) => challenge.status === "active").slice(0, 3).map((challenge) => {
+              const pct = FMG.clamp(Math.round(((challenge.progress || 0) / Math.max(1, challenge.target || 1)) * 100), 0, 100);
+              return `<div class="log-item challenge-card">
+                <strong>${FMG.escapeHtml(challenge.title)}</strong>
+                <p class="muted">${FMG.escapeHtml(challenge.detail)}</p>
+                <p class="muted">Recompensa: ${FMG.escapeHtml(challenge.reward)}</p>
+                <div class="progress"><span style="width:${pct}%"></span></div>
+              </div>`;
+            }).join("") || `<div class="empty-state">No hay desafios activos.</div>`}
+          </div>
+        </section>
       </section>
+      ${(drama.moments || []).length || (drama.consequences || []).length ? `<details class="ux-disclosure" open>
+        <summary>Momentos wow y consecuencias inmediatas</summary>
+        <section class="content-grid">
+          <section class="card">
+            <div class="section-title"><h2>Momentos de temporada</h2><span class="chip">${(drama.moments || []).filter((item) => item.seasonNumber === state.seasonNumber).length}/3 esta temporada</span></div>
+            <div class="log-list">
+              ${(drama.moments || []).slice(0, 6).map((item) => `
+                <div class="log-item wow-moment">
+                  <strong>Semana ${item.week}: ${FMG.escapeHtml(item.title)}</strong>
+                  <p class="muted">${FMG.escapeHtml(item.detail)}</p>
+                </div>`).join("") || `<div class="empty-state">Los grandes momentos apareceran cuando la temporada se rompa.</div>`}
+            </div>
+          </section>
+          <section class="card">
+            <div class="section-title"><h2>Consecuencias visibles</h2><span class="chip">${(drama.consequences || []).length}</span></div>
+            <div class="log-list">
+              ${(drama.consequences || []).slice(0, 6).map((item) => `
+                <div class="log-item consequence-card tone-${FMG.escapeHtml(item.tone || "neutral")}">
+                  <strong>${FMG.escapeHtml(item.actor)} | ${FMG.escapeHtml(item.title)}</strong>
+                  <p class="muted">${FMG.escapeHtml(item.detail)}</p>
+                </div>`).join("") || `<div class="empty-state">Las decisiones fuertes dejaran huella aqui.</div>`}
+            </div>
+          </section>
+        </section>
+      </details>` : ""}
       <details class="ux-disclosure">
         <summary>Historial de temporadas</summary>
         <section class="card">

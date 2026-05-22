@@ -34,7 +34,8 @@ const tests = [
   "tests/longTermWorldSimulation.test.js",
   "tests/pre_phase10_validation.test.js",
   "tests/pre_phase10_finalization.test.js",
-  "tests/playerCareer.test.js"
+  "tests/playerCareer.test.js",
+  "tests/playerMode.test.js"
 ];
 
 const failures = [];

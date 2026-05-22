@@ -45,6 +45,15 @@
       spendingThisSeason: 0, transferProfitThisSeason: 0, developedPlayersThisSeason: 0,
       currentClubStartedSeason: 1, lastEvaluation: null, sackingHistory: []
     },
+    playerMode: {
+      active: false, created: false, player: null, clubId: null, seasonNumber: 1, week: 1,
+      maxWeeks: 30, status: "academy", objectives: [], matches: [], decisions: [],
+      messages: [], offers: [], xp: 0, skillPoints: 0, trainingPlan: "balanced",
+      careerStats: { appearances: 0, starts: 0, goals: 0, assists: 0, cleanSheets: 0, avgRating: 0, trophies: 0 },
+      personality: { managerTrust: 48, fanLove: 35, agentHeat: 28, discipline: 62, form: 50 }
+    },
+    seasonDrama: { moments: [], consequences: [], lastTablePodium: [], preMatchTension: null, seasonMomentCount: {} },
+    liveChallenges: { manager: [], player: [], completed: [] },
     worldNews: { items: [], rivalries: [], streaks: {}, pressQuestions: [], weeklyEvents: [], filter: "all" },
     ui: { selectedRivalId: null, tableSort: "points", tableFilter: "all", calendarFilter: "all", reducedMotion: false },
     settings: {

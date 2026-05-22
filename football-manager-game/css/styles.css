@@ -1114,6 +1114,198 @@ button {
 .toast-market { border-left-color: var(--primary-2); }
 .toast-achievement { border-left-color: var(--primary-2); background: #1c231a; }
 
+.game-entry {
+  display: grid;
+  gap: 18px;
+}
+
+.game-entry__hero {
+  min-height: 380px;
+  display: grid;
+  align-content: end;
+  padding: clamp(24px, 5vw, 56px);
+  border: 1px solid rgba(231, 184, 74, 0.24);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(8, 12, 10, 0.08), rgba(8, 12, 10, 0.9)),
+    radial-gradient(circle at 20% 18%, rgba(41, 168, 119, 0.32), transparent 30%),
+    radial-gradient(circle at 80% 18%, rgba(231, 184, 74, 0.22), transparent 34%),
+    linear-gradient(135deg, #16392c, #101713 62%, #080b09);
+  box-shadow: var(--shadow);
+}
+
+.game-entry__hero .hero-title {
+  max-width: 14ch;
+  font-size: clamp(2.4rem, 6vw, 5rem);
+}
+
+.mode-select-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.mode-card {
+  display: grid;
+  gap: 14px;
+  min-height: 280px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.06), transparent 42%),
+    var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.mode-card h2 {
+  font-size: clamp(1.6rem, 3vw, 2.6rem);
+}
+
+.mode-card__features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mode-card__features span {
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.mode-card--manager {
+  border-color: rgba(41, 168, 119, 0.3);
+}
+
+.mode-card--player {
+  border-color: rgba(231, 184, 74, 0.3);
+}
+
+.nav-brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 10px;
+  color: #f3d789;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.live-cta {
+  animation: urgencyPulse 1.4s ease-in-out infinite;
+}
+
+.pre-match-tension,
+.matchday-tension {
+  border-color: rgba(231, 184, 74, 0.34);
+  background:
+    linear-gradient(135deg, rgba(231, 184, 74, 0.13), transparent 54%),
+    var(--surface);
+}
+
+.tension-chip {
+  background: rgba(224, 90, 79, 0.16);
+  color: #ffb0a8;
+}
+
+.tension-progress > span {
+  background: linear-gradient(90deg, var(--primary-2), var(--danger));
+}
+
+.wow-moment {
+  border-left: 4px solid var(--primary-2);
+  background:
+    linear-gradient(90deg, rgba(231, 184, 74, 0.13), transparent 54%),
+    var(--surface-2);
+}
+
+.challenge-card {
+  border-left: 4px solid #5da7e8;
+  background:
+    linear-gradient(90deg, rgba(93, 167, 232, 0.11), transparent 52%),
+    var(--surface-2);
+}
+
+.consequence-card {
+  border-left: 4px solid rgba(231, 184, 74, 0.36);
+}
+
+.consequence-card.tone-danger,
+.message-danger {
+  border-left-color: var(--danger);
+}
+
+.consequence-card.tone-success,
+.message-success {
+  border-left-color: var(--success);
+}
+
+.live-score-pulse strong {
+  animation: scoreboardBreath 1.2s ease-in-out infinite;
+}
+
+.player-create-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.player-create-grid label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.player-create-grid input,
+.player-create-grid select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.player-avatar {
+  display: grid;
+  place-items: center;
+  width: 74px;
+  height: 74px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--primary), #17684f);
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 950;
+  box-shadow: var(--shadow);
+}
+
+.player-mode-hero {
+  overflow: hidden;
+}
+
+.player-match-row.is-wow {
+  border-left: 4px solid var(--primary-2);
+  background: linear-gradient(90deg, rgba(231, 184, 74, 0.11), transparent 52%), var(--surface-2);
+}
+
+@keyframes urgencyPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(231, 184, 74, 0.34), 0 10px 20px rgba(20, 108, 67, 0.22); }
+  50% { box-shadow: 0 0 0 6px rgba(231, 184, 74, 0.08), 0 12px 24px rgba(20, 108, 67, 0.28); }
+}
+
+@keyframes scoreboardBreath {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+
 .market-hero {
   overflow: hidden;
 }
@@ -1237,6 +1429,15 @@ button {
   .market-kpis,
   .market-rating {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .player-create-grid {
+    grid-template-columns: 1fr;
+  }
+  .mode-select-grid {
+    grid-template-columns: 1fr;
+  }
+  .game-entry__hero {
+    min-height: 320px;
   }
 }
 
