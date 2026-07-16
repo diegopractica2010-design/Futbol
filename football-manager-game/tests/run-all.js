@@ -35,7 +35,8 @@ const tests = [
   "tests/pre_phase10_validation.test.js",
   "tests/pre_phase10_finalization.test.js",
   "tests/playerCareer.test.js",
-  "tests/playerMode.test.js"
+  "tests/playerMode.test.js",
+  "tests/sharedUniverse.test.js"
 ];
 
 const failures = [];

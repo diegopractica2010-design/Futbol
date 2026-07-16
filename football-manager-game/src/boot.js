@@ -148,4 +148,5 @@ import "../ui/historyView.js";
 import "../ui/hallOfFameView.js";
 import "../ui/legacyView.js";
 import "../ui/playerCareerView.js";
+import "../persistence/sharedUniverse.js";
 import "./main.js";
