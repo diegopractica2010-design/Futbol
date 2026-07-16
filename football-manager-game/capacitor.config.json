@@ -1,7 +1,7 @@
 {
   "appId": "cl.footballmanager.chile",
   "appName": "Football Manager Chile",
-  "webDir": ".",
+  "webDir": "dist",
   "server": {
     "androidScheme": "https"
   },

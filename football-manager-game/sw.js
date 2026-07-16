@@ -1,20 +1,16 @@
-// Football Manager Chile — Service Worker
-// Enables PWA offline support and installability on Android / Desktop
+// Football Manager Chile — Service Worker (Vite build)
+// Cache-first strategy for hashed assets (safe: new build = new hash)
 
-const CACHE_NAME = "fmg-chile-v18";
-const STATIC_ASSETS = [
+const CACHE_NAME = "fmg-chile-v19";
+const PRECACHE_URLS = [
   "./index.html",
-  "./css/styles.css",
-  "./manifest.json",
-  "./assets/favicon.svg",
-  "./data/teams.json",
-  "./data/players.json"
+  "./manifest.json"
 ];
 
 self.addEventListener("install", function (event) {
   event.waitUntil(
     caches.open(CACHE_NAME).then(function (cache) {
-      return cache.addAll(STATIC_ASSETS);
+      return cache.addAll(PRECACHE_URLS);
     }).then(function () {
       return self.skipWaiting();
     })
@@ -35,27 +31,17 @@ self.addEventListener("activate", function (event) {
 });
 
 self.addEventListener("fetch", function (event) {
-  // Network-first for data, cache-first for assets
-  const url = new URL(event.request.url);
-  if (url.pathname.endsWith(".json") || url.pathname.endsWith(".js")) {
-    event.respondWith(
-      fetch(event.request).catch(function () {
-        return caches.match(event.request);
-      })
-    );
-  } else {
-    event.respondWith(
-      caches.match(event.request).then(function (cached) {
-        return cached || fetch(event.request).then(function (response) {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(function (cache) {
-              cache.put(event.request, clone);
-            });
-          }
-          return response;
-        });
-      })
-    );
-  }
+  event.respondWith(
+    caches.match(event.request).then(function (cached) {
+      return cached || fetch(event.request).then(function (response) {
+        if (response && response.status === 200 && response.type === "basic") {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(function (cache) {
+            cache.put(event.request, clone);
+          });
+        }
+        return response;
+      });
+    })
+  );
 });
