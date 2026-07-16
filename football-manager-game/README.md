@@ -1,64 +1,64 @@
-# Football Manager Chile
+# Football Life
 
-Simulador web de gestion futbolistica chilena en vanilla JavaScript con Three.js. Funciona como SPA desplegable en GitHub Pages o Netlify, carga datos locales desde `data/`, guarda progreso en `localStorage` y permite exportar/importar partidas.
+Simulador web de gestión futbolística chilena. Stack: **Vite + JavaScript (ES modules)**.
 
-Estado actual: fase publica 24 en navegador. La suite historica de tests conserva compatibilidad con fase 13 en Node.
+## Requisitos
 
-## Caracteristicas
+- Node.js 18+
+- Navegador moderno
 
-- Seleccion de club chileno con dificultad visible.
-- Liga ampliada en navegador, Copa Chile, supercopa e internacional simplificada.
-- Partido en vivo con visualizador 3D, momentum, relato, tacticas, cambios y eventos traducidos.
-- Simulacion de partidos con constantes unificadas entre modo texto y modo vivo.
-- Planteles con profundidad, agentes libres, lesiones, sanciones, moral y energia.
-- Mercado, cesiones, renovaciones, ofertas recibidas e IA rival.
-- Finanzas con presupuestos, prestamos, sponsors, TV, infraestructura, staff y fair play.
-- Carrera de manager con reputacion, objetivos, logros, noticias y decisiones narrativas.
-- Guardado por slots, autosave, historial de notificaciones y export/import validado.
-- Onboarding, creditos/version, meta tags sociales y error de servidor local comprensible.
-
-## Estructura
-
-- `index.html`: punto de entrada.
-- `css/styles.css`: interfaz, accesibilidad visual y visualizador.
-- `src/`: motores, estado, guardado, simulacion y fases 3D.
-- `ui/`: vistas renderizadas por ruta.
-- `data/`: seed base de equipos y jugadores.
-- `tests/`: regresion automatizada.
-
-## Arquitectura Runtime
-
-La interfaz del navegador usa `FMG.gameState` como estado primario de UI por compatibilidad con las partidas existentes. `FMG.Core` se mantiene activo como capa de validacion, determinismo, snapshots, replay y migracion incremental por dominio; no debe asumirse como driver principal de UI hasta completar una migracion dedicada.
-
-## Ejecucion Local
-
-El juego debe abrirse desde un servidor web, no con doble clic sobre `index.html`.
+## Arrancar
 
 ```bash
 cd football-manager-game
-python -m http.server 8080
+npx vite
 ```
 
-Luego abre `http://localhost:8080`.
+Abrir `http://localhost:5173`.
 
-Alternativas:
-
-- VS Code: extension Live Server, clic derecho en `index.html`, "Open with Live Server".
-- Node.js: `npx serve .`.
-
-Modo desarrollo:
-
-- Agrega `?dev` a la URL para mostrar las fases sandbox 15-24 y herramientas experimentales.
-- Cuando `?dev` esta activo, el juego muestra un aviso visible porque esas pantallas no afectan la carrera principal.
-
-## Pruebas
+## Build producción
 
 ```bash
-npm test
+npx vite build
 ```
 
-Tambien se puede verificar sintaxis de todos los scripts con:
+El output queda en `dist/`.
+
+## Tests
 
 ```bash
-Get-ChildItem -Recurse -Filter *.js | ForEach-Object { node --check $_.FullName }
+node tests/run-all.js
 ```
+
+## Estructura
+
+```
+football-manager-game/
+├── index.html              # Entry point (Vite)
+├── vite.config.js
+├── src/                    # Código fuente (IIFE → window.FMG)
+│   ├── boot.js             # Cadena de imports (orden de dependencias)
+│   └── main.js             # Router principal
+├── simulation/             # Motor 2D oficial
+│   ├── engine/             # Framework de sistemas (antes phase16)
+│   ├── animation/          # Animación de jugadores (antes phase17)
+│   ├── ai/                 # IA de equipos (antes phase18)
+│   ├── goalkeeper/         # Porteros (antes phase19)
+│   ├── broadcast/          # Cámara broadcast (antes phase20)
+│   ├── stadium/            # Estadio (antes phase21)
+│   ├── hud/                # HUD final (antes phase22)
+│   ├── audio/              # Audio de partido (antes phase23)
+│   └── tactics/            # Tácticas en cancha (antes phase24)
+├── ui/                     # Vistas renderizadas por ruta
+├── persistence/            # Persistencia (IndexedDB, etc.)
+├── data/                   # Datos de equipos y jugadores
+├── tests/                  # Tests de regresión (Node.js)
+├── docs/                   # Documentación vigente
+│   └── legacy/             # Reportes históricos archivados
+├── assets/                 # Estáticos (favicon, manifest, etc.)
+└── dist/                   # Build de producción (generado por Vite)
+```
+
+## Modo dev
+
+Agrega `?dev` a la URL para mostrar los sandboxes del motor 2D.

@@ -349,3 +349,15 @@ Archivos marcados ELIMINAR/ARCHIVAR que **todavía** están referenciados por c�
 4. **¿Cuándo se ficcionalizan los nombres reales?** El GDD lo pone en Fase 9, pero `data/teams.json`, `presentation.js` y `news.js` ya los traen; si el juego se comparte públicamente antes (itch.io beta), habría que adelantarlo.
 5. **`runtimeHardening.js` (2.839 líneas, 42 exports sin uso externo)**: ¿se poda en Fase 0 o se difiere? Podarlo temprano simplifica la migración a Vite, pero es riesgo extra en la misma fase.
 6. Los tests `phaseN.test.js` conservan nombres por fase histórica; ¿se renombran junto a los módulos en Fase 0 o se dejan como están hasta el vertical slice?
+
+---
+
+## Nota de ejecución — Fase 0 completada el 2026-07-16
+
+**Desviaciones respecto a esta spec:**
+1. `matchVisualizer.js` y `matchVisualController.js` NO se archivaron (siguen activos y referenciados por `gameEngine.js` y `main.js`). Diferido a Fase 1.
+2. `runtimeHardening.js` NO se tocó (como especificado).
+3. `ecs.js` NO se tocó (como especificado).
+4. Los `README.md` de carpetas de dominio vacías se omitieron (solo tienen `.gitkeep`).
+5. CSP se eliminó temporalmente del index.html para compatibilidad con Vite dev server; re-agregar en producción.
+6. El comando `npm test` no está configurado aún (los tests se corren con `node tests/run-all.js`).
