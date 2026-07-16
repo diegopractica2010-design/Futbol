@@ -20,7 +20,7 @@ const tests = [
   "tests/advancedTransferMarket.test.js",
   "tests/advancedYouthAcademy.test.js",
   "tests/squadPsychology.test.js",
-  "tests/phase15_16_17_smoke.test.js",
+  "tests/phase16_17_smoke.test.js",
   "tests/phase19_22.test.js",
   "tests/phase24.test.js",
   "tests/performance_foundation.test.js",

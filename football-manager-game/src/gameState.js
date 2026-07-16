@@ -7,7 +7,7 @@
     rival: "rival", calendar: "calendar", settings: "settings", table: "table",
     onboarding: "onboarding", credits: "credits",
     history: "history", hallOfFame: "hall-of-fame", legacy: "legacy", playerCareer: "player-career",
-    phase15: "phase15", phase16: "phase16", phase17: "phase17",
+    phase16: "phase16", phase17: "phase17",
     phase18: "phase18", phase19: "phase19", phase20: "phase20", phase21: "phase21",
     phase22: "phase22", phase23: "phase23", phase24: "phase24"
   };

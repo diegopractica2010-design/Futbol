@@ -7,7 +7,7 @@
   let livePlaybackTimer = 0;
   let notificationPruneTimer = 0;
   const SANDBOX_PHASE_ROUTES = new Set([
-    "phase15", "phase16", "phase17", "phase18", "phase19",
+    "phase16", "phase17", "phase18", "phase19",
     "phase20", "phase21", "phase22", "phase23", "phase24"
   ]);
   const SANDBOX_OPT_IN_KEY = "fmg-sandbox-opt-in";
@@ -128,7 +128,6 @@
       [FMG.ROUTES.legacy, "Legado", "Legado del manager"],
       [FMG.ROUTES.playerCareer, "Jugador", "Modo jugador separado"],
       [FMG.ROUTES.settings, "Sistema", "Guardado y configuracion"],
-      [FMG.ROUTES.phase15, "Jugar v1", "Partido jugable Fase 15"],
       [FMG.ROUTES.phase16, "Jugar v2", "Framework modular Fase 16"],
       [FMG.ROUTES.phase17, "Jugar v3", "Animaciones base Fase 17"],
       [FMG.ROUTES.phase18, "Jugar v4", "Comportamiento rival Fase 18"],
@@ -254,7 +253,6 @@
       case FMG.ROUTES.playerCareer: return FMG.renderPlayerCareerView ? FMG.renderPlayerCareerView(FMG.gameState) : "<div class='empty-state'>Vista Carrera no disponible.</div>";
       case FMG.ROUTES.onboarding: return FMG.renderOnboardingView();
       case FMG.ROUTES.credits: return FMG.renderCreditsView();
-      case FMG.ROUTES.phase15: return renderSandboxFrame(FMG.renderPhase15View());
       case FMG.ROUTES.phase16: return renderSandboxFrame(FMG.renderPhase16View());
       case FMG.ROUTES.phase17: return renderSandboxFrame(FMG.renderPhase17View());
       case FMG.ROUTES.phase18: return renderSandboxFrame(FMG.renderPhase18View());
@@ -309,7 +307,6 @@
 
   function unmountCurrentPhaseRoute() {
     const phaseUnmounts = {
-      [FMG.ROUTES.phase15]: FMG.unmountPhase15,
       [FMG.ROUTES.phase16]: FMG.unmountPhase16,
       [FMG.ROUTES.phase17]: FMG.unmountPhase17,
       [FMG.ROUTES.phase18]: FMG.unmountPhase18,
@@ -324,7 +321,6 @@
   }
 
   const PHASE_ACTION_HANDLERS = [
-    () => FMG.handlePhase15Action,
     () => FMG.handlePhase16Action,
     () => FMG.handlePhase17Action,
     () => FMG.handlePhase18Action,
