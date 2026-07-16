@@ -44,21 +44,21 @@ window.FMG = {};
 
 [
   "src/performance.js",
-  "src/phase16/constants.js",
-  "src/phase16/InputSystem.js",
-  "src/phase16/BallSystem.js",
-  "src/phase16/MatchSystem.js",
-  "src/phase16/AISystem.js",
-  "src/phase16/AnimationSystem.js",
-  "src/phase16/CameraSystem.js",
-  "src/phase16/HUDSystem.js",
-  "src/phase16/AudioSystem.js",
-  "src/phase16/index.js",
-  "src/phase18/Formation.js",
-  "src/phase18/PlayerRole.js",
-  "src/phase18/DecisionSystem.js",
-  "src/phase18/MovementSystem.js",
-  "src/phase18/TeamBrain.js"
+  "simulation/engine/constants.js",
+  "simulation/engine/InputSystem.js",
+  "simulation/engine/BallSystem.js",
+  "simulation/engine/MatchSystem.js",
+  "simulation/engine/AISystem.js",
+  "simulation/engine/AnimationSystem.js",
+  "simulation/engine/CameraSystem.js",
+  "simulation/engine/HUDSystem.js",
+  "simulation/engine/AudioSystem.js",
+  "simulation/engine/index.js",
+  "simulation/ai/Formation.js",
+  "simulation/ai/PlayerRole.js",
+  "simulation/ai/DecisionSystem.js",
+  "simulation/ai/MovementSystem.js",
+  "simulation/ai/TeamBrain.js"
 ].forEach((file) => vm.runInThisContext(fs.readFileSync(path.join(root, file), "utf8"), { filename: file }));
 
 const FMG = window.FMG;

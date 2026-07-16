@@ -10,17 +10,17 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const basePath = path.join(__dirname, "..", "src");
+const basePath = path.join(__dirname, "..", "simulation");
 
 // Test 1: Archivos Phase 16 existen
 try {
   const files = [
-    path.join(basePath, "phase16", "index.js"),
-    path.join(basePath, "phase16", "MatchSystem.js"),
-    path.join(basePath, "phase16", "InputSystem.js"),
-    path.join(basePath, "phase16", "CameraSystem.js"),
-    path.join(basePath, "phase16", "AISystem.js"),
-    path.join(basePath, "phase16", "HUDSystem.js")
+    path.join(basePath, "engine", "index.js"),
+    path.join(basePath, "engine", "MatchSystem.js"),
+    path.join(basePath, "engine", "InputSystem.js"),
+    path.join(basePath, "engine", "CameraSystem.js"),
+    path.join(basePath, "engine", "AISystem.js"),
+    path.join(basePath, "engine", "HUDSystem.js")
   ];
   
   files.forEach((file) => {
@@ -38,9 +38,9 @@ try {
 // Test 2: Archivos Phase 17 existen
 try {
   const files = [
-    path.join(basePath, "phase17", "index.js"),
-    path.join(basePath, "phase17", "AnimationClip.js"),
-    path.join(basePath, "phase17", "BlendTree.js")
+    path.join(basePath, "animation", "index.js"),
+    path.join(basePath, "animation", "AnimationClip.js"),
+    path.join(basePath, "animation", "BlendTree.js")
   ];
   
   files.forEach((file) => {
@@ -57,7 +57,7 @@ try {
 
 // Test 3: Phase 16 HUDSystem no tiene TODOs ambiguos
 try {
-  const hudFile = path.join(basePath, "phase16", "HUDSystem.js");
+  const hudFile = path.join(basePath, "engine", "HUDSystem.js");
   const content = fs.readFileSync(hudFile, "utf8");
   const lines = content.split("\n");
   const todoLine = lines.find(line => line.includes("TODO") && !line.includes("Responsabilidad"));
@@ -71,17 +71,17 @@ try {
 // Test 4: Fases 16-17 no escriben en standings
 try {
   const phaseFiles = [];
-  for (let phase = 16; phase <= 17; phase++) {
-    const dir = path.join(basePath, `phase${phase}`);
-    if (fs.existsSync(dir)) {
-      fs.readdirSync(dir).forEach((file) => {
-        if (file.endsWith(".js")) {
-          phaseFiles.push(path.join(dir, file));
-        }
-      });
-    }
-  }
-  
+  const dirs = ["engine", "animation"];
+  dirs.forEach((dir) => {
+    const dirPath = path.join(basePath, dir);
+    if (fs.existsSync(dirPath)) {
+        fs.readdirSync(dirPath).forEach((file) => {
+          if (file.endsWith(".js")) {
+            phaseFiles.push(path.join(dirPath, file));
+          }
+        });
+      }
+    });
   let foundViolation = false;
   phaseFiles.forEach((file) => {
     const content = fs.readFileSync(file, "utf8");
