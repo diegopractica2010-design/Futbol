@@ -94,10 +94,34 @@
 3. Los README de carpetas de dominio vacías se omitieron (solo `.gitkeep`).
 4. Los nombres de funciones JS en vistas de simulación (`FMG.renderPhase16View` etc.) no se renombraron (solo cambiaron los nombres de archivo). Diferido a Fase 1 si se desea.
 
-## Para Fase 1
+## Deuda técnica reconocida (para Fase 1)
 
-- Evaluar el test rescatado `uiLifecycleHardening.test.js` en `../_rescatado_worktree/`. Fue escrito hace ~62 días y puede no correr contra el código actual.
+### boot.js es una migración COSMÉTICA a Vite
+- boot.js contiene 150 imports planos en orden secuencial forzado que replican el orden de los viejos `<script>` tags.
+- Ningún módulo del juego usa `export`; todos usan el patrón `(function(){ const FMG = window.FMG = window.FMG || {}; ... })()`.
+- Vite corre y el HMR funciona, pero el acoplamiento por variables globales sigue intacto. Mover un módulo o cambiar el orden puede romper todo.
+
+### Impacto para Fase 1
+Antes de agregar features nuevas (vertical slice del jugador, retrato por capas, life-sim), decidir con el usuario si la migración REAL a ES modules (import/export por módulo, eliminación de window.FMG.*) se hace como Fase 0.5 dedicada, o como primer bloque de Fase 1. Construir features encima del acoplamiento actual será cada vez más caro.
+
+## Cierre de Fase 0
+
+**Fecha de cierre:** 2026-07-16
+**Estado final:**
+- Tests: 36/36 ✅
+- Build: OK (155 módulos, solo warning de chunk size 925 kB) ✅
+- Bug corregido: `simulation/tactics/index.js:124-125` usaba `FMG` sin `window.` en strict mode, causando `ReferenceError`. El módulo explotaba al cargarse, impidiendo que `main.js` se ejecutara. Corregido: `window.FMG._loadedPhases`.
+
+**Incidentes documentados:**
+- Archivos rescatados del worktree: SÍ encontrados en `../_rescatado_worktree/` desde `Futbol/` (ambos archivos existen).
+- boot.js cosmético: documentado como deuda técnica para Fase 1.
+- SIMD-tactics/index.js: sin `window.` en `FMG._loadedPhases` — corregido.
+- Otras rutas: no hay otros `fetch()` ni cargas de archivos de datos en el código. Solo 2 fetch en `src/main.js:71-72` a `./data/teams.json` y `./data/players.json`. Save/load usa `localStorage`.
+
+**Pendientes formales que hereda Fase 1:**
+- Evaluar test rescatado `uiLifecycleHardening.test.js` en `../_rescatado_worktree/`.
 - Decidir archivo de `matchVisualizer.js`/`matchVisualController.js` en `docs/legacy/code-snapshots/`.
+- Migración real a ES modules (boot.js estructural).
 - Podar `runtimeHardening.js`.
 - Integrar `sharedUniverse.js` al flujo del juego.
-- Agregar `npm test` script al `package.json`.
+- CSP re-agregar para producción.
