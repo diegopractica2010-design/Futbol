@@ -7,7 +7,9 @@
     "node": ">=18"
   },
   "scripts": {
-    "dev": "node dev-server.js",
+    "dev": "vite",
+    "preview": "vite preview",
+    "build": "vite build",
     "test": "eslint src/ ui/ --max-warnings=0 && node tests/run-all.js",
     "lint": "eslint src/ ui/",
     "typecheck": "tsc --noEmit",

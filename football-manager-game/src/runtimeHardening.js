@@ -522,11 +522,15 @@
           } catch (error) {}
           return self.wrapLegacyState(value);
         },
-        set(target, prop, value, receiver) {
+        set(target, prop, value) {
           const prefix = target.__fmgRuntimePath || "";
           const path = prefix ? prefix + "." + String(prop) : String(prop);
           self.record(path, { system: self.suppressionDepth ? "legacy-compatibility-facade" : "legacy-runtime", suppressed: self.suppressionDepth > 0 });
-          return Reflect.set(target, prop, value, receiver);
+          // Aplicar la escritura directamente sobre el target. Pasar el `receiver` (el
+          // propio proxy) reintroduce la escritura por el proxy y, en modo estricto de
+          // los modulos ES (Vite), lanza "Cannot assign to read only property". El guard
+          // solo registra escrituras legacy; no debe bloquearlas.
+          return Reflect.set(target, prop, value);
         },
         deleteProperty(target, prop) {
           const prefix = target.__fmgRuntimePath || "";

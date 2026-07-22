@@ -24,7 +24,7 @@
             <div class="mode-card__features">
               <span>Fichajes</span>
               <span>Tacticas</span>
-              <span>Visualizador 3D</span>
+              <span>Partido 2D en vivo</span>
               <span>Drama semanal</span>
             </div>
             <button class="btn-primary" data-action="finish-onboarding">Empezar como manager</button>

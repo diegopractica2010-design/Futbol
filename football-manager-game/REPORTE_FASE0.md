@@ -125,3 +125,33 @@ Antes de agregar features nuevas (vertical slice del jugador, retrato por capas,
 - Podar `runtimeHardening.js`.
 - Integrar `sharedUniverse.js` al flujo del juego.
 - CSP re-agregar para producción.
+
+## Revisión post-cierre (2026-07-16, segunda pasada)
+
+La Fase 0 pasaba tests y compilaba, pero **el juego no arrancaba en el navegador** —
+los tests corren los módulos con `vm.runInThisContext` (modo sloppy) y nunca hacían un
+boot completo, así que ocultaban errores de modo estricto que Vite (módulos ES) sí expone.
+
+**Bugs encontrados y corregidos en esta pasada:**
+
+1. **`npm run dev` roto** — `package.json` seguía apuntando a `node dev-server.js`, pero ese
+   archivo se había archivado a `docs/legacy/`. Corregido a `"dev": "vite"` (+ `build`/`preview`).
+
+2. **Crash fatal al iniciar partida** (`Cannot assign to read only property 'name'`, `career.js:113`).
+   Causa raíz: `FMG.Core/Adapters/LegacyGameStateAdapter.js` pasaba los objetos vivos
+   `managerProfile`, `career`, `finances` y `standings` **por referencia** a los agregados
+   inmutables (`ManagerAggregate`, `ClubAggregate`, `SeasonAggregate`), que hacen `Object.freeze`
+   sobre lo que reciben — congelando el estado legacy en su sitio. En modo sloppy las mutaciones
+   posteriores fallaban en silencio; en modo estricto lanzan y matan el boot. Corregido: el adapter
+   ahora entrega **copias** (`{ ...obj }` / `[ ...arr ]`), nunca referencias vivas.
+
+3. **Bug latente en el proxy del guard de mutaciones** (`runtimeHardening.js:525`): el trap `set`
+   pasaba el propio proxy como `receiver` a `Reflect.set`, lo que en modo estricto también lanza
+   "Cannot assign to read only property". Corregido a `Reflect.set(target, prop, value)`.
+
+**Aporte propio de la fase:** corregidos textos visibles que quedaron desactualizados tras borrar
+Three.js: la etiqueta "Visualizador 3D" → "Partido 2D en vivo" (alineado al pilar 2D del GDD) en
+`onboardingView.js`, y la mención a Three.js + instrucciones de ejecución viejas en `creditsView.js`.
+
+**Verificación:** 36/36 tests ✅ · build Vite OK ✅ · el juego arranca, se elige club, y el
+dashboard de manager carga sin errores de consola ✅ (probado end-to-end en el navegador).

@@ -37,12 +37,12 @@
         fanBase: team.fanBase,
         squad: players,
         lineup: players.slice(0, 11),
-        finances: FMG.gameState.finances || {
+        finances: { ...(FMG.gameState.finances || {
           balance: team.budget || 0,
           budgets: { transfers: 0, wages: 0, infrastructure: 0, operations: 0 },
           debt: 0,
           boardTrust: 65
-        },
+        }) },
         tactics: {
           formation: "4-3-3",
           mentality: "balanced",
@@ -64,25 +64,28 @@
       week: FMG.gameState.currentWeek || 1,
       totalWeeks: FMG.gameState.totalWeeks || 38,
       fixture,
-      standings: FMG.gameState.standings || [],
+      standings: [...(FMG.gameState.standings || [])],
       matchResults: [],
       startSeed: FMG.gameState._startSeed || FMG.Core.Utils.Determinism.seed(["legacy-season", FMG.gameState.seasonNumber || 1, fixture.length])
     });
 
     // Convert manager
+    // Copiar (no referenciar) los objetos legacy: el agregado inmutable hace
+    // Object.freeze sobre lo que recibe, y congelar la referencia viva rompe las
+    // mutaciones posteriores (ensureCareerState, etc.) bajo modo estricto de Vite.
     const manager = new Manager({
-      profile: FMG.gameState.managerProfile || {
+      profile: { ...(FMG.gameState.managerProfile || {
         name: "Manager",
         nationality: "Chile",
         age: 40,
         style: "balanced"
-      },
-      career: FMG.gameState.career || {
+      }) },
+      career: { ...(FMG.gameState.career || {
         reputation: 45,
         achievements: [],
         objectives: [],
         offers: []
-      }
+      }) }
     });
 
     // Build CoreGameState
