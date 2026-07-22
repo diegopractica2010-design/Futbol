@@ -43,7 +43,7 @@ const failures = [];
 
 for (const test of tests) {
   process.stdout.write(`\n[FMG test] ${test}\n`);
-  const result = spawnSync(process.execPath, [test], { stdio: "inherit" });
+  const result = spawnSync(process.execPath, ["-r", "./tests/_esmBridge.js", test], { stdio: "inherit" });
   if (result.status !== 0) {
     failures.push({ test, status: result.status, signal: result.signal });
   }

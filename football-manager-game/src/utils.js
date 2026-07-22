@@ -1,5 +1,7 @@
-(function () {
-  const FMG = (window.FMG = window.FMG || {});
+// utils.js — módulo ES (primer módulo migrado, Fase 1). Mantiene su API en
+// window.FMG como puente de compatibilidad para el código legacy aún no migrado.
+const _fmgGlobal = typeof window !== "undefined" ? window : globalThis;
+const FMG = (_fmgGlobal.FMG = _fmgGlobal.FMG || {});
 
   FMG.STORAGE_KEY = "football-manager-game-save";
   FMG.SAVE_INDEX_KEY = "football-manager-game-save-index";
@@ -266,4 +268,21 @@
       playerIds.add(player.id);
     });
   };
-})();
+
+// --- Exports ES para consumidores ya migrados (los símbolos siguen en window.FMG) ---
+export const clamp = FMG.clamp;
+export const hashText = FMG.hashText;
+export const deterministicId = FMG.deterministicId;
+export const pickByHash = FMG.pickByHash;
+export const boundedPush = FMG.boundedPush;
+export const boundedUpsert = FMG.boundedUpsert;
+export const deepClone = FMG.deepClone;
+export const stableStringify = FMG.stableStringify;
+export const deterministicSort = FMG.deterministicSort;
+export const deterministicCompare = FMG.deterministicCompare;
+export const escapeHtml = FMG.escapeHtml;
+export const currency = FMG.currency;
+export const randomInt = FMG.randomInt;
+export const sample = FMG.sample;
+export const average = FMG.average;
+export const validateSeedData = FMG.validateSeedData;
